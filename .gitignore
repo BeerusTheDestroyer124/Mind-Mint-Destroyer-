@@ -6,6 +6,9 @@ build/
 # Local configuration
 local.properties
 
+.vscode/
+*.json
+
 # IDE files
 .idea/
 *.iml
