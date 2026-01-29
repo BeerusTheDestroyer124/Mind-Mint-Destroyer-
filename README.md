@@ -149,18 +149,25 @@ Mind Mint is built with modern Android development practices, ensuring a smooth 
 
 ## 📈 Repository Stats
 
-Get a glimpse of the project's activity and health.
-
 <div align="center">
-  <img src="https://github-readme-stats.vercel.app/api?username=gtxprime&repo=mind-mint&theme=tokyonight&show_icons=true&hide_border=true&count_private=true" alt="GitHub Stats" />
-  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=gtxprime&repo=mind-mint&theme=tokyonight&show_icons=true&hide_border=true&layout=compact" alt="Top Languages" />
-  <br/>
-  <img src="http://github-profile-summary-cards.vercel.app/api/cards/profile-details?username=gtxprime&theme=tokyonight" alt="Profile Details" />
+
+|                                               **Commit Activity**                                               |                                           **Repo Size**                                            |
+| :-------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------: |
+| ![Commits](https://img.shields.io/github/commit-activity/m/gtxPrime/Mind-Mint?style=for-the-badge&color=25D366) | ![Size](https://img.shields.io/github/repo-size/gtxPrime/Mind-Mint?style=for-the-badge&color=blue) |
+
+|                                                 **Top Language**                                                 |                                                    **Code Size**                                                    |
+| :--------------------------------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------------------------------: |
+| ![Language](https://img.shields.io/github/languages/top/gtxPrime/Mind-Mint?style=for-the-badge&color=blueviolet) | ![Code Size](https://img.shields.io/github/languages/code-size/gtxPrime/Mind-Mint?style=for-the-badge&color=orange) |
+
 </div>
 
-### 📅 Commit Activity
+<br />
 
-![Alt](https://repobeats.axiom.co/api/embed/gtxprime/mind-mint.svg)
+## 🌟 Star History
+
+<a href="https://star-history.com/#gtxPrime/Mind-Mint&Date">
+  <img src="https://api.star-history.com/svg?repos=gtxPrime/Mind-Mint&type=Date&theme=dark" alt="Star History Chart" />
+</a>
 
 ---
 
@@ -173,6 +180,18 @@ We are constantly improving Mind Mint. Here is what's coming next:
 - [ ] **Cloud Sync**: Backup your data across devices.
 - [ ] **Web Dashboard**: View your stats on the big screen.
 - [ ] **Accessibility**: Improved support for screen readers.
+
+---
+
+## 📚 Documentation
+
+We have comprehensive documentation to help you understand the codebase:
+
+- **[⚡ Quick Start](docs/QUICK_START.md)**: Get the app running in 5 minutes.
+- **[🔧 Build & Run](docs/BUILD_AND_RUN.md)**: Detailed setup instructions.
+- **[🏛️ Architecture](docs/ARCHITECTURE.md)**: High-level overview of the code structure.
+- **[🔑 Key Components](docs/KEY_COMPONENTS.md)**: Deep dive into critical files and services.
+- **[📂 Documentation Index](docs/SUMMARY.md)**: Full list of available docs.
 
 ---
 
