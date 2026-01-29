@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Header -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="12dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:fontFamily="sans-serif"
+            android:text="Habits"
+            android:textColor="@color/widget_text_primary"
+            android:textSize="22sp"
+            android:textStyle="normal"
+            tools:ignore="HardcodedText" />
+
+        <ImageView
+            android:id="@+id/widget_add_habit_btn"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:contentDescription="Create Habit"
+            android:padding="8dp"
+            android:src="@drawable/ic_add"
+            android:tint="@color/widget_icon_tint"
+            tools:ignore="UseAppTint" />
+
+    </RelativeLayout>
+
+    <!-- Habit List -->
+    <ListView
+        android:id="@+id/widget_habit_list_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="2dp"
+        android:clipToPadding="false"
+        android:divider="@null"
+        android:dividerHeight="8dp"
+        android:scrollbars="none"
+        tools:listitem="@layout/widget_item_habit" />
+
+    <!-- Empty View -->
+    <TextView
+        android:id="@+id/widget_empty_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="No habits yet"
+        android:textColor="@color/widget_text_secondary"
+        android:textSize="16sp"
+        android:visibility="gone"
+        tools:ignore="HardcodedText" />
+
+</LinearLayout>

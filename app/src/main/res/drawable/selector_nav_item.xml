@@ -1,0 +1,10 @@
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_selected="true">
+        <shape android:shape="rectangle">
+            <solid android:color="?attr/dock_item_selected_bg" />
+            <corners android:radius="16dp" />
+        </shape>
+    </item>
+
+    <item android:drawable="@android:color/transparent" />
+</selector>

@@ -1,0 +1,73 @@
+package com.gxdevs.mindmint.Utils;
+
+import com.gxdevs.mindmint.Models.UpdateLogItem;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class UpdateLogData {
+    public static List<UpdateLogItem> getLogs() {
+        List<UpdateLogItem> list = new ArrayList<>();
+
+        addVersion(list, "Pumpkin 9 (Current)",
+                "Added dedicated stats for all habits (tap on any habit)",
+                "Added in depth overall stats for - Habits, Focus and Tasks",
+                "Redesigned stats screen",
+                "Introduced new streak system to habits",
+                "Added goal system to habits",
+                "Added mood / emotion logging to habits",
+                "Added dedicated settings for Focus Mode",
+                "Added Pomodoro Timer in focus mode",
+                "Added auto break start switch",
+                "Added topics selection in focus mode",
+                "Added 5 widgets for home screen (more will be added in future)",
+                "Improved blocking mechanism");
+
+        addVersion(list, "Pumpkin 8",
+                "Huge improvement in UI",
+                "Improved UX",
+                "Added keep service alive switch in settings",
+                "Improvement in stats",
+                "Bug fixes");
+
+        addVersion(list, "Pumpkin 7",
+                "Added Adult content blocker",
+                "Fixed bugs",
+                "Made all permissions optional");
+
+        addVersion(list, "Pumpkin 6",
+                "Made accessibility permission optional",
+                "Made battery optimization permission optional",
+                "Added blocking on browsers",
+                "Introduced new in app currency",
+                "Introduced custom theme selection");
+
+        addVersion(list, "Pumpkin 5",
+                "Huge improvement in UI",
+                "Added pause blocker feature",
+                "Added task manager",
+                "Added habit manager",
+                "Brief overview of stats");
+
+        addVersion(list, "Pumpkin 4",
+                "PlayStore launch");
+
+        addVersion(list, "Pumpkin 3",
+                "Initial beta v2");
+
+        addVersion(list, "Pumpkin 2",
+                "Initial beta v2");
+
+        addVersion(list, "Pumpkin 1",
+                "Initial beta launch");
+
+        return list;
+    }
+
+    private static void addVersion(List<UpdateLogItem> list, String version, String... changes) {
+        list.add(new UpdateLogItem(UpdateLogItem.TYPE_HEADER, version));
+        for (String change : changes) {
+            list.add(new UpdateLogItem(UpdateLogItem.TYPE_ITEM, change));
+        }
+    }
+}

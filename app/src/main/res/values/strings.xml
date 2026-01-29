@@ -151,7 +151,6 @@
     <string name="tasks">Tasks</string>
     <string name="home">Home</string>
     <string name="habits">Habits</string>
-    <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="add_habits">Add habits</string>
     <string name="completed">Completed</string>
@@ -187,7 +186,7 @@
     <string name="onboarding_desc1">Stop doomscrolling. Start doing. Let your mind enter a state of deep flow.</string>
     <string name="onboarding_heading2">Build Atomic Rituals</string>
     <string name="onboarding_desc2">Small habits, big changes. Stack your wins one by one.</string>
-    <string name="onboarding_heading3">Protect your focus</string>
+    <string name="onboarding_heading3">Protect your Attention</string>
     <string name="onboarding_desc3">Block distractions instantly. Take back control from the algorithm!</string>
     <string name="onboarding_heading4">Visualize Progress</string>
     <string name="onboarding_desc4">Watch yourself grow. Track streaks, mood and focus trends.</string>

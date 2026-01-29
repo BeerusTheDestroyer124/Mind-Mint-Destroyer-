@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="4dp">
+
+    <!-- Reward Value -->
+    <TextView
+        android:id="@+id/tvReward"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="+2"
+        android:textColor="?attr/text_secondary"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <!-- The Dot -->
+    <View
+        android:id="@+id/viewDot"
+        android:layout_width="8dp"
+        android:layout_height="8dp"
+        android:background="@drawable/glass_circle"
+        android:backgroundTint="?attr/app_bg" />
+    <!-- In code: If active, set backgroundTint to ?attr/brand_pink and scale to 1.2 -->
+
+    <!-- Time Label -->
+    <TextView
+        android:id="@+id/tvTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="30m"
+        android:textColor="?attr/text_tertiary"
+        android:textSize="9sp"
+        android:layout_marginTop="8dp"/>
+
+</LinearLayout>

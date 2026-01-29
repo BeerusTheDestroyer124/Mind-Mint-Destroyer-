@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_margin="3dp"
+    app:strokeWidth="0dp"
+    android:layout_height="wrap_content"
+    app:cardBackgroundColor="?attr/surface_task_solid"
+    app:cardCornerRadius="20dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="8dp">
+
+        <com.google.android.material.radiobutton.MaterialRadioButton
+            android:id="@+id/taskRadioButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/taskTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Task Title"
+            android:textColor="?attr/tintGlobalColor"
+            android:textSize="15sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/taskRadioButton"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="@id/taskTitle"
+            app:layout_constraintTop_toBottomOf="@id/taskTitle">
+
+            <!-- Time Chip -->
+            <TextView
+                android:id="@+id/timeChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:alpha="0.7"
+                android:fontFamily="sans-serif"
+                android:text="10:00 AM"
+                android:textColor="?attr/tintGlobalColor"
+                android:textSize="11sp"
+                app:drawableTint="?attr/tintGlobalColor" />
+
+            <!-- Recurring Icon -->
+            <ImageView
+                android:id="@+id/recurringIcon"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:layout_marginStart="8dp"
+                android:src="@drawable/ic_repeat"
+                app:tint="?attr/tintGlobalColor" />
+
+            <!-- Habit Icon -->
+            <ImageView
+                android:id="@+id/habitIcon"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:layout_marginStart="8dp"
+                android:src="@drawable/ic_habit"
+                app:tint="?attr/tintGlobalColor" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/priorityChip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:backgroundTint="#3C3020"
+            android:background="@drawable/importance_bg"
+            android:fontFamily="@font/poppins_semibold"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="2dp"
+            android:text="High"
+            android:textColor="@color/white"
+            android:textSize="11sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.google.android.material.card.MaterialCardView>

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_input_field"
+    android:backgroundTint="?attr/surface_nested"
+    android:padding="12dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <!-- Step Number -->
+    <TextView
+        android:id="@+id/tvStepNum"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:background="@drawable/glass_circle"
+        android:gravity="center"
+        android:text="1"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="?attr/text_primary" />
+
+    <!-- Instruction Text -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="16dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvStepLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Look for:"
+            android:textSize="11sp"
+            android:textColor="?attr/text_primary"
+            android:visibility="visible" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="2dp">
+
+            <!-- Optional Icon for the setting name -->
+            <ImageView
+                android:id="@+id/ivStepIcon"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:importantForAccessibility="no"
+                android:src="@android:drawable/ic_menu_preferences"
+                android:layout_marginEnd="8dp"
+                app:tint="?attr/text_tertiary" />
+
+            <TextView
+                android:id="@+id/tvStepAction"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Installed Apps"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="?attr/text_secondary" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <ImageView
+        android:layout_width="25dp"
+        android:layout_height="25dp"
+        android:src="@drawable/ic_right_arrow"
+        app:tint="?attr/text_secondary" />
+
+</LinearLayout>
+
+
+
+
+
+
+
+
+
+
+
+
+
