@@ -149,16 +149,17 @@ Mind Mint is built with modern Android development practices, ensuring a smooth 
 
 ## 📈 Repository Stats
 
-Get a glimpse of the project's activity and health.
-
 <div align="center">
-  <img src="https://github-readme-stats.vercel.app/api?username=gtxPrime&repo=Mind-Mint&theme=tokyonight&show_icons=true&hide_border=true&v=1" alt="GitHub Stats" />
-  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=gtxPrime&repo=Mind-Mint&theme=tokyonight&show_icons=true&hide_border=true&layout=compact&v=1" alt="Top Languages" />
+
+|                                               **Commit Activity**                                               |                                           **Repo Size**                                            |
+| :-------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------: |
+| ![Commits](https://img.shields.io/github/commit-activity/m/gtxPrime/Mind-Mint?style=for-the-badge&color=25D366) | ![Size](https://img.shields.io/github/repo-size/gtxPrime/Mind-Mint?style=for-the-badge&color=blue) |
+
+|                                                 **Top Language**                                                 |                                                    **Code Size**                                                    |
+| :--------------------------------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------------------------------: |
+| ![Language](https://img.shields.io/github/languages/top/gtxPrime/Mind-Mint?style=for-the-badge&color=blueviolet) | ![Code Size](https://img.shields.io/github/languages/code-size/gtxPrime/Mind-Mint?style=for-the-badge&color=orange) |
+
 </div>
-
-### 📅 Commit Activity
-
-![Alt](https://repobeats.axiom.co/api/embed/gtxPrime/Mind-Mint.svg?v=1)
 
 ---
 
