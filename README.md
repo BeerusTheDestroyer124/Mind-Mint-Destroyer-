@@ -152,13 +152,13 @@ Mind Mint is built with modern Android development practices, ensuring a smooth 
 Get a glimpse of the project's activity and health.
 
 <div align="center">
-  <img src="https://github-readme-stats.vercel.app/api?username=gtxPrime&repo=Mind-Mint&theme=tokyonight&show_icons=true&hide_border=true&count_private=true" alt="GitHub Stats" />
-  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=gtxPrime&repo=Mind-Mint&theme=tokyonight&show_icons=true&hide_border=true&layout=compact" alt="Top Languages" />
+  <img src="https://github-readme-stats.vercel.app/api?username=gtxPrime&repo=Mind-Mint&theme=tokyonight&show_icons=true&hide_border=true&v=1" alt="GitHub Stats" />
+  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=gtxPrime&repo=Mind-Mint&theme=tokyonight&show_icons=true&hide_border=true&layout=compact&v=1" alt="Top Languages" />
 </div>
 
 ### 📅 Commit Activity
 
-![Alt](https://repobeats.axiom.co/api/embed/gtxPrime/Mind-Mint.svg)
+![Alt](https://repobeats.axiom.co/api/embed/gtxPrime/Mind-Mint.svg?v=1)
 
 ---
 
