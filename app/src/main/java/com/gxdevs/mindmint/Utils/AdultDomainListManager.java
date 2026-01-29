@@ -24,9 +24,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.text.DecimalFormat;
 import java.util.Locale;
-import java.util.Set;
-import java.util.zip.GZIPInputStream;
 import java.util.regex.Pattern;
+import java.util.zip.GZIPInputStream;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -38,7 +37,6 @@ public class AdultDomainListManager {
     private static final String GZIP_URL = "https://www.dl.dropboxusercontent.com/scl/fi/iqhvxoxtuvct1xssllivj/hosts.txt.gz?rlkey=wa4ojotpa58bj0u4ugjryqv9d&st=72gb6qzi&dl=0";
     private static final String GZIP_FILE = "adult_domains.gz";
     private static final String EXTRACTED_FILE = "adult_domains_extracted.txt";
-    private static volatile Set<String> cachedDomains;
 
     // Built-in domains that must always be present (de-duplicated on insert)
     private static final String[] PREDEFINED_DOMAINS = new String[]{
@@ -230,10 +228,7 @@ public class AdultDomainListManager {
     private static String normalizeCandidate(String s) {
         if (TextUtils.isEmpty(s)) return null;
         String v = s.trim().toLowerCase(Locale.ROOT);
-        // remove common numeric IP or prefixes mistakenly included
         if (v.startsWith("0.0.0.0") || v.startsWith("127.0.0.1")) {
-            // possible when host file has IP + domain, but our parser uses last token so normally not needed
-            // just try to strip ip if present (unlikely)
             int idx = v.indexOf(' ');
             if (idx >= 0 && idx + 1 < v.length()) v = v.substring(idx + 1);
         }
@@ -310,7 +305,6 @@ public class AdultDomainListManager {
 
 
     public static synchronized void clearCache() {
-        cachedDomains = null;
     }
 
     public static boolean isAdultHost(@NonNull Context context, @Nullable String host) {

@@ -3,11 +3,107 @@
     <!-- Night overrides so custom attrs change with AppCompatDelegate night mode -->
     <style name="Theme.NoScroll" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="tintGlobalColor">#f1f1f1</item>
-        <item name="globalBg">#0D0D0D</item>
-        <item name="secondaryColor">#1E1E2A</item>
+        <item name="globalBg">#14131B</item>
+        <item name="secondaryColor">#1E1E24</item>
         <item name="switchTrack">#283039</item>
         <item name="switchThumb">#9EABB8</item>
         <item name="embeddedCards">@color/sexyGrey</item>
+        <item name="glassTints">#25252E </item>
+
+        <!--The final colors-->
+        <!-- Backgrounds -->
+        <item name="app_bg">#0F0F13</item>
+        <item name="surface_card">#1E1E24</item>
+        <item name="surface_nested">#141419</item>
+        <item name="surface_dock">#1E1E24</item>
+
+        <!-- Brand -->
+        <item name="brand_pink">#FF6B6B</item>
+        <item name="brand_pink_light">#FF8E8E</item>
+        <item name="brand_glow">#4DFF6B6B</item>
+        <item name="brand_tint_bg">#1AFF6B6B</item>  <!-- 10% Opacity -->
+        <item name="brand_tint_text">#FF6B6B</item>
+
+        <!-- Text -->
+        <item name="text_primary">#FFFFFF</item>
+        <item name="text_secondary">#99FFFFFF</item>
+        <item name="text_tertiary">#80FFFFFF</item>
+        <item name="text_disabled">#33FFFFFF</item>
+        <item name="text_inverse">#1F2937</item>
+
+        <!-- Glass -->
+        <item name="glass_surface">#991E1E24</item>
+        <item name="glass_stroke">#0DFFFFFF</item>
+        <item name="glass_circle">#1AFFFFFF</item>
+
+        <!-- Status: Success -->
+        <item name="status_success_icon">#10B981</item>
+        <item name="status_success_bg">#1A10B981</item>
+        <item name="status_success_text">#34D399</item>
+
+        <!-- Status: Warning -->
+        <item name="status_warning_icon">#F59E0B</item>
+        <item name="status_warning_bg">#CCF59E0B</item>
+        <item name="status_warning_text">#FBBF24</item>
+
+        <!-- Status: Error -->
+        <item name="status_error_icon">#F43F5E</item>
+        <item name="status_error_bg">#1AF43F5E</item>
+        <item name="status_error_text">#FECDD3</item>
+        <item name="critical_stroke">#33F43F5E</item>
+
+        <!-- Status: Info -->
+        <item name="status_info_icon">#3B82F6</item>
+        <item name="status_info_bg">#1A3B82F6</item>
+        <item name="status_info_text">#60A5FA</item>
+
+        <!-- Charts -->
+        <item name="chart_grid">#1AFFFFFF</item>
+        <item name="chart_axis">#66FFFFFF</item>
+
+        <item name="surface_dock_solid">#25252E</item> <!-- Lighter than bg -->
+        <item name="dock_stroke">#33FFFFFF</item> <!-- Stronger border -->
+        <item name="surface_task_solid">#1E1E24</item> <!-- Solid Charcoal -->
+        <item name="dock_item_selected_bg">#A60F0F13</item>
+
+        <!--Settings icon bg tints-->
+        <item name="eye_bg">#35262B</item>
+        <item name="mobile_bg">#1D2436</item>
+        <item name="browser_bg">#182A2A</item>
+        <item name="block_bg">#35262B</item>
+        <item name="popup_bg">#282036</item>
+
+        <!-- Gold/Amber -->
+        <item name="econ_amber_bg">#1AF59E0B</item>   <!-- 10% Amber -->
+        <item name="econ_amber_text">#F59E0B</item>   <!-- Amber 500 -->
+
+        <!-- Emerald -->
+        <item name="econ_emerald_bg">#1A10B981</item> <!-- 10% Emerald -->
+        <item name="econ_emerald_text">#10B981</item> <!-- Emerald 500 -->
+
+        <!-- Timeline -->
+        <item name="econ_timeline_line">#33FFFFFF</item> <!-- 20% White -->
+        <item name="econ_timeline_active">#FFFFFF</item> <!-- White -->
+
+        <!-- FIREWALL COLORS (DARK) -->
+        <item name="firewall_input_bg">#141419</item>   <!-- Deep Charcoal -->
+        <item name="firewall_input_text">#FFFFFF</item> <!-- White -->
+        <item name="firewall_input_hint">#33FFFFFF</item> <!-- Faded White -->
+
+        <item name="firewall_rule_bg">#1E1E24</item>    <!-- Lighter Charcoal -->
+        <item name="firewall_rule_border">#0DFFFFFF</item> <!-- Subtle Glass -->
+
+        <item name="firewall_chip_bg">#1E1E24</item>
+        <item name="firewall_chip_border">#1AFFFFFF</item>
+        <item name="firewall_chip_text">#99FFFFFF</item>
+
+        <item name="firewall_active_line">#FF0000</item> <!-- Neon Red -->
+        <item name="sheet_input_bg">#141419</item>
+
+        <item name="habitTileMarked">#393939</item>
+        <item name="habitTileActionBtn">#0FFFFFFF</item>
+
+
     </style>
 
     <style name="Theme.MyApp.Splash" parent="Theme.NoScroll">

@@ -22,9 +22,9 @@
     <color name="snapColor">#FFFC00</color>
     <color name="primaryColor">#184B50</color>
     <color name="accentColor">#0FB198</color>
-<!--    <color name="secondaryColor">#1E1E1E</color>-->
+    <!--    <color name="secondaryColor">#1E1E1E</color>-->
     <color name="secondaryColor">#243546</color>
-<!--    <color name="mainBgColor">#121212</color>-->
+    <!--    <color name="mainBgColor">#121212</color>-->
 
     <color name="textColor">#9EABB8</color>
     <color name="sexyGrey">#283039</color>
@@ -32,16 +32,8 @@
     <color name="sexyInsta">#E1306C</color>
     <color name="sexyYt">#FF0000</color>
     <color name="sexySnap">#FFFC00</color>
-
-<!--    <color name="sexyInsta">#6E8295</color>-->
-<!--    <color name="sexyYt">#8799AC</color>-->
-<!--    <color name="sexySnap">#A1B1C3</color>-->
-
-    <!-- Final colors -->
-<!--    <color name="cardColor">#252A34</color>-->
-<!--    <color name="cardColor">#1A1A1A</color>-->
     <color name="cardColor">#1E1E2A</color>
-<!--    <color name="mainBgColor">#181920</color>-->
+    <!--    <color name="mainBgColor">#181920</color>-->
     <color name="mainBgColor">#0D0D0D</color>
     <color name="bgGradientColor">#1A192E</color>
     <color name="brainColor">#FD7D81</color>
@@ -59,7 +51,6 @@
     <color name="aquamarine">#53C9ED</color>
     <color name="amber">#F5AF04</color>
 
-
     <color name="test">#FFEFCA</color>
 
 
@@ -67,16 +58,67 @@
     <color name="globalTintColor">#1f1f1f</color>
 
 
+    <!--Demo colors-->
+    <color name="app_background">#0F0F13</color>
+    <color name="surface_dark">#1E1E24</color>
+    <color name="surface_glass">#99141419</color> <!-- 60% opacity for glass feel -->
+
+    <!-- Brand Colors -->
+    <color name="brand_pink">#FF6B6B</color>
+    <color name="brand_pink_light">#FF8E8E</color>
+    <color name="brand_pink_subtle">#FFE5E5</color>
+
+    <!-- Status Colors -->
+    <color name="status_emerald">#34D399</color>
+    <color name="status_amber">#FBBF24</color>
+    <color name="status_rose">#F43F5E</color>
+
+    <color name="white_40">#66FFFFFF</color>
+    <color name="white_10">#1AFFFFFF</color>
+    <color name="white_05">#0DFFFFFF</color>
+
+    <!--Nav bottom colors-->
+    <color name="nav_bg">#22222C</color>
+    <color name="window_bg">#0D0D11</color>
+    <color name="home_accent">#FF6B6B</color>
+    <color name="home_glow">#CCFF6B6B</color>
+    <color name="item_selected_bg">#333542</color>
+    <color name="icon_unselected">#888899</color>
+    <color name="icon_selected">#FFFFFF</color>
+
+    <!-- Habit colors-->
+    <color name="app_bg">#0F0F13</color>
+    <color name="surface_glass_dark">#CC141419</color> <!-- Darker glass -->
+    <color name="surface_glass_light">#33FFFFFF</color> <!-- Lighter glass overlay -->
+
+    <!-- Text -->
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_tertiary">#4DFFFFFF</color>
+
+    <!--Settings color-->
+
+    <!-- Glass Surfaces -->
+    <color name="glass_surface">#991E1E24</color> <!-- 60% opacity -->
+    <color name="glass_stroke">#0DFFFFFF</color> <!-- 5% white -->
+
+    <!-- Critical / Alerts -->
+    <color name="glass_critical_bg">#1AF43F5E</color> <!-- Rose 10% -->
+    <color name="glass_critical_stroke">#33F43F5E</color> <!-- Rose 20% -->
+    <color name="text_critical">#FECDD3</color> <!-- Rose 200 -->
+    <color name="icon_critical">#F43F5E</color> <!-- Rose 500 -->
+
+    <!-- Text -->
+    <color name="text_disabled">#33FFFFFF</color>
+
+    <!-- Widget Colors -->
+    <color name="widget_background">#F2F4F6</color>
+    <color name="widget_text_primary">#202124</color>
+    <color name="widget_text_secondary">#5F6368</color>
+    <color name="widget_text_tertiary">#9AA0A6</color>
+    <color name="widget_icon_tint">#5F6368</color>
+    <color name="widget_divider">#F1F1F1</color>
+    <color name="surface_card">#FFFFFF</color>
+    <color name="glass_circle">#F1F5F9</color>
+    <color name="text_secondary">#64748B</color>
+
 </resources>
-
-
-
-
-
-
-
-
-
-
-
-

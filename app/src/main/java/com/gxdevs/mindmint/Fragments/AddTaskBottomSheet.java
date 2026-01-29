@@ -5,26 +5,28 @@ import android.app.Dialog;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CalendarView;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.Spinner;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.widget.AppCompatButton;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
-import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.gson.Gson;
 import com.gxdevs.mindmint.Models.Task;
@@ -45,14 +47,14 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
     }
 
     private EditText taskNameInput;
-    private Spinner prioritySpinner;
-    private TextView dueDateText;
+    private RadioGroup priorityRadioGroup;
+    private RadioButton rbLow, rbMedium, rbHigh;
+    private TextView dateText, timeText;
     private MaterialSwitch reminderSwitch;
-    private Button cancelButton, saveButton;
+    private AppCompatButton cancelButton, saveButton;
     private TextView sheetTitle;
-    private TextView emojiTextView;
-    private MaterialCardView emojiCard;
-
+    private ImageView taskIconView;
+    private int currentIconIndex = 0;
     private OnTaskActionListener listener;
     private Task editingTask;
     private Calendar selectedDateTime;
@@ -80,6 +82,7 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
         return inflater.inflate(R.layout.bottom_sheet_add_task, container, false);
     }
 
+    @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         BottomSheetDialog dialog = (BottomSheetDialog) super.onCreateDialog(savedInstanceState);
@@ -110,81 +113,105 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
 
     private void initViews(View view) {
         taskNameInput = view.findViewById(R.id.taskNameInput);
-        prioritySpinner = view.findViewById(R.id.prioritySpinner);
-        dueDateText = view.findViewById(R.id.dueDateText);
+        priorityRadioGroup = view.findViewById(R.id.rgPriority);
+        rbLow = view.findViewById(R.id.rbLow);
+        rbMedium = view.findViewById(R.id.rbMedium);
+        rbHigh = view.findViewById(R.id.rbHigh);
+        dateText = view.findViewById(R.id.dateText);
+        timeText = view.findViewById(R.id.timeText);
         reminderSwitch = view.findViewById(R.id.reminderSwitch);
         cancelButton = view.findViewById(R.id.cancelButton);
         saveButton = view.findViewById(R.id.saveButton);
-        sheetTitle = view.findViewById(R.id.sheetTitle);
-        emojiTextView = view.findViewById(R.id.emojiText);
-        emojiCard = view.findViewById(R.id.emojiCard);
+        sheetTitle = view.findViewById(R.id.greetings);
+        taskIconView = view.findViewById(R.id.taskIconView);
+        ImageView crossBtn = view.findViewById(R.id.crossBtn);
 
         selectedDateTime = Calendar.getInstance();
-        
-        // Setup emoji picker
-        setupEmojiPicker();
+        crossBtn.setOnClickListener(v -> {
+            if (this.isVisible()) {
+                this.dismiss();
+            }
+        });
+
+        // Setup icon picker
+        setupIconPicker();
     }
 
     private void setupSpinners() {
-        // Setup priority spinner
-        ArrayAdapter<Task.Priority> priorityAdapter = new ArrayAdapter<>(
-                requireContext(),
-                R.layout.spinner_dropdown_item,
-                Task.Priority.values()
-        );
-        priorityAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
-        prioritySpinner.setAdapter(priorityAdapter);
+        priorityRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            updatePriorityTextColors();
+        });
+        // Initial update for default selection
+        updatePriorityTextColors();
     }
 
-    private void setupEmojiPicker() {
-        // Emoji picker - cycles through emojis on tap
-        emojiCard.setOnClickListener(v -> {
-            String current = emojiTextView.getText().toString();
-            String[] options = new String[]{"✅", "📝", "🎯", "🔥", "💡", "⭐", "🏃", "📚", "💪", "🎨"};
-            int idx = 0;
-            for (int i = 0; i < options.length; i++)
-                if (options[i].equals(current)) {
-                    idx = i;
+    private void updatePriorityTextColors() {
+        int textPrimaryColor = getAttrColor(R.attr.text_primary);
+        int textSecondaryColor = getAttrColor(R.attr.text_disabled);
+
+        rbLow.setTextColor(rbLow.isChecked() ? textPrimaryColor : textSecondaryColor);
+        rbMedium.setTextColor(rbMedium.isChecked() ? textPrimaryColor : textSecondaryColor);
+        rbHigh.setTextColor(rbHigh.isChecked() ? textPrimaryColor : textSecondaryColor);
+    }
+
+    private int getAttrColor(int attr) {
+        TypedValue typedValue = new TypedValue();
+        requireContext().getTheme().resolveAttribute(attr, typedValue, true);
+        return typedValue.data;
+    }
+
+    private void setupIconPicker() {
+        final int[] iconOptions = {
+                R.drawable.flame,
+                R.drawable.droplets,
+                R.drawable.dumbbell,
+                R.drawable.book,
+                R.drawable.moon,
+                R.drawable.gamepad,
+                R.drawable.palette,
+                R.drawable.party_popper
+        };
+
+        // Initialize current icon index
+        if (editingTask != null && editingTask.getIcon() != 0) {
+            for (int i = 0; i < iconOptions.length; i++) {
+                if (iconOptions[i] == editingTask.getIcon()) {
+                    currentIconIndex = i;
                     break;
                 }
-            emojiTextView.setText(options[(idx + 1) % options.length]);
+            }
+        } else {
+            currentIconIndex = 0;
+        }
+
+        taskIconView.setOnClickListener(v -> {
+            currentIconIndex = (currentIconIndex + 1) % iconOptions.length;
+            int nextIcon = iconOptions[currentIconIndex];
+            taskIconView.setImageResource(nextIcon);
         });
     }
 
     private void setupDateTimePicker() {
-        View dueDateClickable = requireView().findViewById(R.id.dueDateClickable);
-        dueDateClickable.setOnClickListener(v -> showDateTimePicker());
-        dueDateText.setOnClickListener(v -> showDateTimePicker());
-    }
-
-    private void showDateTimePicker() {
-        showCustomDatePicker();
+        LinearLayout dateClickable = requireView().findViewById(R.id.dateClickable);
+        LinearLayout timeClickable = requireView().findViewById(R.id.timeClickable);
+        dateClickable.setOnClickListener(v -> showCustomDatePicker());
+        timeClickable.setOnClickListener(v -> showCustomTimePicker());
     }
 
     private void showCustomDatePicker() {
         AlertDialog.Builder builder = new AlertDialog.Builder(requireContext(), R.style.AlertDialogTheme);
         View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_date_picker, null);
-
         CalendarView calendarView = dialogView.findViewById(R.id.calendarView);
-        LinearLayout setTimeButton = dialogView.findViewById(R.id.setTimeButton);
         LinearLayout repeatButton = dialogView.findViewById(R.id.repeatButton);
         Button cancelButton = dialogView.findViewById(R.id.cancelButton);
         Button doneButton = dialogView.findViewById(R.id.doneButton);
 
-        // Set current date
         calendarView.setDate(selectedDateTime.getTimeInMillis());
-
         AlertDialog dialog = builder.setView(dialogView).create();
-
         calendarView.setOnDateChangeListener((view, year, month, dayOfMonth) -> {
             selectedDateTime.set(Calendar.YEAR, year);
             selectedDateTime.set(Calendar.MONTH, month);
             selectedDateTime.set(Calendar.DAY_OF_MONTH, dayOfMonth);
-        });
-
-        setTimeButton.setOnClickListener(v -> {
-            dialog.dismiss();
-            showCustomTimePicker();
         });
 
         repeatButton.setOnClickListener(v -> {
@@ -205,14 +232,13 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
     private void showCustomTimePicker() {
         AlertDialog.Builder builder = new AlertDialog.Builder(requireContext(), R.style.AlertDialogTheme);
         View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_time_picker, null);
-
         TextView hourDisplay = dialogView.findViewById(R.id.hourDisplay);
         TextView minuteDisplay = dialogView.findViewById(R.id.minuteDisplay);
         TextView amButton = dialogView.findViewById(R.id.amButton);
         TextView pmButton = dialogView.findViewById(R.id.pmButton);
         AnalogClockView analogClock = dialogView.findViewById(R.id.analogClock);
-        Button cancelButton = dialogView.findViewById(R.id.cancelButton);
-        Button okButton = dialogView.findViewById(R.id.okButton);
+        AppCompatButton cancelButton = dialogView.findViewById(R.id.cancelButton);
+        AppCompatButton okButton = dialogView.findViewById(R.id.okButton);
 
         // Initialize with current time
         int currentHour = selectedDateTime.get(Calendar.HOUR);
@@ -299,14 +325,16 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
         String dateStr = dateFormat.format(selectedDateTime.getTime());
         String timeStr = timeFormat.format(selectedDateTime.getTime());
 
-        // Check if it's today
+        // Update date text - check if it's today
         Calendar today = Calendar.getInstance();
-        if (selectedDateTime.get(Calendar.YEAR) == today.get(Calendar.YEAR) &&
-                selectedDateTime.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR)) {
-            dueDateText.setText("Today " + timeStr);
+        if (selectedDateTime.get(Calendar.YEAR) == today.get(Calendar.YEAR) && selectedDateTime.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR)) {
+            dateText.setText("Today");
         } else {
-            dueDateText.setText(dateStr + " " + timeStr);
+            dateText.setText(dateStr);
         }
+
+        // Update time text
+        timeText.setText(timeStr);
     }
 
     private void setupClickListeners() {
@@ -335,15 +363,26 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
 
     private void createTask() {
         String taskName = taskNameInput.getText().toString().trim();
-        Task.Priority priority = (Task.Priority) prioritySpinner.getSelectedItem();
+        Task.Priority priority = getSelectedPriority();
         Task.RecurringType recurringType = getRecurringTypeFromRepeatOptions();
 
-        // Create task with placeholder image (will be replaced with emoji in adapter)
-        Task newTask = new Task(taskName, "", R.drawable.todo, priority);
+        // Create task with icon
+        int[] iconOptions = {
+                R.drawable.flame,
+                R.drawable.droplets,
+                R.drawable.dumbbell,
+                R.drawable.book,
+                R.drawable.moon,
+                R.drawable.gamepad,
+                R.drawable.palette,
+                R.drawable.party_popper
+        };
+        int selectedIcon = iconOptions[currentIconIndex];
+        Task newTask = new Task(taskName, "", R.drawable.list_todo, priority);
         newTask.setRecurringType(recurringType);
         newTask.setScheduledDate(selectedDateTime.getTime());
         newTask.setHasReminder(reminderSwitch.isChecked());
-        newTask.setEmoji(emojiTextView.getText().toString());
+        newTask.setIcon(selectedIcon);
 
         // Save advanced repeat options if available
         if (currentRepeatOptions != null) {
@@ -358,7 +397,7 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
 
     private void updateTask() {
         String taskName = taskNameInput.getText().toString().trim();
-        Task.Priority priority = (Task.Priority) prioritySpinner.getSelectedItem();
+        Task.Priority priority = getSelectedPriority();
         Task.RecurringType recurringType = getRecurringTypeFromRepeatOptions();
 
         editingTask.setName(taskName);
@@ -366,7 +405,20 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
         editingTask.setRecurringType(recurringType);
         editingTask.setScheduledDate(selectedDateTime.getTime());
         editingTask.setHasReminder(reminderSwitch.isChecked());
-        editingTask.setEmoji(emojiTextView.getText().toString());
+
+        // Update icon if changed
+        int[] iconOptions = {
+                R.drawable.flame,
+                R.drawable.droplets,
+                R.drawable.dumbbell,
+                R.drawable.book,
+                R.drawable.moon,
+                R.drawable.gamepad,
+                R.drawable.palette,
+                R.drawable.party_popper
+        };
+        int selectedIcon = iconOptions[currentIconIndex];
+        editingTask.setIcon(selectedIcon);
 
         // Save advanced repeat options if available
         if (currentRepeatOptions != null) {
@@ -403,11 +455,28 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
         saveButton.setText("Update");
 
         taskNameInput.setText(editingTask.getName());
-        prioritySpinner.setSelection(editingTask.getPriority().ordinal());
+        setPrioritySelection(editingTask.getPriority());
 
-        // Set emoji
-        if (editingTask.getEmoji() != null && !editingTask.getEmoji().isEmpty()) {
-            emojiTextView.setText(editingTask.getEmoji());
+        // Set icon
+        int iconRes = editingTask.getIcon() != 0 ? editingTask.getIcon() : R.drawable.list_todo;
+        taskIconView.setImageResource(iconRes);
+
+        // Find current icon index
+        int[] iconOptions = {
+                R.drawable.flame,
+                R.drawable.droplets,
+                R.drawable.dumbbell,
+                R.drawable.book,
+                R.drawable.moon,
+                R.drawable.gamepad,
+                R.drawable.palette,
+                R.drawable.party_popper
+        };
+        for (int i = 0; i < iconOptions.length; i++) {
+            if (iconOptions[i] == iconRes) {
+                currentIconIndex = i;
+                break;
+            }
         }
 
         // Set scheduled date
@@ -436,12 +505,38 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
         sheetTitle.setText("Add Task");
         saveButton.setText("Save");
 
-        // Set default priority to Medium
-        prioritySpinner.setSelection(1);
+        // Set default priority to Medium (already set in XML)
+        rbMedium.setChecked(true);
 
         // Set default time to current time + 1 hour
         selectedDateTime.add(Calendar.HOUR_OF_DAY, 1);
         updateDateTimeDisplay();
+    }
+
+    private Task.Priority getSelectedPriority() {
+        int checkedId = priorityRadioGroup.getCheckedRadioButtonId();
+        if (checkedId == R.id.rbLow) {
+            return Task.Priority.LOW;
+        } else if (checkedId == R.id.rbHigh) {
+            return Task.Priority.HIGH;
+        } else {
+            return Task.Priority.MEDIUM; // Default
+        }
+    }
+
+    private void setPrioritySelection(Task.Priority priority) {
+        switch (priority) {
+            case LOW:
+                rbLow.setChecked(true);
+                break;
+            case HIGH:
+                rbHigh.setChecked(true);
+                break;
+            case MEDIUM:
+            default:
+                rbMedium.setChecked(true);
+                break;
+        }
     }
 
     private void showRepeatOptionsDialog() {
@@ -454,7 +549,6 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
 
         repeatSheet.setOnRepeatOptionsListener(repeatOptions -> {
             currentRepeatOptions = repeatOptions;
-            // After setting repeat options, return to date picker
             showCustomDatePicker();
         });
 

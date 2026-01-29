@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/bottom_sheet_shape"
+    android:background="@drawable/bg_sheet_panel"
     android:padding="20dp"
     tools:ignore="HardcodedText, Autofill,TextFields">
 
@@ -19,164 +19,285 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Title -->
-    <TextView
-        android:id="@+id/sheetTitle"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:id="@+id/headerContainer"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
-        android:fontFamily="@font/poppins_semibold"
-        android:text="Add Task"
-        android:textColor="?attr/tintGlobalColor"
-        android:textSize="18sp"
+        android:layout_marginEnd="25dp"
+        android:orientation="vertical"
+        app:layout_constraintEnd_toStartOf="@+id/crossBtn"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/handleBar" />
+        app:layout_constraintTop_toBottomOf="@+id/handleBar">
 
-    <!-- Emoji and Task Name Section -->
+        <TextView
+            android:id="@+id/dateDetails"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:alpha="0.5"
+            android:fontFamily="@font/poppins_semibold"
+            android:letterSpacing="0.1"
+            android:text="Add a new side-mission"
+            android:textAllCaps="true"
+            android:textColor="?attr/text_secondary"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/greetings"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-light"
+            android:lineSpacingMultiplier="0.8"
+            android:text="Create Quest"
+            android:textColor="?attr/text_primary"
+            android:textSize="35sp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/welcomeTxt" />
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/crossBtn"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
+        android:background="@drawable/glass_circle"
+        android:contentDescription="Close"
+        android:padding="10dp"
+        android:src="@drawable/x"
+        app:layout_constraintBottom_toBottomOf="@+id/headerContainer"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/headerContainer"
+        app:tint="?attr/text_primary" />
+
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/nameCard"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="30dp"
         android:layout_marginEnd="5dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/sheetTitle">
+        app:layout_constraintTop_toBottomOf="@+id/crossBtn">
 
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/emojiCard"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            app:cardBackgroundColor="@color/transparent"
-            app:cardCornerRadius="24dp"
+        <ImageView
+            android:id="@+id/taskIconView"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:padding="10dp"
+            android:background="@drawable/glass_circle"
+            android:contentDescription="Task icon"
+            android:src="@drawable/flame"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
-
-            <TextView
-                android:id="@+id/emojiText"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@drawable/circle_gra"
-                android:gravity="center"
-                android:text="✅"
-                android:textSize="20sp" />
-
-        </com.google.android.material.card.MaterialCardView>
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="?attr/text_primary" />
 
         <EditText
             android:id="@+id/taskNameInput"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="56dp"
             android:layout_marginStart="12dp"
-            android:background="@drawable/background_outline"
+            android:background="@drawable/bg_input_field"
             android:fontFamily="@font/inter18regular"
-            android:hint="Task name..."
+            android:hint="Quest name..."
             android:paddingHorizontal="16dp"
-            android:textColor="?attr/tintGlobalColor"
-            android:textColorHint="?attr/tintGlobalColor"
+            android:textColor="?attr/text_primary"
+            android:textColorHint="?attr/text_tertiary"
             android:textSize="16sp"
-            app:layout_constraintBottom_toBottomOf="@+id/emojiCard"
+            app:layout_constraintBottom_toBottomOf="@+id/taskIconView"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@id/emojiCard"
-            app:layout_constraintTop_toTopOf="@+id/emojiCard" />
+            app:layout_constraintStart_toEndOf="@id/taskIconView"
+            app:layout_constraintTop_toTopOf="@+id/taskIconView" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- Priority Section -->
-    <LinearLayout
-        android:id="@+id/prioritySection"
+    <TextView
+        android:id="@+id/tvPriorityLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="24dp"
+        android:letterSpacing="0.1"
+        android:text="PRIORITY LEVEL"
+        android:textColor="?attr/text_tertiary"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/nameCard" />
+
+    <RadioGroup
+        android:id="@+id/rgPriority"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:orientation="vertical"
-        app:layout_constraintTop_toBottomOf="@+id/nameCard">
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toBottomOf="@+id/tvPriorityLabel">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/inter18regular"
-            android:text="Priority"
-            android:textColor="?attr/tintGlobalColor"
-            android:textSize="14sp" />
-
-        <Spinner
-            android:id="@+id/prioritySpinner"
-            android:layout_width="match_parent"
+        <RadioButton
+            android:id="@+id/rbLow"
+            android:layout_width="0dp"
             android:layout_height="48dp"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/background_outline"
-            android:paddingHorizontal="12dp"
-            android:popupBackground="@drawable/spinner_dropdown_bg"
-            android:theme="@style/SpinnerTheme" />
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:background="@drawable/selector_priority_chip"
+            android:button="@null"
+            android:gravity="center"
+            android:text="Low"
+            android:textColor="?attr/text_secondary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
-    </LinearLayout>
+        <RadioButton
+            android:id="@+id/rbMedium"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:background="@drawable/selector_priority_chip"
+            android:button="@null"
+            android:checked="true"
+            android:gravity="center"
+            android:text="Medium"
+            android:textColor="?attr/text_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
-    <!-- Set Date/Time Section -->
+        <RadioButton
+            android:id="@+id/rbHigh"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:background="@drawable/selector_priority_chip"
+            android:button="@null"
+            android:gravity="center"
+            android:text="High"
+            android:textColor="?attr/text_secondary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+    </RadioGroup>
+
     <LinearLayout
-        android:id="@+id/dateTimeSection"
+        android:id="@+id/rowDateTime"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:orientation="vertical"
-        app:layout_constraintTop_toBottomOf="@+id/prioritySection">
+        android:layout_marginTop="25dp"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toBottomOf="@id/rgPriority">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/inter18regular"
-            android:text="Set Date/Time"
-            android:textColor="?attr/tintGlobalColor"
-            android:textSize="14sp" />
-
+        <!-- Date Button -->
         <LinearLayout
-            android:id="@+id/dueDateClickable"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/background_outline"
-            android:clickable="true"
-            android:focusable="true"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingHorizontal="12dp">
-
-            <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:importantForAccessibility="no"
-                android:src="@drawable/ic_time"
-                app:tint="@color/brainColor" />
+            android:id="@+id/dateButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
 
             <TextView
-                android:id="@+id/dueDateText"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:layout_weight="1"
-                android:fontFamily="@font/inter18regular"
-                android:text="Today 3PM"
-                android:textColor="?attr/tintGlobalColor"
-                android:textSize="14sp" />
+                android:layout_marginBottom="8dp"
+                android:letterSpacing="0.1"
+                android:text="DATE"
+                android:textColor="?attr/text_tertiary"
+                android:textSize="11sp"
+                android:textStyle="bold" />
 
+            <LinearLayout
+                android:id="@+id/dateClickable"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:background="@drawable/bg_input_field"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="16dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_calendar"
+                    app:tint="@color/brand_pink" />
+
+                <TextView
+                    android:id="@+id/dateText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:text="Today"
+                    android:textColor="?attr/text_primary"
+                    android:textStyle="bold" />
+            </LinearLayout>
         </LinearLayout>
 
+        <View
+            android:layout_width="12dp"
+            android:layout_height="1dp" />
+
+        <!-- Time Button -->
+        <LinearLayout
+            android:id="@+id/timeButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginBottom="8dp"
+                android:letterSpacing="0.1"
+                android:text="TIME"
+                android:textColor="?attr/text_tertiary"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:id="@+id/timeClickable"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:background="@drawable/bg_input_field"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="16dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_time"
+                    app:tint="@color/brand_pink" />
+
+                <TextView
+                    android:id="@+id/timeText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:text="10:00 AM"
+                    android:textColor="?attr/text_primary"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
     </LinearLayout>
 
-
-    <!-- Reminder Section -->
     <LinearLayout
         android:id="@+id/reminderSection"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="56dp"
         android:layout_marginTop="20dp"
+        android:background="@drawable/bg_input_field"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        app:layout_constraintTop_toBottomOf="@+id/dateTimeSection">
+        app:layout_constraintTop_toBottomOf="@+id/rowDateTime">
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="15dp"
             android:layout_weight="1"
             android:fontFamily="@font/inter18regular"
             android:text="Reminder"
@@ -187,6 +308,7 @@
             android:id="@+id/reminderSwitch"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="15dp"
             app:thumbTint="?attr/switchThumb"
             app:trackTint="?attr/switchTrack" />
 
@@ -204,30 +326,28 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/reminderSection">
 
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/cancelButton"
-            style="?android:attr/buttonBarButtonStyle"
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_marginEnd="8dp"
             android:layout_weight="1"
-            android:background="@drawable/background_outline"
-            android:fontFamily="@font/inter18regular"
+            android:background="@drawable/bg_brand_gradient"
+            android:fontFamily="@font/poppins_semibold"
             android:text="Cancel"
-            android:textColor="?attr/tintGlobalColor"
+            android:textColor="@color/white"
             android:textSize="16sp" />
 
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/saveButton"
-            style="?android:attr/buttonBarButtonStyle"
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:background="@drawable/button_pill_bg"
-            android:fontFamily="@font/inter18regular"
+            android:background="@drawable/bg_brand_gradient"
+            android:fontFamily="@font/poppins_semibold"
             android:text="Save"
-            android:textColor="?attr/tintGlobalColor"
+            android:textColor="@color/white"
             android:textSize="16sp" />
 
     </LinearLayout>

@@ -11,10 +11,11 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:elevation="8dp"
-        app:cardBackgroundColor="?attr/secondaryColor"
+        app:cardBackgroundColor="?attr/surface_card"
         app:cardCornerRadius="16dp"
         app:cardUseCompatPadding="true"
         app:cardPreventCornerOverlap="true"
+        app:strokeColor="@color/glass_stroke"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent">
@@ -32,7 +33,7 @@
                 android:layout_height="wrap_content"
                 android:fontFamily="sans-serif-medium"
                 android:text="@string/what_s_your_first_name"
-                android:textColor="?attr/tintGlobalColor"
+                android:textColor="?attr/text_primary"
                 android:textSize="16sp" />
 
             <com.google.android.material.textfield.TextInputLayout
@@ -50,8 +51,9 @@
                     android:imeOptions="actionDone"
                     android:inputType="textCapSentences"
                     android:maxLines="1"
-                    android:textColor="?attr/tintGlobalColor"
-                    android:textColorHint="?attr/tintGlobalColor" />
+                    android:textColor="?attr/text_primary"
+                    android:textColorHint="?attr/text_disabled" />
+
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.button.MaterialButton
@@ -60,8 +62,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:textColor="?attr/secondaryColor"
-                android:backgroundTint="?attr/tintGlobalColor"
+                android:textColor="?attr/text_inverse"
+                android:backgroundTint="?attr/text_primary"
                 android:text="@string/save"
                 app:cornerRadius="12dp" />
 

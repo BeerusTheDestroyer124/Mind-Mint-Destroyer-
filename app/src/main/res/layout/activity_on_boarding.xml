@@ -5,56 +5,26 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/mainBgColor"
+    android:background="@color/app_bg"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     tools:context=".Activities.OnBoarding">
 
-    <eightbitlab.com.blurview.BlurTarget
-        android:id="@+id/blurTarget"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
-
-            <View
-                android:layout_width="550dp"
-                android:layout_height="550dp"
-                android:layout_marginStart="-200dp"
-                android:layout_marginTop="-200dp"
-                android:background="@drawable/main_bg_gradient"
-                android:backgroundTint="#59FD7D81"
-                android:importantForAccessibility="no"
-                android:scaleType="centerCrop"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <View
-                android:layout_width="550dp"
-                android:layout_height="550dp"
-                android:layout_marginEnd="-200dp"
-                android:layout_marginBottom="-200dp"
-                android:background="@drawable/main_bg_gradient"
-                android:backgroundTint="#2614B8A6"
-                android:importantForAccessibility="no"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent" />
-
-            <View
-                android:layout_width="550dp"
-                android:layout_height="550dp"
-                android:layout_marginStart="-350dp"
-                android:background="@drawable/main_bg_gradient"
-                android:backgroundTint="#33A78BFA"
-                android:importantForAccessibility="no"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent" />
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-    </eightbitlab.com.blurview.BlurTarget>
+    <TextView
+        android:id="@+id/skipBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAllCaps="true"
+        android:layout_marginTop="30dp"
+        android:layout_margin="20dp"
+        android:alpha="0.9"
+        android:fontFamily="@font/poppins_semibold"
+        android:padding="10dp"
+        android:text="@string/skip"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <androidx.viewpager.widget.ViewPager
         android:id="@+id/slider"
@@ -62,38 +32,69 @@
         android:layout_height="0dp"
         android:layout_margin="20dp"
         android:background="@color/transparent"
-        app:layout_constraintBottom_toTopOf="@id/buttonLayout"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        app:layout_constraintBottom_toTopOf="@id/indicatorLayout"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/skipBtn" />
+
+    <LinearLayout
+        android:id="@+id/indicatorLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="40dp"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toTopOf="@id/goLayout"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/buttonLayout"
+        android:id="@+id/goLayout"
         android:layout_width="0dp"
-        android:layout_marginBottom="40dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="35dp"
+        android:layout_marginEnd="35dp"
+        android:layout_marginBottom="40dp"
+        android:background="@drawable/custom_button"
+        android:backgroundTint="@color/white"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
-        <TextView
-            android:id="@+id/accessibilityBtn"
+        <LinearLayout
             android:layout_width="wrap_content"
-            android:layout_height="50dp"
-            android:layout_marginStart="35dp"
-            android:layout_marginTop="0dp"
-            android:layout_marginEnd="35dp"
-            android:background="@drawable/custom_button"
-            android:fontFamily="@font/baloo"
+            android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:text="@string/next"
-            android:textAllCaps="false"
-            android:textColor="?attr/tintGlobalColor"
+            android:orientation="horizontal"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            tools:ignore="UseCompoundDrawables">
+
+            <TextView
+                android:id="@+id/goText"
+                android:layout_width="wrap_content"
+                android:layout_height="50dp"
+                android:layout_marginTop="0dp"
+                android:fontFamily="@font/poppins_semibold"
+                android:gravity="center_vertical"
+                android:text="@string/next"
+                android:textColor="@color/black"
+                android:textSize="18sp" />
+
+            <ImageView
+                android:id="@+id/goIcon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginStart="5dp"
+                android:layout_marginBottom="1dp"
+                android:src="@drawable/ic_right_arrow"
+                app:tint="@color/black"
+                tools:ignore="ContentDescription" />
+
+        </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

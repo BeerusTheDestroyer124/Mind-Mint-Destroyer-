@@ -7,14 +7,14 @@ plugins {
 
 android {
     namespace 'com.gxdevs.mindmint'
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.gxdevs.mindmint"
         minSdk 28
-        targetSdk 35
-        versionCode 11
-        versionName 'Pumpkin 7'
+        targetSdk 36
+        versionCode 13
+        versionName 'Pumpkin 9'
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -78,6 +78,7 @@ dependencies {
     implementation libs.androidx.activity
     implementation libs.androidx.constraintlayout
     implementation libs.firebase.crashlytics
+    implementation libs.firebase.messaging
     testImplementation libs.junit
     androidTestImplementation libs.androidx.junit
     androidTestImplementation libs.androidx.espresso.core
@@ -113,26 +114,21 @@ dependencies {
     //MPAndroidChart
     implementation libs.mpandroidchart
 
-    //BlurView
-    implementation libs.blurview
-
     //Chat bubble
     implementation libs.balloon
-
-    //reveal
-    implementation libs.easyreveal
 
     implementation libs.firebase.crashlytics
     implementation libs.review
     implementation libs.app.update
 
-    //color picker
-    implementation libs.colorpickerview
-
     // Glide for image loading
     implementation libs.glide
 
     implementation libs.okhttp
+
+    // Room (SQLite ORM)
+    implementation libs.androidx.room.runtime
+    annotationProcessor libs.androidx.room.compiler
 }
 
 

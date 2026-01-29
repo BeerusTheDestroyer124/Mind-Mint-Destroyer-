@@ -11,7 +11,7 @@
     <string name="time_focused">Time Focused</string>
     <string name="demo_time">24h 24m</string>
     <string name="grant_permission">Grant Accessibility Permission</string>
-    <string name="next">Next</string>
+    <string name="next">Continue</string>
     <string name="turn_off_battery_optimisation">Turn off battery optimisation</string>
     <string name="heading1">Take Control of Your Time!</string>
     <string name="heading2">Focus on What Matters!</string>
@@ -43,7 +43,7 @@
     <string name="step2allow">2. Click on Allow</string>
     <string name="hello">Hello</string>
     <string name="demo_coin">52</string>
-    <string name="focus_mode">Focus Mode</string>
+    <string name="focus_mode">Focus\nMode</string>
     <string name="work_mode">Work Mode</string>
     <string name="youtube_shorts">YouTube Shorts</string>
     <string name="instagram_reels">Instagram Reels</string>
@@ -116,7 +116,7 @@
     <string name="overlayPermission">Overlay Permission</string>
     <string name="overlayPermissionDesc">Overlay permission is required for app blocking.</string>
     <string name="overlayPermissionStep2">2. Turn on the switch next to Mind Mint</string>
-    <string name="demo_hello">Hello, \ngtxPrime \uD83D\uDC4B</string>
+    <string name="demo_hello">gtxPrime</string>
     <string name="hello_hand"> \uD83D\uDC4B</string>
     <string name="pieRadius">Pie Radius</string>
     <string name="pieGlow">Pie Glow</string>
@@ -134,7 +134,7 @@
     <string name="batter_notice">If app stops working in the background, try turning off battery optimization</string>
     <string name="set_reminder_time">Set Reminder Time</string>
     <string name="set_block_time">Set Block Time</string>
-    <string name="accurate">To make sure that you\'re notified at the right time, grant Tasks permission to set alarms and reminders.</string>
+    <string name="accurate">To make sure that you\'re notified at the right time, grant Tasks permission.</string>
     <string name="ok">Ok</string>
     <string name="cancel">Cancel</string>
     <string name="repeats">Repeats</string>
@@ -146,5 +146,54 @@
     <string name="what_s_your_first_name">What\'s your first name?</string>
     <string name="dark">Dark</string>
     <string name="light">Light</string>
+    <string name="welcome_back">welcome back</string>
+    <string name="quit">Quit</string>
+    <string name="tasks">Tasks</string>
+    <string name="home">Home</string>
+    <string name="habits">Habits</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="add_habits">Add habits</string>
+    <string name="completed">Completed</string>
+    <string name="task_icon">Task icon</string>
+
+    <!-- Widget Strings -->
+    <string name="focus_timer">Focus Timer</string>
+    <string name="pomodoro">Pomodoro</string>
+    <string name="tap_to_start">Tap to Start</string>
+    <string name="running">Running</string>
+    <string name="paused">Paused</string>
+    <string name="break_time">Break Time</string>
+    <string name="widget_focus_desc">Set Timer</string>
+    <string name="widget_pomodoro_desc">Pomodoro Focus</string>
+
+    <!-- Refined Widget Strings -->
+    <string name="widget_tasks_label">Tasks List</string>
+    <string name="widget_tasks_desc">View and manage your daily tasks directly from your home screen.</string>
+
+    <string name="widget_habits_label">Habit Tracker</string>
+    <string name="widget_habits_desc">Keep track of your daily habits and maintain your streaks.</string>
+
+    <string name="widget_focus_label">Focus Timer</string>
+    <string name="widget_focus_desc_new">Start a custom focus session to enhance your productivity.</string>
+
+    <string name="widget_pomodoro_label">Pomodoro Timer</string>
+    <string name="widget_pomodoro_desc_new">Use the Pomodoro technique to balance work and breaks effectively.</string>
+
+    <string name="widget_screen_time_label">Screen Time Stats</string>
+    <string name="widget_screen_time_desc">Monitor your daily screen time and track scrolling habits.</string>
+    
+    <string name="onboarding_heading1">Master your focus</string>
+    <string name="onboarding_desc1">Stop doomscrolling. Start doing. Let your mind enter a state of deep flow.</string>
+    <string name="onboarding_heading2">Build Atomic Rituals</string>
+    <string name="onboarding_desc2">Small habits, big changes. Stack your wins one by one.</string>
+    <string name="onboarding_heading3">Protect your focus</string>
+    <string name="onboarding_desc3">Block distractions instantly. Take back control from the algorithm!</string>
+    <string name="onboarding_heading4">Visualize Progress</string>
+    <string name="onboarding_desc4">Watch yourself grow. Track streaks, mood and focus trends.</string>
+    <string name="onboarding_heading5">Private \u0026 Offline</string>
+    <string name="onboarding_desc5">Your data stays on your device. No cloud uploads, no tracking 100% secure.</string>
+    <string name="skip">Skip</string>
+
 
 </resources>

@@ -6,8 +6,7 @@ import android.content.SharedPreferences;
 public class MintCrystals {
     private static final String PREFS_NAME = "PeaceCoinsPrefs";
     private static final String COINS_KEY = "PeaceCoins";
-
-    private SharedPreferences prefs;
+    private final SharedPreferences prefs;
 
     public MintCrystals(Context context) {
         prefs = context.getApplicationContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);

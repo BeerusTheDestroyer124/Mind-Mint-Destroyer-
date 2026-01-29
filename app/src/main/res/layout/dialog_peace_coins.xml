@@ -1,662 +1,396 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:elevation="8dp"
-    android:padding="10dp"
-    app:cardBackgroundColor="?attr/secondaryColor"
-    app:cardCornerRadius="24dp"
-    app:cardPreventCornerOverlap="true"
-    app:cardUseCompatPadding="true"
-    tools:ignore="HardcodedText">
+    android:layout_margin="20dp"
+    android:background="@drawable/rounded_bg"
+    android:backgroundTint="?attr/surface_card"
+    android:paddingBottom="32dp"
+    tools:ignore="ContentDescription, HardcodedText, UseCompoundDrawables">
 
-    <LinearLayout
+    <!-- 1. CLOSE BUTTON (Top Right) -->
+    <ImageButton
+        android:id="@+id/btnClose"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginTop="24dp"
+        android:layout_marginEnd="24dp"
+        android:background="@drawable/glass_circle"
+        android:padding="8dp"
+        android:src="@drawable/x"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="?attr/text_secondary" />
+
+    <!-- 2. HEADER & HERO (Floating Bag) -->
+    <ImageView
+        android:id="@+id/ivHeroIcon"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_marginTop="25dp"
+        android:src="@drawable/sack"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+    <!-- Note: In production, replace src with your 3D Gem Bag drawable -->
+
+    <TextView
+        android:id="@+id/tvTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:fontFamily="@font/poppins_semibold"
+        android:text="Mint Crystals"
+        android:textColor="?attr/text_primary"
+        android:textSize="22sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ivHeroIcon" />
+
+    <TextView
+        android:id="@+id/tvSubtitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="48dp"
+        android:gravity="center"
+        android:text="Earn currency by staying focused and building consistent habits."
+        android:textColor="?attr/text_tertiary"
+        android:textSize="12sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvTitle" />
+
+    <!-- 3. SCROLLABLE CONTENT -->
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_horizontal"
-        android:orientation="vertical"
-        android:padding="24dp">
+        android:layout_marginTop="24dp"
+        android:paddingHorizontal="24dp"
+        app:layout_constrainedHeight="true"
+        app:layout_constraintHeight_max="500dp"
+        app:layout_constraintTop_toBottomOf="@id/tvSubtitle">
 
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/closeButton"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:clickable="true"
-            android:contentDescription="Close"
-            android:focusable="true"
-            android:gravity="end"
-            android:text="✕"
-            android:textColor="?attr/tintGlobalColor"
-            android:textSize="20sp" />
+            android:orientation="vertical">
 
-        <ImageView
-            android:id="@+id/coinSackImage"
-            android:layout_width="110dp"
-            android:layout_height="110dp"
-            android:layout_marginTop="4dp"
-            android:contentDescription="@string/app_name"
-            android:src="@drawable/sack" />
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/coinInfoText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:fontFamily="sans-serif-medium"
-            android:gravity="center"
-            android:text="Mint Crystals are earned by focusing and completing tasks."
-            android:textColor="?attr/tintGlobalColor"
-            android:textSize="14sp" />
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/coinEconomyTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:fontFamily="sans-serif"
-            android:gravity="center"
-            android:text="Crystal Economy"
-            android:textColor="?attr/tintGlobalColor"
-            android:textSize="20sp"
-            android:textStyle="bold" />
-
-        <ScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:scrollbars="none">
+            <!-- SECTION A: BASE INCOME -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:letterSpacing="0.1"
+                android:text="BASE INCOME"
+                android:textColor="?attr/text_tertiary"
+                android:textSize="11sp"
+                android:textStyle="bold" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:baselineAligned="false"
+                android:orientation="horizontal">
 
-                <!-- Section: Tasks & Habits (card) -->
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="match_parent"
+                <!-- Task Card (Emerald) -->
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    app:cardBackgroundColor="@android:color/transparent"
-                    app:cardCornerRadius="12dp"
-                    app:strokeColor="?attr/embeddedCards"
-                    app:strokeWidth="1dp">
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_surface_glass"
+                    android:backgroundTint="?attr/surface_nested"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_gravity="center"
+                        android:background="@drawable/glass_circle"
+                        android:backgroundTint="?attr/browser_bg"
+                        android:padding="8dp"
+                        android:src="@drawable/list_todo"
+                        app:tint="?attr/econ_emerald_text" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="14dp">
+                        android:layout_marginTop="8dp"
+                        android:text="+2"
+                        android:textColor="?attr/text_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
 
-                        <com.google.android.material.textview.MaterialTextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="sans-serif-medium"
-                            android:text="🪙  Tasks &amp; Habits"
-                            android:textColor="?attr/tintGlobalColor"
-                            android:textSize="16sp" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="PER TASK"
+                        android:textColor="?attr/text_tertiary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
 
-                        <com.google.android.material.textview.MaterialTextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:fontFamily="sans-serif"
-                            android:lineSpacingMultiplier="1.3"
-                            android:text="✅ Tasks: +2 each (habit-related tasks excluded)\n✅ Habits: +5 each"
-                            android:textColor="?attr/tintGlobalColor"
-                            android:textSize="14sp" />
-
-                    </LinearLayout>
-
-                </com.google.android.material.card.MaterialCardView>
-
-                <!-- Section: Focus Timer Rewards (card) -->
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="match_parent"
+                <!-- Habit Card (Amber) -->
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    app:cardBackgroundColor="@android:color/transparent"
-                    app:cardCornerRadius="12dp"
-                    app:strokeColor="?attr/embeddedCards"
-                    app:strokeWidth="1dp">
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_surface_glass"
+                    android:backgroundTint="?attr/surface_nested"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
+
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_gravity="center"
+                        android:background="@drawable/glass_circle"
+                        android:backgroundTint="?attr/econ_amber_bg"
+                        android:padding="8dp"
+                        android:src="@drawable/flame"
+                        app:tint="?attr/econ_amber_text" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="14dp">
+                        android:layout_marginTop="8dp"
+                        android:text="+5"
+                        android:textColor="?attr/text_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
 
-                        <com.google.android.material.textview.MaterialTextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="sans-serif-medium"
-                            android:text="⏱️  Focus Timer Rewards"
-                            android:textColor="?attr/tintGlobalColor"
-                            android:textSize="16sp" />
-
-                        <androidx.constraintlayout.widget.ConstraintLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:padding="8dp">
-
-                            <!-- Baseline progress line -->
-                            <View
-                                android:id="@+id/focusBaseline"
-                                android:layout_width="0dp"
-                                android:layout_height="2dp"
-                                android:alpha="0.6"
-                                android:background="?attr/tintGlobalColor"
-                                app:layout_constraintBottom_toBottomOf="parent"
-                                app:layout_constraintEnd_toEndOf="parent"
-                                app:layout_constraintStart_toStartOf="parent"
-                                app:layout_constraintTop_toTopOf="parent"
-                                app:layout_constraintVertical_bias="0.5" />
-
-                            <androidx.constraintlayout.helper.widget.Flow
-                                android:id="@+id/flowTicks"
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                app:constraint_referenced_ids="tick30,tick60,tick90,tick120,tick150,tick180"
-                                app:flow_horizontalAlign="center"
-                                app:flow_horizontalStyle="spread_inside"
-                                app:flow_verticalAlign="top"
-                                app:flow_wrapMode="none"
-                                app:layout_constraintEnd_toEndOf="parent"
-                                app:layout_constraintStart_toStartOf="parent"
-                                app:layout_constraintTop_toTopOf="parent" />
-
-                            <!-- Reusable TICK block -->
-                            <!-- 30m -->
-                            <androidx.constraintlayout.widget.ConstraintLayout
-                                android:id="@+id/tick30"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:paddingHorizontal="4dp"
-                                android:paddingVertical="6dp">
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt30Bonus"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:fontFamily="sans-serif-medium"
-                                    android:text="+2"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="12sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toTopOf="parent" />
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt30ArrowUp"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="▲"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="11sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/txt30Bonus" />
-
-                                <View
-                                    android:id="@+id/line30"
-                                    android:layout_width="2dp"
-                                    android:layout_height="28dp"
-                                    android:alpha="0.7"
-                                    android:background="?attr/tintGlobalColor"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/txt30ArrowUp" />
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt30ArrowDown"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="▼"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="11sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/line30" />
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt30Distance"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
-                                    android:fontFamily="sans-serif"
-                                    android:text="30m"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="12sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/txt30ArrowDown" />
-
-                            </androidx.constraintlayout.widget.ConstraintLayout>
-
-                            <!-- 60m -->
-                            <androidx.constraintlayout.widget.ConstraintLayout
-                                android:id="@+id/tick60"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:paddingHorizontal="4dp"
-                                android:paddingVertical="6dp">
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt60Bonus"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:fontFamily="sans-serif-medium"
-                                    android:text="+5"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="12sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toTopOf="parent" />
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt60ArrowUp"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="▲"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="11sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/txt60Bonus" />
-
-                                <View
-                                    android:id="@+id/line60"
-                                    android:layout_width="2dp"
-                                    android:layout_height="28dp"
-                                    android:alpha="0.7"
-                                    android:background="?attr/tintGlobalColor"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/txt60ArrowUp" />
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt60ArrowDown"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="▼"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="11sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/line60" />
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt60Distance"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
-                                    android:fontFamily="sans-serif"
-                                    android:text="60m"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="12sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/txt60ArrowDown" />
-
-                            </androidx.constraintlayout.widget.ConstraintLayout>
-
-                            <!-- 90m -->
-                            <androidx.constraintlayout.widget.ConstraintLayout
-                                android:id="@+id/tick90"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:paddingHorizontal="4dp"
-                                android:paddingVertical="6dp">
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt90Bonus"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:fontFamily="sans-serif-medium"
-                                    android:text="+7"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="12sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toTopOf="parent" />
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt90ArrowUp"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="▲"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="11sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/txt90Bonus" />
-
-                                <View
-                                    android:id="@+id/line90"
-                                    android:layout_width="2dp"
-                                    android:layout_height="28dp"
-                                    android:alpha="0.7"
-                                    android:background="?attr/tintGlobalColor"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/txt90ArrowUp" />
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt90ArrowDown"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="▼"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="11sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/line90" />
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt90Distance"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
-                                    android:fontFamily="sans-serif"
-                                    android:text="90m"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="12sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/txt90ArrowDown" />
-
-                            </androidx.constraintlayout.widget.ConstraintLayout>
-
-                            <!-- 120m -->
-                            <androidx.constraintlayout.widget.ConstraintLayout
-                                android:id="@+id/tick120"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:paddingHorizontal="4dp"
-                                android:paddingVertical="6dp">
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt120Bonus"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:fontFamily="sans-serif-medium"
-                                    android:text="+10"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="12sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toTopOf="parent" />
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt120ArrowUp"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="▲"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="11sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/txt120Bonus" />
-
-                                <View
-                                    android:id="@+id/line120"
-                                    android:layout_width="2dp"
-                                    android:layout_height="28dp"
-                                    android:alpha="0.7"
-                                    android:background="?attr/tintGlobalColor"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/txt120ArrowUp" />
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt120ArrowDown"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="▼"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="11sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/line120" />
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt120Distance"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
-                                    android:fontFamily="sans-serif"
-                                    android:text="120m"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="12sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/txt120ArrowDown" />
-
-                            </androidx.constraintlayout.widget.ConstraintLayout>
-
-                            <!-- 150m -->
-                            <androidx.constraintlayout.widget.ConstraintLayout
-                                android:id="@+id/tick150"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:paddingHorizontal="4dp"
-                                android:paddingVertical="6dp">
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt150Bonus"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:fontFamily="sans-serif-medium"
-                                    android:text="+15"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="12sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toTopOf="parent" />
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt150ArrowUp"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="▲"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="11sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/txt150Bonus" />
-
-                                <View
-                                    android:id="@+id/line150"
-                                    android:layout_width="2dp"
-                                    android:layout_height="28dp"
-                                    android:alpha="0.7"
-                                    android:background="?attr/tintGlobalColor"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/txt150ArrowUp" />
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt150ArrowDown"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="▼"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="11sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/line150" />
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt150Distance"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
-                                    android:fontFamily="sans-serif"
-                                    android:text="150m"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="12sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/txt150ArrowDown" />
-
-                            </androidx.constraintlayout.widget.ConstraintLayout>
-
-                            <!-- 180m -->
-                            <androidx.constraintlayout.widget.ConstraintLayout
-                                android:id="@+id/tick180"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:paddingHorizontal="4dp"
-                                android:paddingVertical="6dp">
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt180Bonus"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:fontFamily="sans-serif-medium"
-                                    android:text="+20"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="12sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toTopOf="parent" />
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt180ArrowUp"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="▲"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="11sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/txt180Bonus" />
-
-                                <View
-                                    android:id="@+id/line180"
-                                    android:layout_width="2dp"
-                                    android:layout_height="28dp"
-                                    android:alpha="0.7"
-                                    android:background="?attr/tintGlobalColor"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/txt180ArrowUp" />
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt180ArrowDown"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="▼"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="11sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/line180" />
-
-                                <com.google.android.material.textview.MaterialTextView
-                                    android:id="@+id/txt180Distance"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
-                                    android:fontFamily="sans-serif"
-                                    android:text="180m"
-                                    android:textColor="?attr/tintGlobalColor"
-                                    android:textSize="12sp"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintTop_toBottomOf="@id/txt180ArrowDown" />
-
-                            </androidx.constraintlayout.widget.ConstraintLayout>
-
-                        </androidx.constraintlayout.widget.ConstraintLayout>
-
-                    </LinearLayout>
-
-                </com.google.android.material.card.MaterialCardView>
-
-                <!-- Section: Penalties (card) -->
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    app:cardBackgroundColor="@android:color/transparent"
-                    app:cardCornerRadius="12dp"
-                    app:strokeColor="?attr/embeddedCards"
-                    app:strokeWidth="1dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="14dp">
+                        android:text="PER HABIT"
+                        android:textColor="?attr/text_tertiary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
 
-                        <com.google.android.material.textview.MaterialTextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="sans-serif-medium"
-                            android:text="⚠️  Penalties"
-                            android:textColor="?attr/tintGlobalColor"
-                            android:textSize="16sp" />
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:fontFamily="sans-serif"
-                            android:lineSpacingMultiplier="1.3"
-                            android:text="⚠️ Stopped timer before limit: −3\n⚠️ Ignored 5 scroll reminders in a day: −2"
-                            android:textColor="?attr/tintGlobalColor"
-                            android:textSize="11sp" />
-
-                    </LinearLayout>
-
-                </com.google.android.material.card.MaterialCardView>
-
-                <!-- Section: Coming Soon (card) -->
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:layout_marginBottom="4dp"
-                    app:cardBackgroundColor="@android:color/transparent"
-                    app:cardCornerRadius="12dp"
-                    app:strokeColor="?attr/embeddedCards"
-                    app:strokeWidth="1dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="14dp">
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="sans-serif-medium"
-                            android:text="🛍️  Coming soon"
-                            android:textColor="?attr/tintGlobalColor"
-                            android:textSize="16sp" />
-
-                        <com.google.android.material.textview.MaterialTextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:fontFamily="sans-serif"
-                            android:lineSpacingMultiplier="1.3"
-                            android:text="Spend crystals in the shop and discover more ways to earn."
-                            android:textColor="?attr/tintGlobalColor"
-                            android:textSize="14sp" />
-
-                    </LinearLayout>
-
-                </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
 
             </LinearLayout>
 
-        </ScrollView>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:layout_marginBottom="8dp"
+                android:letterSpacing="0.1"
+                android:text="FOCUS MULTIPLIER"
+                android:textColor="?attr/text_tertiary"
+                android:textSize="11sp"
+                android:textStyle="bold" />
 
-    </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:backgroundTint="?attr/surface_nested"
+                android:background="@drawable/bg_surface_glass"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-</com.google.android.material.card.MaterialCardView>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="24dp"
+                    android:gravity="center_vertical">
 
+                    <ImageView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:background="@drawable/glass_circle"
+                        android:backgroundTint="?attr/brand_tint_bg"
+                        android:padding="8dp"
+                        android:src="@android:drawable/ic_menu_recent_history"
+                        app:tint="?attr/brand_pink" />
 
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="Rewards scale with duration"
+                        android:textColor="?attr/text_secondary"
+                        android:textSize="12sp" />
+
+                </LinearLayout>
+
+                <!-- TIMELINE VISUALIZATION -->
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <!-- The Line -->
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="2dp"
+                        android:background="?attr/econ_timeline_line"
+                        app:layout_constraintBottom_toBottomOf="@+id/node30"
+                        app:layout_constraintEnd_toEndOf="@+id/node180"
+                        app:layout_constraintStart_toStartOf="@+id/node30"
+                        app:layout_constraintTop_toTopOf="@+id/node30" />
+
+                    <!-- Node 30m -->
+                    <include
+                        android:id="@+id/node30"
+                        layout="@layout/item_timeline_node"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:layout_constraintEnd_toStartOf="@id/node60"
+                        app:layout_constraintHorizontal_chainStyle="spread_inside"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <!-- Node 60m -->
+                    <include
+                        android:id="@+id/node60"
+                        layout="@layout/item_timeline_node"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:layout_constraintEnd_toStartOf="@id/node90"
+                        app:layout_constraintStart_toEndOf="@id/node30"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <!-- Node 90m -->
+                    <include
+                        android:id="@+id/node90"
+                        layout="@layout/item_timeline_node"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:layout_constraintEnd_toStartOf="@id/node120"
+                        app:layout_constraintStart_toEndOf="@id/node60"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <!-- Node 120m -->
+                    <include
+                        android:id="@+id/node120"
+                        layout="@layout/item_timeline_node"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:layout_constraintEnd_toStartOf="@id/node150"
+                        app:layout_constraintStart_toEndOf="@id/node90"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <!-- Node 150m -->
+                    <include
+                        android:id="@+id/node150"
+                        layout="@layout/item_timeline_node"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:layout_constraintEnd_toStartOf="@id/node180"
+                        app:layout_constraintStart_toEndOf="@id/node120"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <!-- Node 180m -->
+                    <include
+                        android:id="@+id/node180"
+                        layout="@layout/item_timeline_node"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@id/node150"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+            </LinearLayout>
+
+            <!-- SECTION C: PENALTIES -->
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:background="@drawable/bg_surface_glass"
+                android:backgroundTint="?attr/status_error_bg"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:id="@+id/penaltyHeader"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent">
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@android:drawable/ic_dialog_alert"
+                        app:tint="@color/icon_critical" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:letterSpacing="0.1"
+                        android:text="PENALTIES"
+                        android:textColor="?attr/status_error_text"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="vertical"
+                    app:layout_constraintTop_toBottomOf="@id/penaltyHeader">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Stopped timer early"
+                            android:textColor="?attr/status_error_text"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="-3 Crystals"
+                            android:layout_marginStart="5dp"
+                            android:textColor="?attr/status_error_icon"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Ignored 5 warnings"
+                            android:textColor="?attr/status_error_text"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="-2 Crystals"
+                            android:layout_marginStart="5dp"
+                            android:textColor="?attr/status_error_icon"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </LinearLayout>
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

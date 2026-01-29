@@ -149,11 +149,4 @@ public class AnalogClockView extends View {
         this.timeChangeListener = listener;
     }
 
-    public int getHour() {
-        return hour;
-    }
-
-    public int getMinute() {
-        return minute;
-    }
 }

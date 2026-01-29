@@ -8,61 +8,10 @@
     android:background="@color/mainBgColor"
     tools:ignore="ContentDescription">
 
-    <eightbitlab.com.blurview.BlurTarget
-        android:id="@+id/blurTarget"
+    <com.gxdevs.mindmint.Views.NebulaStarfieldView
+        android:id="@+id/starFieldView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
-
-            <com.gxdevs.mindmint.Components.NebulaStarfieldView
-                android:id="@+id/starFieldView"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" />
-
-            <View
-                android:id="@+id/arcTopLeft"
-                android:layout_width="550dp"
-                android:layout_height="550dp"
-                android:layout_marginStart="-200dp"
-                android:layout_marginTop="-200dp"
-                android:background="@drawable/main_bg_gradient"
-                android:backgroundTint="#B4FD7D81"
-                android:importantForAccessibility="no"
-                android:scaleType="centerCrop"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <View
-                android:id="@+id/arcBottomRight"
-                android:layout_width="550dp"
-                android:layout_height="550dp"
-                android:layout_marginEnd="-200dp"
-                android:layout_marginBottom="-200dp"
-                android:background="@drawable/main_bg_gradient"
-                android:backgroundTint="#8014B8A6"
-                android:importantForAccessibility="no"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent" />
-
-            <View
-                android:id="@+id/arcBottomLeft"
-                android:layout_width="550dp"
-                android:layout_height="550dp"
-                android:layout_marginStart="-350dp"
-                android:background="@drawable/main_bg_gradient"
-                android:backgroundTint="#D9A78BFA"
-                android:importantForAccessibility="no"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent" />
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-    </eightbitlab.com.blurview.BlurTarget>
+        android:layout_height="match_parent" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/toolbar"
@@ -93,13 +42,26 @@
             android:layout_marginStart="-20dp"
             android:alpha="0.8"
             android:background="@drawable/pill_bg"
+            android:backgroundTint="?attr/surface_card"
             android:fontFamily="sans-serif-medium"
             android:text="@string/demo_coin"
-            android:textColor="?attr/tintGlobalColor"
+            android:textColor="?attr/text_primary"
             android:textSize="14sp"
             app:layout_constraintBottom_toBottomOf="@+id/coinImg"
             app:layout_constraintStart_toEndOf="@+id/coinImg"
             app:layout_constraintTop_toTopOf="@+id/coinImg" />
+
+        <ImageView
+            android:id="@+id/settingsBtn"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_marginEnd="20dp"
+            android:padding="10dp"
+            android:src="@drawable/settings"
+            app:tint="?attr/tintGlobalColor"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -114,8 +76,8 @@
 
         <com.airbnb.lottie.LottieAnimationView
             android:id="@+id/lottie"
-            android:layout_width="300dp"
-            android:layout_height="300dp"
+            android:layout_width="270dp"
+            android:layout_height="270dp"
             android:layout_gravity="center"
             app:lottie_autoPlay="true"
             app:lottie_fileName="ruby.json"
@@ -123,8 +85,8 @@
 
         <me.tankery.lib.circularseekbar.CircularSeekBar
             android:id="@+id/circularProgress"
-            android:layout_width="320dp"
-            android:layout_height="320dp"
+            android:layout_width="270dp"
+            android:layout_height="270dp"
             android:layout_gravity="center"
             app:cs_circle_color="@color/sexyGrey"
             app:cs_circle_progress_color="@color/brainColor"
@@ -140,14 +102,14 @@
         <!-- Crystal Container with Growing Effect using custom mask logic -->
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/crystalContainer"
-            android:layout_width="150dp"
-            android:layout_height="150dp"
+            android:layout_width="140dp"
+            android:layout_height="140dp"
             android:layout_gravity="center">
 
             <com.gxdevs.mindmint.Views.RevealMaskImageView
                 android:id="@+id/crystalColor"
-                android:layout_width="150dp"
-                android:layout_height="150dp"
+                android:layout_width="140dp"
+                android:layout_height="140dp"
                 android:elevation="2dp"
                 android:src="@drawable/ruby"
                 app:layout_constraintBottom_toBottomOf="parent"
@@ -157,8 +119,8 @@
 
             <ImageView
                 android:id="@+id/crystalBase"
-                android:layout_width="150dp"
-                android:layout_height="150dp"
+                android:layout_width="140dp"
+                android:layout_height="140dp"
                 android:src="@drawable/ruby"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -176,11 +138,31 @@
         android:layout_marginTop="30dp"
         android:fontFamily="sans-serif-light"
         android:textColor="?attr/tintGlobalColor"
-        android:textSize="60sp"
+        android:textSize="50sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/progressContainer" />
+
+    <TextView
+        android:id="@+id/pomodoroIndicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:text="Pomodoro Active"
+        android:textColor="?attr/tintGlobalColor"
+        android:textSize="16sp"
+        android:fontFamily="sans-serif-medium"
+        android:background="@drawable/pill_bg"
+        android:backgroundTint="?attr/glass_surface"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/timerText" />
 
     <TextView
         android:id="@+id/instructionText"
@@ -194,66 +176,122 @@
         android:textSize="14sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/timerText" />
+        app:layout_constraintTop_toBottomOf="@+id/pomodoroIndicator" />
 
-    <com.google.android.material.card.MaterialCardView
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/permissionCard"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="30dp"
-        android:layout_marginTop="12dp"
-        android:layout_marginEnd="30dp"
-        app:cardBackgroundColor="?attr/secondaryColor"
-        app:cardCornerRadius="12dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="24dp"
+        android:layout_marginEnd="20dp"
+        android:background="@drawable/bg_surface_glass"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        android:padding="10dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/instructionText"
-        app:strokeColor="?attr/embeddedCards"
-        app:strokeWidth="1dp">
+        app:layout_constraintTop_toBottomOf="@+id/instructionText"> <!-- Ripple Effect -->
 
-        <eightbitlab.com.blurview.BlurView
-            android:id="@+id/permissionBlur"
+        <ImageView
+            android:id="@+id/frameAlertIcon"
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:layout_gravity="center"
+            android:background="@drawable/glass_circle"
+            android:padding="8dp"
+            android:src="@drawable/alarm"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="?attr/status_warning_icon" />
+
+        <!-- Title -->
+        <TextView
+            android:id="@+id/tvAlertTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="8dp"
+            android:text="Permission Required"
+            android:textColor="?attr/text_primary"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toStartOf="@id/ivArrow1"
+            app:layout_constraintStart_toEndOf="@id/frameAlertIcon"
+            app:layout_constraintTop_toTopOf="@id/frameAlertIcon" />
+
+        <!-- Description -->
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:lineSpacingExtra="2dp"
+            android:text="@string/accurate"
+            android:textColor="?attr/text_tertiary"
+            android:textSize="11sp"
+            app:layout_constraintEnd_toEndOf="@id/tvAlertTitle"
+            app:layout_constraintStart_toStartOf="@id/tvAlertTitle"
+            app:layout_constraintTop_toBottomOf="@id/tvAlertTitle" />
+
+        <!-- Arrow Icon -->
+        <ImageView
+            android:id="@+id/ivArrow1"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@drawable/ic_right_arrow"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="?attr/text_tertiary" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <LinearLayout
+        android:id="@+id/topicsContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginBottom="24dp"
+        app:layout_constraintBottom_toTopOf="@+id/buttonCard">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Select Topic"
+            android:textSize="12sp"
+            android:textAllCaps="true"
+            android:textStyle="bold"
+            android:alpha="0.6"
+            android:layout_marginStart="30dp"
+            android:textColor="?attr/tintGlobalColor"
+            android:fontFamily="sans-serif-medium" />
+
+        <HorizontalScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:scrollbars="none"
+            android:clipToPadding="false"
+            android:paddingStart="30dp"
+            android:paddingEnd="30dp"
+            android:layout_marginTop="10dp">
 
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:layout_width="match_parent"
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/topicsChipGroup"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:padding="10dp">
+                app:singleSelection="true"
+                app:selectionRequired="false"
+                app:chipSpacingHorizontal="10dp"
+                android:animateLayoutChanges="true">
+                
+                <!-- Chips will be added dynamically -->
 
-                <TextView
-                    android:id="@+id/permissionText"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
-                    android:padding="6dp"
-                    android:text="@string/accurate"
-                    android:textColor="?attr/tintGlobalColor"
-                    android:textSize="12sp"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toStartOf="@+id/permissionArrow"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+            </com.google.android.material.chip.ChipGroup>
 
-                <ImageView
-                    android:id="@+id/permissionArrow"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginEnd="6dp"
-                    android:contentDescription="@string/decor"
-                    android:rotation="180"
-                    android:src="@drawable/ic_arrow_back"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:tint="?attr/tintGlobalColor" />
+        </HorizontalScrollView>
 
-            </androidx.constraintlayout.widget.ConstraintLayout>
-
-        </eightbitlab.com.blurview.BlurView>
-
-    </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/buttonCard"
@@ -261,82 +299,57 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="30dp"
         android:layout_marginEnd="30dp"
-        android:layout_marginBottom="100dp"
-        app:cardBackgroundColor="@color/transparent"
+        android:layout_marginBottom="50dp"
+        app:cardBackgroundColor="?attr/glass_surface"
         app:cardCornerRadius="30dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
-        <eightbitlab.com.blurview.BlurView
-            android:id="@+id/btnBlur"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="2">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
+            <Button
+                android:id="@+id/focusStop"
+                android:layout_width="0dp"
+                android:layout_height="60dp"
+                android:layout_weight="1"
+                android:visibility="gone"
+                android:backgroundTint="@color/transparent"
+                android:fontFamily="sans-serif-medium"
+                android:text="Stop"
+                android:gravity="center"
+                android:textAllCaps="false"
+                android:textColor="?attr/tintGlobalColor"
+                android:textSize="20sp"
+                app:cornerRadius="30dp" />
 
-                <Button
-                    android:id="@+id/focusStart"
-                    android:layout_width="match_parent"
-                    android:layout_height="60dp"
-                    android:backgroundTint="@color/transparent"
-                    android:fontFamily="sans-serif-medium"
-                    android:text="@string/start"
-                    android:textAllCaps="false"
-                    android:textColor="?attr/tintGlobalColor"
-                    android:textSize="20sp"
-                    app:cornerRadius="30dp" />
+            <View
+                android:id="@+id/btnDivider"
+                android:layout_width="1dp"
+                android:layout_height="match_parent"
+                android:background="?attr/glass_stroke"
+                android:visibility="gone" />
 
-            </LinearLayout>
+            <Button
+                android:id="@+id/focusStart"
+                android:layout_width="0dp"
+                android:layout_height="60dp"
+                android:layout_weight="2"
+                android:backgroundTint="@color/transparent"
+                android:fontFamily="sans-serif-medium"
+                android:text="@string/start"
+                android:gravity="center"
+                android:textAllCaps="false"
+                android:textColor="?attr/tintGlobalColor"
+                android:textSize="20sp"
+                app:cornerRadius="30dp" />
 
-        </eightbitlab.com.blurview.BlurView>
+        </LinearLayout>
 
     </com.google.android.material.card.MaterialCardView>
 
-    <LinearLayout
-        android:id="@+id/themeSwitchRow"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:gravity="center"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/buttonCard"
-        android:orientation="horizontal">
-
-        <TextView
-            android:id="@+id/labelLight"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="12dp"
-            android:alpha="0.8"
-            android:fontFamily="sans-serif-medium"
-            android:text="@string/light"
-            android:textColor="?attr/tintGlobalColor"
-            android:textSize="14sp" />
-
-        <com.google.android.material.materialswitch.MaterialSwitch
-            android:id="@+id/themeSwitch"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:checked="false"
-            app:thumbTint="?attr/switchThumb"
-            app:trackTint="?attr/switchTrack" />
-
-        <TextView
-            android:id="@+id/labelDark"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:alpha="0.8"
-            android:fontFamily="sans-serif-medium"
-            android:text="@string/dark"
-            android:textColor="?attr/tintGlobalColor"
-            android:textSize="14sp" />
-
-    </LinearLayout>
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>

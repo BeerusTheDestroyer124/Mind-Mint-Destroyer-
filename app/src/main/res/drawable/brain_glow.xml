@@ -4,7 +4,7 @@
     <gradient
         android:angle="270"
         android:endColor="@color/transparent"
-        android:gradientRadius="120"
+        android:gradientRadius="130"
         android:startColor="@color/brainColor"
         android:type="radial" />
 

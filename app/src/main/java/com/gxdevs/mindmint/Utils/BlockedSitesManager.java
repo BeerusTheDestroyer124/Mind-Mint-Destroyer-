@@ -27,28 +27,6 @@ public class BlockedSitesManager {
         editor.apply();
     }
 
-    public static void seedDefaultsIfMissing(@NonNull Context context) {
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
-        Set<String> domains = new LinkedHashSet<>(sp.getStringSet(PREF_BLOCKED_DOMAINS_SET, new HashSet<>()));
-        Set<String> exacts = new LinkedHashSet<>(sp.getStringSet(PREF_BLOCKED_EXACT_URLS_SET, new HashSet<>()));
-        boolean changed = false;
-        // Hardcoded defaults (previously in Utils)
-        String[] defaultExactUrls = new String[]{"youtube.com/shorts", "instagram.com/reel", "snapchat.com/spotlight"};
-
-        for (String e : defaultExactUrls) {
-            if (!exacts.contains(e)) {
-                exacts.add(e);
-                changed = true;
-            }
-        }
-        if (changed) {
-            SharedPreferences.Editor editor = sp.edit();
-            editor.putStringSet(PREF_BLOCKED_DOMAINS_SET, domains);
-            editor.putStringSet(PREF_BLOCKED_EXACT_URLS_SET, exacts);
-            editor.apply();
-        }
-    }
-
     public static boolean hasSeededDefaults(@NonNull Context context) {
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
         return sp.getBoolean(PREF_DEFAULT_SITES_SEEDED, false);
@@ -59,18 +37,12 @@ public class BlockedSitesManager {
                 .edit().putBoolean(PREF_DEFAULT_SITES_SEEDED, true).apply();
     }
 
-    /**
-     * Seed default items only if it's the first time (flag not set) AND current lists are empty.
-     * After adding, marks the one-time flag so we never seed again from any entry point.
-     */
     public static void seedDefaultsIfFirstTimeAndEmpty(@NonNull Context context) {
         if (hasSeededDefaults(context)) return;
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
         Set<String> domains = new LinkedHashSet<>(sp.getStringSet(PREF_BLOCKED_DOMAINS_SET, new HashSet<>()));
         Set<String> exacts = new LinkedHashSet<>(sp.getStringSet(PREF_BLOCKED_EXACT_URLS_SET, new HashSet<>()));
-        if (!domains.isEmpty() || !exacts.isEmpty())
-            return; // user already has entries; don't seed and don't flip flag
-
+        if (!domains.isEmpty() || !exacts.isEmpty()) return;
         String[] defaultExactUrls = new String[]{"https://youtube.com/shorts", "https://instagram.com/reel", "https://snapchat.com/spotlight"};
         exacts.addAll(Arrays.asList(defaultExactUrls));
         SharedPreferences.Editor editor = sp.edit();

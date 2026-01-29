@@ -18,7 +18,7 @@ public class Task {
     private String repeatOptionsJson; // Store advanced repeat options as JSON
     private boolean isHabit; // mark if this task represents a Habit
     private String habitId; // optional link to Habit
-    private String emoji; // emoji for the task
+    private int icon; // drawable resource ID for the task icon
 
     public enum Priority {
         LOW("Low", 1),
@@ -69,6 +69,7 @@ public class Task {
         this.recurringType = RecurringType.NONE;
         this.isRecurring = false;
         this.hasReminder = false;
+        this.icon = 0; // 0 means no icon set
     }
 
     public Task(String name, String shortDescription, int imageResource) {
@@ -213,12 +214,12 @@ public class Task {
         this.habitId = habitId;
     }
 
-    public String getEmoji() {
-        return emoji;
+    public int getIcon() {
+        return icon;
     }
 
-    public void setEmoji(String emoji) {
-        this.emoji = emoji;
+    public void setIcon(int icon) {
+        this.icon = icon;
     }
 
     // Helper methods

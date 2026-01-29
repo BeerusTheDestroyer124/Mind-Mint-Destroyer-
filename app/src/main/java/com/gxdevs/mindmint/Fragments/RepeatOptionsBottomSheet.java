@@ -2,17 +2,18 @@ package com.gxdevs.mindmint.Fragments;
 
 import android.app.DatePickerDialog;
 import android.app.Dialog;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
@@ -23,6 +24,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.widget.AppCompatButton;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
@@ -30,10 +32,8 @@ import com.google.android.material.button.MaterialButton;
 import com.gxdevs.mindmint.R;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
@@ -74,30 +74,6 @@ public class RepeatOptionsBottomSheet extends BottomSheetDialogFragment {
         public EndType endType = EndType.NEVER;
         public Calendar endDate = Calendar.getInstance();
         public int occurrences = 30;
-
-        public String getDisplayText() {
-            StringBuilder text = new StringBuilder();
-
-            if (frequency == 1) {
-                text.append("Every ").append(frequencyType.getDisplayName());
-            } else {
-                text.append("Every ").append(frequency).append(" ").append(frequencyType.getDisplayName()).append("s");
-            }
-
-            if (frequencyType == FrequencyType.WEEKLY && !weekDays.isEmpty()) {
-                text.append(" on ");
-                String[] dayNames = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-                List<String> selectedDays = new ArrayList<>();
-                for (int day : weekDays) {
-                    if (day >= 1 && day <= 7) {
-                        selectedDays.add(dayNames[day - 1]);
-                    }
-                }
-                text.append(String.join(", ", selectedDays));
-            }
-
-            return text.toString();
-        }
     }
 
     private EditText frequencyNumber;
@@ -110,11 +86,11 @@ public class RepeatOptionsBottomSheet extends BottomSheetDialogFragment {
     private RadioGroup endRadioGroup;
     private RadioButton radioNever, radioOnDate, radioAfterOccurrences;
     private EditText endDateInput, occurrencesInput;
-    private Button cancelButton, doneButton;
+    private AppCompatButton cancelButton, doneButton;
 
     // Week day buttons
     private MaterialButton[] weekDayButtons;
-    private boolean[] selectedWeekDays = new boolean[7]; // Sunday to Saturday
+    private final boolean[] selectedWeekDays = new boolean[7]; // Sunday to Saturday
 
     private OnRepeatOptionsListener listener;
     private RepeatOptions currentOptions;
@@ -141,9 +117,10 @@ public class RepeatOptionsBottomSheet extends BottomSheetDialogFragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.bottom_sheet_repeat_options, container, false);
+        return inflater.inflate(R.layout.bottom_sheet_repeat, container, false);
     }
 
+    @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         BottomSheetDialog dialog = (BottomSheetDialog) super.onCreateDialog(savedInstanceState);
@@ -197,8 +174,6 @@ public class RepeatOptionsBottomSheet extends BottomSheetDialogFragment {
         occurrencesInput = view.findViewById(R.id.occurrencesInput);
         cancelButton = view.findViewById(R.id.cancelButton);
         doneButton = view.findViewById(R.id.doneButton);
-
-        // Week day buttons
         weekDayButtons = new MaterialButton[7];
         weekDayButtons[0] = view.findViewById(R.id.btnSunday);
         weekDayButtons[1] = view.findViewById(R.id.btnMonday);
@@ -214,10 +189,10 @@ public class RepeatOptionsBottomSheet extends BottomSheetDialogFragment {
         String[] frequencyTypes = {"day", "week", "month", "year"};
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_spinner_item,
+                R.layout.spinner_dropdown_item,
                 frequencyTypes
         );
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        adapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
         frequencyTypeSpinner.setAdapter(adapter);
 
         frequencyTypeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -238,7 +213,6 @@ public class RepeatOptionsBottomSheet extends BottomSheetDialogFragment {
             final int dayIndex = i;
             MaterialButton button = weekDayButtons[i];
 
-            // Ensure button is visible and properly styled
             button.setVisibility(View.VISIBLE);
             updateWeekDayButtonAppearance(dayIndex);
 
@@ -260,14 +234,21 @@ public class RepeatOptionsBottomSheet extends BottomSheetDialogFragment {
             button.setTextColor(getResources().getColor(R.color.white, null));
         } else {
             // Unselected state - white background
-            button.setBackgroundTintList(getResources().getColorStateList(R.color.transparent, null));
-            button.setStrokeColor(getResources().getColorStateList(R.color.sexyGrey, null));
+            ColorStateList colorStateList = ColorStateList.valueOf(getAttrColor(R.attr.sheet_input_bg));
+            button.setBackgroundTintList(colorStateList);
+            button.setStrokeColor(getResources().getColorStateList(R.color.brainColor, null));
             button.setStrokeWidth(20);
-            button.setTextColor(getResources().getColor(R.color.white, null));
+            button.setTextColor(getAttrColor(R.attr.text_primary));
         }
         // Force refresh
         button.invalidate();
         button.requestLayout();
+    }
+
+    private int getAttrColor(int attr) {
+        TypedValue typedValue = new TypedValue();
+        this.requireContext().getTheme().resolveAttribute(attr, typedValue, true);
+        return typedValue.data;
     }
 
     private void setupClickListeners() {

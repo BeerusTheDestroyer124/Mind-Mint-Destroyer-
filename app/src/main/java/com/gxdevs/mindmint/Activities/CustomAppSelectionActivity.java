@@ -58,14 +58,6 @@ public class CustomAppSelectionActivity extends AppCompatActivity implements App
         recyclerViewApps.setAdapter(adapter);
 
         loadInstalledApps();
-        applyColors();
-    }
-
-    private void applyColors() {
-        View arc1 = findViewById(R.id.arcTopLeft);
-        View arc2 = findViewById(R.id.arcBottomRight);
-        View arc3 = findViewById(R.id.arcBottomLeft);
-        Utils.applyAccentColors(arc1, arc2, arc3, this);
     }
 
     private void loadInstalledApps() {
@@ -84,17 +76,12 @@ public class CustomAppSelectionActivity extends AppCompatActivity implements App
 
             for (ResolveInfo info : resolveInfos) {
                 String packageName = info.activityInfo.packageName;
-
                 try {
-                    // Avoid duplicates and skip your own app
                     if (!packageName.equals(myPackageName) && !addedPackages.contains(packageName)) {
                         addedPackages.add(packageName);
-
-                        // Get ApplicationInfo to fetch accurate name and icon
                         ApplicationInfo appInfo = pm.getApplicationInfo(packageName, 0);
                         String appName = pm.getApplicationLabel(appInfo).toString();
                         Drawable icon = pm.getApplicationIcon(appInfo);
-
                         boolean isBlocked = blockedAppPackages.contains(packageName);
                         installedApps.add(new AppInfo(appName, packageName, icon, isBlocked));
                     }
@@ -103,7 +90,6 @@ public class CustomAppSelectionActivity extends AppCompatActivity implements App
                 }
             }
 
-            // Sort alphabetically
             installedApps.sort((a, b) -> a.appName.compareToIgnoreCase(b.appName));
 
             runOnUiThread(() -> {
@@ -129,10 +115,10 @@ public class CustomAppSelectionActivity extends AppCompatActivity implements App
             blockedAppPackages.remove(packageName);
             Log.d("CustomAppSelection", "Removing from block list: " + packageName);
         }
-        // Persist immediately and check result for debugging
+
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putStringSet(AppUsageAccessibilityService.PREF_CUSTOM_BLOCKED_APPS, blockedAppPackages);
-        // Using commit() for immediate feedback during debugging
+
         boolean success = editor.commit();
         if (success) {
             Log.d("CustomAppSelection", "SharedPreferences commit successful. Current blocked apps: " + blockedAppPackages.toString());
@@ -151,6 +137,5 @@ public class CustomAppSelectionActivity extends AppCompatActivity implements App
     @Override
     protected void onResume() {
         super.onResume();
-        applyColors();
     }
 }

@@ -1,0 +1,549 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/app_bg"
+    tools:context=".Activities.HabitCreateActivity"
+    tools:ignore="HardcodedText, ContentDescription, Autofill,TextFields">
+
+    <LinearLayout
+        android:id="@+id/headerContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="30dp"
+        android:orientation="vertical"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/dateDetails"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/poppins_semibold"
+            android:letterSpacing="0.1"
+            android:text="THURSDAY, NOV 28"
+            android:layout_marginTop="15dp"
+            android:textAllCaps="true"
+            android:textColor="?attr/text_tertiary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/greetings"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-light"
+            android:lineSpacingMultiplier="0.8"
+            android:text="Create Ritual"
+            android:textColor="?attr/text_primary"
+            android:textSize="30sp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/welcomeTxt" />
+
+    </LinearLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scroll"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        app:layout_constraintBottom_toTopOf="@+id/buttonsRow"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/headerContainer">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="20dp">
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/nameCard"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="5dp"
+                app:cardBackgroundColor="?attr/surface_card"
+                app:cardCornerRadius="25dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:strokeWidth="0dp">
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="20dp">
+
+                    <ImageView
+                        android:id="@+id/habitTileIcon"
+                        android:layout_width="45dp"
+                        android:layout_height="45dp"
+                        android:background="@drawable/glass_circle"
+                        android:contentDescription="Habit icon"
+                        android:padding="12dp"
+                        android:src="@drawable/flame"
+                        app:layout_constraintBottom_toBottomOf="@+id/habitTitleEdit"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="@+id/habitTitleEdit" />
+
+                    <EditText
+                        android:id="@+id/habitTitleEdit"
+                        android:layout_width="0dp"
+                        android:layout_height="50dp"
+                        android:layout_marginStart="12dp"
+                        android:background="@drawable/bg_input_field"
+                        android:hint="e.g., Deep Work"
+                        android:inputType="textCapSentences"
+                        android:maxLines="1"
+                        android:paddingHorizontal="16dp"
+                        android:textColor="?attr/text_primary"
+                        android:textColorHint="?attr/text_disabled"
+                        android:textSize="18sp"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@+id/habitTileIcon"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rvIcons"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="20dp"
+                        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/habitTitleEdit"
+                        tools:itemCount="8"
+                        tools:listitem="@layout/item_icon_mini" />
+
+                    <View
+                        android:id="@+id/divider1"
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="16dp"
+                        android:background="@color/glass_stroke"
+                        app:layout_constraintTop_toBottomOf="@id/rvIcons" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rvColors"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:gravity="center"
+                        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/divider1"
+                        tools:itemCount="8"
+                        tools:listitem="@layout/item_color_selection" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/detailsCard"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:layout_marginEnd="5dp"
+                app:cardBackgroundColor="?attr/surface_card"
+                app:cardCornerRadius="25dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/nameCard"
+                app:strokeWidth="0dp">
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:animateLayoutChanges="true"
+                    android:padding="20dp">
+
+                    <ImageView
+                        android:id="@+id/goalIcon"
+                        android:layout_width="35dp"
+                        android:layout_height="35dp"
+                        android:background="@drawable/glass_circle"
+                        android:contentDescription="Habit icon"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_target"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <TextView
+                        android:id="@+id/goalTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:textStyle="bold"
+                        android:text="Goal Tracking"
+                        android:textSize="15sp"
+                        app:layout_constraintBottom_toBottomOf="@+id/goalIcon"
+                        app:layout_constraintStart_toEndOf="@+id/goalIcon"
+                        app:layout_constraintTop_toTopOf="@+id/goalIcon" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/goalTrackingSwitch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="?attr/text_primary"
+                        app:thumbTint="?attr/switchThumb"
+                        app:trackTint="?attr/switchTrack"
+                        app:layout_constraintBottom_toBottomOf="@+id/goalIcon"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="@+id/goalIcon" />
+
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:id="@+id/detailsContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="15dp"
+                        android:background="@drawable/bg_input_field"
+                        android:padding="15dp"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/goalIcon">
+
+                        <TextView
+                            android:id="@+id/unitNameLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Unit Name"
+                            android:textAllCaps="true"
+                            android:textColor="?attr/text_tertiary"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent" />
+
+                        <EditText
+                            android:id="@+id/unitName"
+                            android:layout_width="0dp"
+                            android:layout_height="50dp"
+                            android:layout_marginTop="10dp"
+                            android:background="@drawable/bg_input_field"
+                            android:hint="e.g., Glass"
+                            android:inputType="textCapSentences"
+                            android:maxLines="1"
+                            android:paddingHorizontal="16dp"
+                            android:textColor="?attr/text_primary"
+                            android:textColorHint="?attr/text_disabled"
+                            android:textSize="18sp"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toBottomOf="@+id/unitNameLabel" />
+
+                        <TextView
+                            android:id="@+id/dailyNameLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="15dp"
+                            android:text="Daily target"
+                            android:textAllCaps="true"
+                            android:textColor="?attr/text_tertiary"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            app:layout_constraintStart_toStartOf="@+id/dailyTarget"
+                            app:layout_constraintTop_toBottomOf="@+id/unitName" />
+
+                        <EditText
+                            android:id="@+id/dailyTarget"
+                            android:layout_width="0dp"
+                            android:layout_height="50dp"
+                            android:layout_marginTop="6dp"
+                            android:layout_marginEnd="7.5dp"
+                            android:background="@drawable/bg_input_field"
+                            android:hint="e.g., 8"
+                            android:inputType="number"
+                            android:maxLines="1"
+                            android:paddingHorizontal="16dp"
+                            android:textColor="?attr/text_primary"
+                            android:textColorHint="?attr/text_disabled"
+                            android:textSize="18sp"
+                            app:layout_constraintEnd_toStartOf="@+id/oneTapAdds"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toBottomOf="@+id/dailyNameLabel" />
+
+                        <TextView
+                            android:id="@+id/oneTapLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="15dp"
+                            android:text="One tap adds"
+                            android:textAllCaps="true"
+                            android:textColor="?attr/text_tertiary"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            app:layout_constraintStart_toStartOf="@+id/oneTapAdds"
+                            app:layout_constraintTop_toBottomOf="@+id/unitName" />
+
+                        <EditText
+                            android:id="@+id/oneTapAdds"
+                            android:layout_width="0dp"
+                            android:layout_height="50dp"
+                            android:layout_marginStart="7.5dp"
+                            android:layout_marginTop="6dp"
+                            android:background="@drawable/bg_input_field"
+                            android:hint="e.g., 1"
+                            android:inputType="number"
+                            android:maxLines="1"
+                            android:paddingHorizontal="16dp"
+                            android:textColor="?attr/text_primary"
+                            android:textColorHint="?attr/text_disabled"
+                            android:textSize="18sp"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toEndOf="@+id/dailyTarget"
+                            app:layout_constraintTop_toBottomOf="@+id/dailyNameLabel" />
+
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+
+                    <View
+                        android:id="@+id/dividerX1"
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="16dp"
+                        android:background="@color/glass_stroke"
+                        app:layout_constraintTop_toBottomOf="@id/detailsContainer" />
+
+                    <ImageView
+                        android:id="@+id/difficultyIcon"
+                        android:layout_width="35dp"
+                        android:layout_height="35dp"
+                        android:layout_marginTop="15dp"
+                        android:background="@drawable/glass_circle"
+                        android:contentDescription="Habit icon"
+                        android:padding="8dp"
+                        android:src="@drawable/shapes"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/dividerX1" />
+
+                    <TextView
+                        android:id="@+id/difficultyLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:text="Difficulty"
+                        android:textStyle="bold"
+                        android:textSize="15sp"
+                        app:layout_constraintBottom_toBottomOf="@+id/difficultyIcon"
+                        app:layout_constraintStart_toEndOf="@+id/difficultyIcon"
+                        app:layout_constraintTop_toTopOf="@+id/difficultyIcon" />
+
+                    <LinearLayout
+                        android:id="@+id/effortHolder"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="15dp"
+                        android:background="@drawable/bg_segment_container"
+                        android:orientation="horizontal"
+                        android:padding="6dp"
+                        app:layout_constraintBottom_toBottomOf="@+id/difficultyIcon"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@+id/difficultyLabel"
+                        app:layout_constraintTop_toTopOf="@+id/difficultyIcon">
+
+                        <TextView
+                            android:id="@+id/effortEasy"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:paddingVertical="6dp"
+                            android:text="Easy"
+                            android:textColor="?attr/text_tertiary"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/effortMedium"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_segment_selected"
+                            android:gravity="center"
+                            android:paddingVertical="6dp"
+                            android:text="Medium"
+                            android:textColor="?attr/text_primary"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/effortHard"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:paddingVertical="6dp"
+                            android:text="Hard"
+                            android:textColor="?attr/text_tertiary"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <View
+                        android:id="@+id/dividerX2"
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="15dp"
+                        android:background="@color/glass_stroke"
+                        app:layout_constraintTop_toBottomOf="@id/difficultyIcon" />
+
+                    <ImageView
+                        android:id="@+id/moodIcon"
+                        android:layout_width="35dp"
+                        android:layout_marginTop="15dp"
+                        android:layout_height="35dp"
+                        android:background="@drawable/glass_circle"
+                        android:contentDescription="Habit icon"
+                        android:padding="8dp"
+                        android:src="@drawable/smile"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/dividerX2" />
+
+                    <TextView
+                        android:id="@+id/emotionLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:text="Mood Log"
+                        android:textStyle="bold"
+                        android:textSize="15sp"
+                        app:layout_constraintBottom_toBottomOf="@+id/moodIcon"
+                        app:layout_constraintStart_toEndOf="@+id/moodIcon"
+                        app:layout_constraintTop_toTopOf="@+id/moodIcon" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/swAskEmotion"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="?attr/text_primary"
+                        app:thumbTint="?attr/switchThumb"
+                        app:trackTint="?attr/switchTrack"
+                        app:layout_constraintBottom_toBottomOf="@+id/moodIcon"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="@+id/moodIcon" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:id="@+id/descTxt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="20dp"
+                android:drawablePadding="5dp"
+                android:gravity="center"
+                android:letterSpacing="0.1"
+                android:text="DETAILS &amp; TARGETS"
+                android:textColor="?attr/text_tertiary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                app:drawableStartCompat="@drawable/crosshair"
+                app:drawableTint="@color/text_tertiary"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/detailsCard" />
+
+            <EditText
+                android:id="@+id/inputReason"
+                android:layout_width="match_parent"
+                android:layout_height="140dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_input_field"
+                android:gravity="top|start"
+                android:hint="Describe your goal (e.g., Read 10 pages daily)..."
+                android:inputType="textMultiLine"
+                android:padding="16dp"
+                android:textColor="?attr/text_primary"
+                android:textColorHint="?attr/text_disabled"
+                android:textSize="14sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/descTxt" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/subTasksRecyclerView"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:clipToPadding="false"
+                android:nestedScrollingEnabled="false"
+                android:paddingBottom="20dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/inputReason"
+                tools:listitem="@layout/item_task" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/addTaskFAB"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="24dp"
+                android:background="@drawable/bg_dashed_button"
+                android:letterSpacing="0.1"
+                android:text="+ Link a Related Task"
+                android:textAllCaps="false"
+                android:textColor="?attr/text_secondary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/subTasksRecyclerView" />
+
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/buttonsRow"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:layout_marginBottom="20dp"
+        android:padding="10dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnDelete"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="5dp"
+            android:background="@drawable/bg_brand_gradient"
+            android:text="Delete"
+            android:textColor="?attr/tintGlobalColor"
+            android:visibility="gone"
+            app:layout_constraintEnd_toStartOf="@+id/btnDone"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnDone"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
+            android:background="@drawable/bg_brand_gradient"
+            android:text="Save"
+            android:textColor="@color/white"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/btnDelete"
+            app:layout_constraintTop_toTopOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+
+
+
+
+
+
+

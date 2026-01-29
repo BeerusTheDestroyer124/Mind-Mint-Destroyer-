@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/bottom_sheet_shape"
+    android:background="@drawable/bg_sheet_panel"
     android:padding="20dp">
 
     <!-- Title -->
@@ -128,54 +128,36 @@
 
     </FrameLayout>
 
-    <!-- Keyboard Toggle -->
-    <ImageView
-        android:id="@+id/keyboardToggle"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_marginTop="20dp"
-        android:background="@drawable/background_outline"
-        android:importantForAccessibility="no"
-        android:padding="8dp"
-        android:src="@drawable/ic_keyboard"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/analogClockContainer"
-        app:tint="?attr/tintGlobalColor" />
-
-    <!-- Action Buttons -->
     <LinearLayout
         style="?android:attr/buttonBarStyle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="30dp"
         android:orientation="horizontal"
-        app:layout_constraintTop_toBottomOf="@+id/keyboardToggle">
+        app:layout_constraintTop_toBottomOf="@+id/analogClockContainer">
 
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/cancelButton"
-            style="?android:attr/buttonBarButtonStyle"
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_marginEnd="8dp"
             android:layout_weight="1"
-            android:background="@drawable/background_outline"
+            android:background="@drawable/bg_brand_gradient"
             android:fontFamily="@font/inter18regular"
             android:text="@string/cancel"
-            android:textColor="?attr/tintGlobalColor"
+            android:textColor="@color/white"
             android:textSize="16sp" />
 
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/okButton"
-            style="?android:attr/buttonBarButtonStyle"
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:background="@drawable/button_pill_bg"
+            android:background="@drawable/bg_brand_gradient"
             android:fontFamily="@font/inter18regular"
             android:text="@string/ok"
-            android:textColor="?attr/tintGlobalColor"
+            android:textColor="@color/white"
             android:textSize="16sp" />
 
     </LinearLayout>

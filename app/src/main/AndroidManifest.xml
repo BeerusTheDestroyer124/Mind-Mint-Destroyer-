@@ -11,6 +11,7 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Optional feature for compatibility -->
     <uses-feature
         android:name="android.hardware.screen.portrait"
@@ -35,12 +36,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.NoScroll"
         tools:targetApi="31">
-        <activity
-            android:name=".Activities.SettingsActivity"
-            android:exported="false" />
-        <activity
-            android:name=".Activities.TaskActivity"
-            android:exported="false" />
         <activity
             android:name=".Activities.FocusMode"
             android:exported="false" />
@@ -75,13 +70,48 @@
             android:launchMode="singleInstance"
             android:taskAffinity=""
             android:theme="@style/Theme.MindMint.TransparentOverlay" />
-        <activity android:name="com.gxdevs.mindmint.Activities.HabitActivity" />
-        <activity android:name="com.gxdevs.mindmint.Activities.HabitDetailActivity" />
+        <activity android:name="com.gxdevs.mindmint.Activities.HabitCreateActivity" />
         <activity android:name="com.gxdevs.mindmint.Activities.StatsActivity" />
+        <activity android:name="com.gxdevs.mindmint.Activities.HabitStatActivity" />
+        
+        <!-- Transparent activity for widget quick add task -->
+        <activity
+            android:name=".Activities.WidgetQuickAddActivity"
+            android:exported="true"
+            android:launchMode="singleInstance"
+            android:theme="@style/Theme.MindMint.TransparentOverlay"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".Activities.WidgetActionActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MindMint.TransparentOverlay"
+            android:windowSoftInputMode="adjustResize" />
+
+        <receiver
+            android:name=".Widgets.HabitListWidgetProvider"
+            android:label="@string/widget_habits_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.gxdevs.mindmint.ACTION_WIDGET_CLICK" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_habit_list_info" />
+        </receiver>
+
+        <service
+            android:name=".Widgets.HabitListService"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
 
         <service
             android:name=".Services.AppUsageAccessibilityService"
+            android:canRetrieveWindowContent="true"
             android:exported="true"
+            android:foregroundServiceType="specialUse"
+            android:label="@string/app_name"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
@@ -92,6 +122,22 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
         </service>
+
+        <!-- Notification dismiss receiver to rebuild guard notification -->
+        <receiver
+            android:name=".Receivers.NotificationDismissBroadcastReceiver"
+            android:exported="false" />
+
+        <!-- Boot/package update receiver to restart services -->
+        <receiver
+            android:name=".Receivers.BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
         <service
             android:name=".Services.FocusService"
             android:exported="false"
@@ -109,9 +155,11 @@
                 <action android:name="com.gtxprime.mindmint.RESET_APP_TIMES" />
             </intent-filter>
         </receiver>
+
         <receiver
             android:name=".Receivers.ServiceResumeReceiver"
             android:exported="false" />
+
         <receiver
             android:name=".Receivers.BootCompletedReceiver"
             android:enabled="true"
@@ -120,10 +168,98 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
         <receiver
             android:name=".Receivers.TaskReminderReceiver"
             android:enabled="true"
             android:exported="false" />
+
+        <receiver
+            android:name="com.gxdevs.mindmint.Receivers.AccessibilityCheckReceiver"
+            android:exported="false" />
+
+        <service
+            android:name=".Receivers.FirebaseNotificationReceiver"
+            android:exported="false">
+
+        </service>
+
+        <receiver
+            android:name=".Widgets.TasksWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_tasks_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.gxdevs.mindmint.ACTION_TOGGLE_TASK" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/tasks_widget_info" />
+        </receiver>
+
+        <service
+            android:name=".Widgets.TasksWidgetService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
+
+        <receiver
+            android:name=".Widgets.FocusTimerWidgetProvider"
+            android:label="@string/widget_focus_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_focus_timer_info" />
+        </receiver>
+
+        <receiver
+            android:name=".Widgets.ScreenTimeWidgetProvider"
+            android:label="@string/widget_screen_time_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.gxdevs.mindmint.MINDMINT_APP_USAGE_TIME_UPDATED_ACTION" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_screen_time_info" />
+        </receiver>
+
+        <receiver
+            android:name=".Widgets.PomodoroTimerWidgetProvider"
+            android:label="@string/widget_pomodoro_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_pomodoro_timer_info" />
+        </receiver>
+
+
+
     </application>
 
 </manifest>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

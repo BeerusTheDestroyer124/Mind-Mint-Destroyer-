@@ -8,6 +8,112 @@
         <item name="switchTrack">#FFB8BC</item>
         <item name="switchThumb">#FFF6F6</item>
         <item name="embeddedCards">#FFB8BC</item>
+        <item name="glassTints">#FFF6F6</item>
+
+        <!--The final colors-->
+        <!-- Backgrounds -->
+        <item name="app_bg">#F2F4F6</item>
+        <item name="surface_card">#FFFFFF</item>
+        <item name="surface_nested">#F8FAFC</item>
+        <item name="surface_dock">#CCFFFFFF</item>
+
+        <!-- Brand -->
+        <item name="brand_pink">#FF6B6B</item>
+        <item name="brand_pink_light">#FF8E8E</item>
+        <item name="brand_glow">#4DFF6B6B</item>
+        <item name="brand_tint_bg">#FFF1F2</item>    <!-- Rose 50 -->
+        <item name="brand_tint_text">#E11D48</item>  <!-- Rose 600 -->
+
+        <!-- Text -->
+        <item name="text_primary">#1F2937</item>     <!-- Slate 900 -->
+        <item name="text_secondary">#64748B</item>   <!-- Slate 500 -->
+        <item name="text_tertiary">#94A3B8</item>    <!-- Slate 400 -->
+        <item name="text_disabled">#CBD5E1</item>    <!-- Slate 300 -->
+        <item name="text_inverse">#FFFFFF</item>
+
+        <!-- Glass -->
+        <item name="glass_surface">#B3FFFFFF</item>
+        <item name="glass_stroke">#E2E8F0</item>
+        <item name="glass_circle">#F1F5F9</item>
+
+        <!-- Status: Success -->
+        <item name="status_success_icon">#10B981</item>
+        <item name="status_success_bg">#ECFDF5</item>
+        <item name="status_success_text">#059669</item>
+
+        <!-- Status: Warning -->
+        <item name="status_warning_icon">#F59E0B</item>
+        <item name="status_warning_bg">#FFF4A8</item>
+        <item name="status_warning_text">#D97706</item>
+
+        <!-- Status: Error -->
+        <item name="status_error_icon">#DC2626</item>
+        <item name="status_error_bg">#FEE2E2</item>
+        <item name="status_error_text">#99991B1B</item>
+        <item name="critical_stroke">#FECACA</item>
+
+        <!-- Status: Info -->
+        <item name="status_info_icon">#3B82F6</item>
+        <item name="status_info_bg">#EFF6FF</item>
+        <item name="status_info_text">#2563EB</item>
+
+        <!-- Charts -->
+        <item name="chart_grid">#E2E8F0</item>
+        <item name="chart_axis">#94A3B8</item>
+
+        <item name="surface_dock_solid">#FFFFFF</item>
+        <item name="dock_stroke">#E2E8F0</item> <!-- Slate 200 -->
+        <item name="surface_task_solid">#F8FAFC</item> <!-- Slate 50 (Solid, not transparent) -->
+        <item name="dock_item_selected_bg">#FFA8AC</item>
+
+        <!--Settings icon bg tints-->
+        <item name="eye_bg">#FFF1F2</item>
+        <item name="mobile_bg">#EFF6FF</item>
+        <item name="browser_bg">#ECFDF5</item>
+        <item name="block_bg">#FFF1F2</item>
+        <item name="popup_bg">#FAF5FF</item>
+
+        <!-- Gold/Amber (Habits) -->
+        <item name="econ_amber_bg">#FFFBEB</item>   <!-- Amber 50 -->
+        <item name="econ_amber_text">#D97706</item> <!-- Amber 600 -->
+
+        <!-- Emerald (Tasks) -->
+        <item name="econ_emerald_bg">#ECFDF5</item>   <!-- Emerald 50 -->
+        <item name="econ_emerald_text">#059669</item> <!-- Emerald 600 -->
+
+        <!-- Timeline -->
+        <item name="econ_timeline_line">#E2E8F0</item> <!-- Slate 200 -->
+        <item name="econ_timeline_active">#1F2937</item> <!-- Gunmetal -->
+
+        <!-- FIREWALL COLORS (LIGHT) -->
+        <item name="firewall_input_bg">#F8FAFC</item>   <!-- Slate 50 -->
+        <item name="firewall_input_text">#1F2937</item> <!-- Gunmetal -->
+        <item name="firewall_input_hint">#94A3B8</item> <!-- Slate 400 -->
+
+        <item name="firewall_rule_bg">#FFFFFF</item>    <!-- White Card -->
+        <item name="firewall_rule_border">#E2E8F0</item> <!-- Slate 200 -->
+
+        <item name="firewall_chip_bg">#FFFFFF</item>
+        <item name="firewall_chip_border">#E2E8F0</item>
+        <item name="firewall_chip_text">#64748B</item>
+
+        <item name="firewall_active_line">#EF4444</item> <!-- Red 500 -->
+        <item name="sheet_input_bg">#F8FAFC</item>
+
+        <item name="habitTileMarked">#FFCCCC</item>
+
+        <item name="habitTileActionBtn">#F1F5F9</item>
+
+        <!-- Habit Tile Marked State Colors -->
+        <item name="habit_marked_icon_tint">#FFFFFF</item>
+        <item name="habit_marked_icon_bg">#4DFFFFFF</item>
+        <item name="habit_marked_text">#FFFFFF</item>
+        <item name="habit_marked_button_bg">#FFFFFF</item>
+        <item name="habit_marked_button_text">?attr/brand_pink</item>
+        <item name="habit_marked_goal_action_bg">#ADFFFFFF</item>
+        <item name="habit_marked_plus_minus_tint">#FFFFFF</item>
+        <item name="habit_more_button_tint">?attr/text_tertiary</item>
+
     </style>
 
     <style name="Theme.MyApp.Splash" parent="Theme.NoScroll">
@@ -17,13 +123,13 @@
 
     <style name="circleImageView" parent="">
         <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">14dp</item>
+        <item name="cornerSize">0.5dp</item>
     </style>
 
     <style name="NumberPickerTheme" parent="Theme.AppCompat.Light">
         <item name="colorAccent">?attr/tintGlobalColor</item>
         <item name="dividerColor">?attr/tintGlobalColor</item>
-        <item name="android:fontFamily">@font/baloo</item>
+        <item name="android:fontFamily">@font/poppins_semibold</item>
         <item name="android:textColorPrimary">?attr/tintGlobalColor</item>
         <item name="android:background">@android:color/transparent</item>
         <item name="android:textSize">25sp</item>
@@ -39,7 +145,7 @@
     </style>
 
     <!-- Add this custom theme for the Blocking Overlay Activity -->
-    <style name="Theme.MindMint.TransparentOverlay" parent="Theme.AppCompat.NoActionBar">
+    <style name="Theme.MindMint.TransparentOverlay" parent="Theme.NoScroll">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowContentOverlay">@null</item>
@@ -51,7 +157,7 @@
 
     <style name="CustomTabText" parent="TextAppearance.Design.Tab">
         <item name="android:textSize">16sp</item>
-        <item name="android:fontFamily">@font/baloo</item> <!-- optional custom font -->
+        <item name="android:fontFamily">@font/poppins_semibold</item> <!-- optional custom font -->
     </style>
 
     <style name="CustomBottomSheetTheme" parent="Theme.Material3.DayNight.BottomSheetDialog"/>
@@ -85,4 +191,37 @@
         <item name="android:colorBackground">?attr/secondaryColor</item>
     </style>
 
+    <style name="ShapeAppearance.CustomCardRight" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">30dp</item>
+        <item name="cornerSizeTopRight">30dp</item>
+        <item name="cornerSizeBottomLeft">30dp</item>
+        <item name="cornerSizeBottomRight">0dp</item> <!-- Make this corner sharp -->
+    </style>
+
+    <style name="ShapeAppearance.CustomCardLeft" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">0dp</item>
+        <item name="cornerSizeTopRight">30dp</item>
+        <item name="cornerSizeBottomLeft">30dp</item>
+        <item name="cornerSizeBottomRight">30dp</item> <!-- Make this corner sharp -->
+    </style>
+
+    <style name="roundImageView" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">26dp</item>
+    </style>
+
 </resources>
+
+
+
+
+
+
+
+
+
+
+
+

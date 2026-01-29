@@ -1,5 +1,8 @@
 package com.gxdevs.mindmint.Utils;
 
+import static com.gxdevs.mindmint.Activities.HomeActivity.EXTRA_START_FRAGMENT;
+import static com.gxdevs.mindmint.Activities.HomeActivity.START_FRAGMENT_TASKS;
+
 import android.app.AlarmManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -11,7 +14,7 @@ import android.os.Build;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
-import com.gxdevs.mindmint.Activities.TaskActivity;
+import com.gxdevs.mindmint.Activities.HomeActivity;
 import com.gxdevs.mindmint.Models.Task;
 import com.gxdevs.mindmint.R;
 import com.gxdevs.mindmint.Receivers.TaskReminderReceiver;
@@ -22,7 +25,6 @@ public class TaskNotificationManager {
     private static final String CHANNEL_ID = "task_reminders";
     private static final String CHANNEL_NAME = "Task Reminders";
     private static final String CHANNEL_DESCRIPTION = "Notifications for task reminders";
-
     private final Context context;
     private final NotificationManager notificationManager;
     private final AlarmManager alarmManager;
@@ -118,7 +120,8 @@ public class TaskNotificationManager {
     }
 
     public void showTaskNotification(String taskId, String taskName, String taskDescription, boolean isPreReminder) {
-        Intent intent = new Intent(context, TaskActivity.class);
+        Intent intent = new Intent(context, HomeActivity.class);
+        intent.putExtra(EXTRA_START_FRAGMENT, START_FRAGMENT_TASKS);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         String title = isPreReminder ? "⏰ Task Reminder" : "🔔 Task Due Now";
@@ -127,7 +130,7 @@ public class TaskNotificationManager {
                 "It's time for: " + taskName;
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_reminder)
+                .setSmallIcon(R.drawable.bell)
                 .setContentTitle(title)
                 .setContentText(content)
                 .setStyle(new NotificationCompat.BigTextStyle()

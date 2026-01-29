@@ -26,8 +26,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-import eightbitlab.com.blurview.BlurTarget;
-
 public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder> {
 
     private final Context context;
@@ -35,7 +33,6 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     private final List<Task> filteredTaskList;
     private OnTaskClickListener onTaskClickListener;
     private final boolean manageOnly; // hide completion checkbox & disable toggle
-    private BlurTarget blurTarget;
 
     public interface OnTaskClickListener {
         void onTaskClick(Task task, int position);
@@ -67,7 +64,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     @NonNull
     @Override
     public TaskViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context).inflate(R.layout.task_item, parent, false);
+        View view = LayoutInflater.from(context).inflate(R.layout.item_task, parent, false);
         return new TaskViewHolder(view);
     }
 
@@ -75,24 +72,12 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     public void onBindViewHolder(@NonNull TaskViewHolder holder, int position) {
         Task task = filteredTaskList.get(position);
 
-        // Set task details
         holder.taskName.setText(task.getName());
-
-        // Display emoji - if not set, assign a random one
-        if (task.getEmoji() == null || task.getEmoji().isEmpty()) {
-            String[] emojis = new String[]{"✅", "📝", "🎯", "🔥", "💡", "⭐", "🏃", "📚", "💪", "🎨"};
-            String randomEmoji = emojis[(int) (Math.random() * emojis.length)];
-            task.setEmoji(randomEmoji);
-        }
-        holder.taskEmoji.setText(task.getEmoji());
-
-        // Set priority
+        int iconRes = task.getIcon() != 0 ? task.getIcon() : R.drawable.list_todo;
+        holder.taskIcon.setImageResource(iconRes);
         holder.priorityLabel.setText(task.getPriority().getDisplayName());
-
-        // Set date
         holder.dateCreated.setText(getFormattedDate(task.getScheduledDate()));
 
-        // Show recurring indicator if task is recurring
         if (task.isRecurring()) {
             holder.recurringIndicator.setVisibility(View.VISIBLE);
         } else {
@@ -105,10 +90,8 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             habitBadge.setVisibility(task.isHabit() ? View.VISIBLE : View.GONE);
         }
 
-        // Apply completed state styling
         applyCompletedStyling(holder, task.isCompleted());
 
-        // Completion checkbox visibility/behavior based on mode
         if (manageOnly) {
             holder.checkBox.setOnCheckedChangeListener(null);
             holder.checkBox.setVisibility(View.GONE);
@@ -155,11 +138,9 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     private void applyCompletedStyling(TaskViewHolder holder, boolean isCompleted) {
         float alpha = isCompleted ? 0.5f : 1.0f;
 
-        // Animate alpha change
         ObjectAnimator.ofFloat(holder.taskName, "alpha", holder.taskName.getAlpha(), alpha).start();
-        ObjectAnimator.ofFloat(holder.taskEmoji, "alpha", holder.taskEmoji.getAlpha(), alpha).start();
+        ObjectAnimator.ofFloat(holder.taskIcon, "alpha", holder.taskIcon.getAlpha(), alpha).start();
 
-        // Strike through effect could be added here if needed
         if (isCompleted) {
             holder.taskName.setPaintFlags(holder.taskName.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
         } else {
@@ -172,14 +153,18 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
 
         long now = System.currentTimeMillis();
         long taskTime = date.getTime();
+        boolean isPassed = taskTime < now;
+        String passedPrefix = isPassed ? "(passed) " : "";
 
         if (DateUtils.isToday(taskTime)) {
-            return "Today";
+            // For today, always show time
+            SimpleDateFormat timeFormat = new SimpleDateFormat("h:mm a", Locale.getDefault());
+            return passedPrefix + "Today " + timeFormat.format(date);
         } else if (DateUtils.isToday(taskTime + DateUtils.DAY_IN_MILLIS)) {
-            return "Yesterday";
+            return passedPrefix + "Yesterday";
         } else {
             SimpleDateFormat sdf = new SimpleDateFormat("MMM dd", Locale.getDefault());
-            return sdf.format(date);
+            return passedPrefix + sdf.format(date);
         }
     }
 
@@ -188,11 +173,14 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         return filteredTaskList.size();
     }
 
-    // Filter methods
-    public void filterTasks(String query, String filterType) {
+    public void filterTasks(String query, String filterType, Task excludeTask) {
         filteredTaskList.clear();
 
         for (Task task : taskList) {
+            if (excludeTask != null && task.getId().equals(excludeTask.getId())) {
+                continue;
+            }
+
             boolean matchesQuery = query.isEmpty() ||
                     task.getName().toLowerCase().contains(query.toLowerCase()) ||
                     (task.getShortDescription() != null && task.getShortDescription().toLowerCase().contains(query.toLowerCase()));
@@ -210,20 +198,27 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             }
         }
 
-        // Sort tasks by priority (High priority first) since completed tasks are filtered out from "All"
-        if (filterType.equals("All") || filterType.equals("Pending")) {
-            sortTasksByPriority();
-        }
+        sortTasksByDeadlineAndPriority();
 
         notifyDataSetChanged();
     }
 
-    private void sortTasksByPriority() {
+    private void sortTasksByDeadlineAndPriority() {
         filteredTaskList.sort(new Comparator<Task>() {
             @Override
             public int compare(Task t1, Task t2) {
-                // Sort by priority (High priority first)
-                return Integer.compare(t2.getPriority().getValue(), t1.getPriority().getValue());
+                int p1 = t1.getPriority() != null ? t1.getPriority().getValue() : 0;
+                int p2 = t2.getPriority() != null ? t2.getPriority().getValue() : 0;
+                int priorityCompare = Integer.compare(p2, p1); // Descending order (high to low)
+                if (priorityCompare != 0) return priorityCompare;
+
+                Date d1 = t1.getScheduledDate();
+                Date d2 = t2.getScheduledDate();
+                if (d1 != null && d2 != null) {
+                    return d1.compareTo(d2); // Ascending order (earliest first)
+                } else if (d1 != null) return -1; // t1 has date, t2 doesn't - t1 comes first
+                else if (d2 != null) return 1; // t2 has date, t1 doesn't - t2 comes first
+                else return 0; // Both null, keep order
             }
         });
     }
@@ -250,7 +245,6 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             Task taskToRemove = filteredTaskList.get(position);
             filteredTaskList.remove(position);
 
-            // Find and remove from main task list using task ID
             taskList.removeIf(task -> task.getId().equals(taskToRemove.getId()));
 
             notifyItemRemoved(position);
@@ -268,8 +262,8 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     }
 
     public static class TaskViewHolder extends RecyclerView.ViewHolder {
-        TextView taskName, priorityLabel, dateCreated, taskEmoji;
-        ImageView recurringIndicator, habitBadge;
+        TextView taskName, priorityLabel, dateCreated;
+        ImageView taskIcon, recurringIndicator, habitBadge;
         CheckBox checkBox;
         ConstraintLayout taskCardView;
         LinearLayout swipeActionsLayout;
@@ -281,7 +275,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             taskName = itemView.findViewById(R.id.taskName);
             priorityLabel = itemView.findViewById(R.id.priorityLabel);
             dateCreated = itemView.findViewById(R.id.dateCreated);
-            taskEmoji = itemView.findViewById(R.id.taskEmoji);
+            taskIcon = itemView.findViewById(R.id.taskIcon);
             recurringIndicator = itemView.findViewById(R.id.recurringIndicator);
             habitBadge = itemView.findViewById(R.id.habitBadge);
             checkBox = itemView.findViewById(R.id.checkBox);

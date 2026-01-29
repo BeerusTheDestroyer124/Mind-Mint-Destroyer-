@@ -8,6 +8,108 @@
     <attr name="switchTrack" format="reference|color"/>
     <attr name="switchThumb" format="reference|color"/>
     <attr name="embeddedCards" format="reference|color"/>
+    <attr name="glassTints" format="reference|color"/>
+
+    <!-- Final Backgrounds -->
+    <attr name="app_bg" format="color" />
+    <attr name="surface_card" format="color" />
+    <attr name="surface_nested" format="color" />
+    <attr name="surface_dock" format="color" />
+
+    <!-- Brand -->
+    <attr name="brand_pink" format="color" />
+    <attr name="brand_pink_light" format="color" />
+    <attr name="brand_glow" format="color" />
+    <attr name="brand_tint_bg" format="color" />
+    <attr name="brand_tint_text" format="color" />
+
+    <!-- Text -->
+    <attr name="text_primary" format="color" />
+    <attr name="text_secondary" format="color" />
+    <attr name="text_tertiary" format="color" />
+    <attr name="text_disabled" format="color" />
+    <attr name="text_inverse" format="color" />
+
+    <!-- Glass UI -->
+    <attr name="glass_surface" format="color" />
+    <attr name="glass_stroke" format="color" />
+    <attr name="glass_circle" format="color" />
+
+    <!-- Status Colors (Groups) -->
+    <attr name="status_success_icon" format="color" />
+    <attr name="status_success_bg" format="color" />
+    <attr name="status_success_text" format="color" />
+
+    <attr name="status_warning_icon" format="color" />
+    <attr name="status_warning_bg" format="color" />
+    <attr name="status_warning_text" format="color" />
+
+    <attr name="status_error_icon" format="color" />
+    <attr name="status_error_bg" format="color" />
+    <attr name="status_error_text" format="color" />
+    <attr name="critical_stroke" format="color" />
+
+    <attr name="status_info_icon" format="color" />
+    <attr name="status_info_bg" format="color" />
+    <attr name="status_info_text" format="color" />
+
+    <!-- Charts -->
+    <attr name="chart_grid" format="color" />
+    <attr name="chart_axis" format="color" />
+
+    <attr name="surface_dock_solid" format="color" />
+    <attr name="surface_task_solid" format="color" />
+    <attr name="dock_stroke" format="color" />
+    <attr name="dock_item_selected_bg" format="color" />
+
+    <!--Settings icon bg tints-->
+    <attr name="eye_bg" format="color"/>
+    <attr name="mobile_bg" format="color"/>
+    <attr name="browser_bg" format="color"/>
+    <attr name="block_bg" format="color"/>
+    <attr name="popup_bg" format="color"/>
+
+    <!-- Economy Colors -->
+    <attr name="econ_gold_bg" format="color" />
+    <attr name="econ_gold_text" format="color" />
+
+    <attr name="econ_emerald_bg" format="color" />
+    <attr name="econ_emerald_text" format="color" />
+
+    <attr name="econ_amber_bg" format="color" />
+    <attr name="econ_amber_text" format="color" />
+
+    <attr name="econ_timeline_line" format="color" />
+    <attr name="econ_timeline_active" format="color" />
+
+    <attr name="firewall_input_bg" format="color" />
+    <attr name="firewall_input_text" format="color" />
+    <attr name="firewall_input_hint" format="color" />
+    <attr name="firewall_rule_bg" format="color" />
+    <attr name="firewall_rule_border" format="color" />
+
+    <attr name="firewall_chip_bg" format="color" />
+    <attr name="firewall_chip_border" format="color" />
+    <attr name="firewall_chip_text" format="color" />
+
+    <attr name="firewall_active_line" format="color" />
+    <attr name="sheet_input_bg" format="color" />
+
+    <attr name="habitTileMarked" format="color" />
+
+    <attr name="habitTileActionBtn" format="color" />
+
+    <!-- Habit Tile Marked State Colors -->
+    <attr name="habit_marked_icon_tint" format="color" />
+    <attr name="habit_marked_icon_bg" format="color" />
+    <attr name="habit_marked_text" format="color" />
+    <attr name="habit_marked_button_bg" format="color" />
+    <attr name="habit_marked_button_text" format="color" />
+    <attr name="habit_marked_goal_action_bg" format="color" />
+    <attr name="habit_marked_plus_minus_tint" format="color" />
+    <attr name="habit_more_button_tint" format="color" />
+
+    <!--END-->
 
     <declare-styleable name="CustomPieChart">
         <attr name="pieRadius" format="dimension" />

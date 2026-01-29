@@ -1,55 +1,103 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/bottomSheetBlockerLayout"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="30dp"
+    android:background="?attr/surface_card"
     android:elevation="20dp"
-    app:cardBackgroundColor="?attr/secondaryColor"
-    app:cardCornerRadius="20dp"
     app:layout_constraintBottom_toBottomOf="parent"
-    app:strokeWidth="0dp"
     tools:ignore="HardcodedText, ContentDescription">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/appsHolder"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="15dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/focusTimeHolder">
+        android:padding="20dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <LinearLayout
+            android:id="@+id/headerContainer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginEnd="25dp"
+            android:orientation="vertical"
+            app:layout_constraintEnd_toStartOf="@+id/crossBtn"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:id="@+id/dateDetails"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:alpha="0.5"
+                android:fontFamily="@font/poppins_semibold"
+                android:letterSpacing="0.1"
+                android:text="Select apps to block"
+                android:textAllCaps="true"
+                android:textColor="?attr/text_tertiary"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/greetings"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-light"
+                android:lineSpacingMultiplier="0.8"
+                android:text="Block Content"
+                android:textColor="?attr/text_primary"
+                android:textSize="35sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/welcomeTxt" />
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/crossBtn"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:background="@drawable/glass_circle"
+            android:padding="10dp"
+            android:src="@drawable/x"
+            app:layout_constraintBottom_toBottomOf="@+id/headerContainer"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/headerContainer"
+            app:tint="?attr/text_secondary" />
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/ytCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="15dp"
+            android:layout_marginTop="20dp"
             android:elevation="4dp"
-            app:cardBackgroundColor="?attr/secondaryColor"
-            app:cardCornerRadius="10dp"
-            app:layout_constraintTop_toTopOf="parent"
-            app:strokeColor="#26FD7D81"
-            app:strokeWidth="1dp">
+            app:cardBackgroundColor="?attr/surface_nested"
+            app:cardCornerRadius="25dp"
+            app:layout_constraintTop_toBottomOf="@+id/headerContainer"
+            app:strokeColor="@color/glass_stroke"
+            app:strokeWidth="2dp">
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/ytBlock"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="10dp"
+                android:padding="18dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent">
 
-                <com.google.android.material.imageview.ShapeableImageView
+                <ImageView
                     android:id="@+id/ytLogo"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:src="@drawable/yotube"
+                    android:background="@drawable/glass_circle"
+                    android:padding="10dp"
+                    android:src="@drawable/youtube"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
-                    app:shapeAppearanceOverlay="@style/circleImageView" />
+                    app:tint="?attr/text_primary" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -58,7 +106,7 @@
                     android:fontFamily="sans-serif-medium"
                     android:gravity="center"
                     android:text="@string/youtube_shorts"
-                    android:textColor="?attr/tintGlobalColor"
+                    android:textColor="?attr/text_primary"
                     android:textSize="15sp"
                     app:layout_constraintBottom_toBottomOf="@+id/ytLogo"
                     app:layout_constraintStart_toEndOf="@+id/ytLogo"
@@ -72,35 +120,60 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="@+id/ytLogo"
                     app:thumbTint="?attr/switchThumb"
-                    app:trackTint="?attr/switchTrack"/>
+                    app:trackTint="?attr/switchTrack" />
 
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:id="@+id/ytModHolder"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:visibility="gone"
+                    android:layout_marginTop="10dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/ytLogo">
+                    app:layout_constraintTop_toBottomOf="@+id/ytSwitch">
+
+                    <View
+                        android:id="@+id/border1"
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/glass_stroke"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
 
                     <TextView
                         android:id="@+id/ytModTxt"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="50dp"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginTop="10dp"
                         android:fontFamily="sans-serif-medium"
                         android:gravity="center"
                         android:text="Use mod"
-                        android:textColor="?attr/tintGlobalColor"
+                        android:textColor="?attr/text_secondary"
                         android:textSize="13sp"
                         app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent" />
+                        app:layout_constraintStart_toEndOf="@+id/ytModSwitch"
+                        app:layout_constraintTop_toBottomOf="@+id/border1" />
 
                     <com.google.android.material.checkbox.MaterialCheckBox
                         android:id="@+id/ytModSwitch"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        app:buttonTint="@color/brainColor"
+                        app:layout_constraintBottom_toBottomOf="@+id/ytModTxt"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="@+id/ytModTxt" />
+
+                    <TextView
+                        android:id="@+id/reco1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:fontFamily="@font/poppins_semibold"
+                        android:gravity="center"
+                        android:text="RECOMMENDED"
+                        android:textColor="?attr/text_tertiary"
+                        android:textSize="11sp"
                         app:layout_constraintBottom_toBottomOf="@+id/ytModTxt"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="@+id/ytModTxt" />
@@ -117,29 +190,31 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="15dp"
             android:elevation="4dp"
-            app:cardBackgroundColor="?attr/secondaryColor"
-            app:cardCornerRadius="10dp"
+            app:cardBackgroundColor="?attr/surface_nested"
+            app:cardCornerRadius="20dp"
             app:layout_constraintTop_toBottomOf="@+id/ytCard"
-            app:strokeColor="#26FD7D81"
-            app:strokeWidth="1dp">
+            app:strokeColor="@color/glass_stroke"
+            app:strokeWidth="2dp">
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/instaBlock"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="10dp"
+                android:padding="18dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/ytCard">
 
-                <com.google.android.material.imageview.ShapeableImageView
+                <ImageView
                     android:id="@+id/instaLogo"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
+                    android:background="@drawable/glass_circle"
+                    android:padding="10dp"
+                    app:tint="?attr/text_primary"
                     android:src="@drawable/instagram"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:shapeAppearanceOverlay="@style/circleImageView" />
+                    app:layout_constraintTop_toTopOf="parent" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -148,7 +223,7 @@
                     android:fontFamily="@font/poppins_semibold"
                     android:gravity="center"
                     android:text="@string/instagram_reels"
-                    android:textColor="?attr/tintGlobalColor"
+                    android:textColor="?attr/text_primary"
                     android:textSize="15sp"
                     app:layout_constraintBottom_toBottomOf="@+id/instaLogo"
                     app:layout_constraintStart_toEndOf="@+id/instaLogo"
@@ -162,35 +237,60 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="@+id/instaLogo"
                     app:thumbTint="?attr/switchThumb"
-                    app:trackTint="?attr/switchTrack"/>
+                    app:trackTint="?attr/switchTrack" />
 
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:id="@+id/instaModHolder"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:visibility="gone"
+                    android:layout_marginTop="10dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/instaLogo">
+                    app:layout_constraintTop_toBottomOf="@+id/instaSwitch">
+
+                    <View
+                        android:id="@+id/border2"
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/glass_stroke"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
 
                     <TextView
                         android:id="@+id/instaModTxt"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="50dp"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginTop="10dp"
                         android:fontFamily="sans-serif-medium"
                         android:gravity="center"
                         android:text="Use mod"
-                        android:textColor="?attr/tintGlobalColor"
+                        android:textColor="?attr/text_secondary"
                         android:textSize="13sp"
                         app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent" />
+                        app:layout_constraintStart_toEndOf="@+id/instaModSwitch"
+                        app:layout_constraintTop_toBottomOf="@+id/border2" />
 
                     <com.google.android.material.checkbox.MaterialCheckBox
                         android:id="@+id/instaModSwitch"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        app:buttonTint="@color/brainColor"
+                        app:layout_constraintBottom_toBottomOf="@+id/instaModTxt"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="@+id/instaModTxt" />
+
+                    <TextView
+                        android:id="@+id/reco2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:fontFamily="@font/poppins_semibold"
+                        android:gravity="center"
+                        android:text="RECOMMENDED"
+                        android:textColor="?attr/text_tertiary"
+                        android:textSize="11sp"
                         app:layout_constraintBottom_toBottomOf="@+id/instaModTxt"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="@+id/instaModTxt" />
@@ -207,17 +307,17 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="15dp"
             android:elevation="4dp"
-            app:cardBackgroundColor="?attr/secondaryColor"
-            app:cardCornerRadius="10dp"
+            app:cardBackgroundColor="?attr/surface_nested"
+            app:cardCornerRadius="20dp"
             app:layout_constraintTop_toBottomOf="@+id/instaCard"
-            app:strokeColor="#26FD7D81"
-            app:strokeWidth="1dp">
+            app:strokeColor="@color/glass_stroke"
+            app:strokeWidth="2dp">
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/snapBlock"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="10dp"
+                android:padding="18dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/instaBlock">
@@ -226,7 +326,10 @@
                     android:id="@+id/snapLogo"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
+                    android:background="@drawable/glass_circle"
                     android:contentDescription="@string/snapchat"
+                    android:padding="10dp"
+                    app:tint="?attr/text_primary"
                     android:src="@drawable/snapchat"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
@@ -239,7 +342,7 @@
                     android:fontFamily="@font/poppins_semibold"
                     android:gravity="center"
                     android:text="@string/snapchat_highlights"
-                    android:textColor="?attr/tintGlobalColor"
+                    android:textColor="?attr/text_primary"
                     android:textSize="15sp"
                     app:layout_constraintBottom_toBottomOf="@+id/snapLogo"
                     app:layout_constraintStart_toEndOf="@+id/snapLogo"
@@ -253,35 +356,60 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="@+id/snapLogo"
                     app:thumbTint="?attr/switchThumb"
-                    app:trackTint="?attr/switchTrack"/>
+                    app:trackTint="?attr/switchTrack" />
 
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:id="@+id/snapModHolder"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:visibility="gone"
+                    android:layout_marginTop="10dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/snapLogo">
+                    app:layout_constraintTop_toBottomOf="@+id/snapSwitch">
+
+                    <View
+                        android:id="@+id/border3"
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/glass_stroke"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
 
                     <TextView
                         android:id="@+id/snapModTxt"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="50dp"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginTop="10dp"
                         android:fontFamily="sans-serif-medium"
                         android:gravity="center"
                         android:text="Use mod"
-                        android:textColor="?attr/tintGlobalColor"
+                        android:textColor="?attr/text_secondary"
                         android:textSize="13sp"
                         app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent" />
+                        app:layout_constraintStart_toEndOf="@+id/snapModSwitch"
+                        app:layout_constraintTop_toBottomOf="@+id/border3" />
 
                     <com.google.android.material.checkbox.MaterialCheckBox
                         android:id="@+id/snapModSwitch"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        app:buttonTint="@color/brainColor"
+                        app:layout_constraintBottom_toBottomOf="@+id/snapModTxt"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="@+id/snapModTxt" />
+
+                    <TextView
+                        android:id="@+id/reco3"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:fontFamily="sans-serif-medium"
+                        android:gravity="center"
+                        android:text="RECOMMENDED"
+                        android:textColor="?attr/text_tertiary"
+                        android:textSize="11sp"
                         app:layout_constraintBottom_toBottomOf="@+id/snapModTxt"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="@+id/snapModTxt" />
@@ -297,17 +425,16 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="5dp"
-            android:alpha="0.3"
             android:fontFamily="sans-serif-medium"
             android:text="@string/more_apps_coming_soon"
             android:textAlignment="center"
-            android:textColor="?attr/tintGlobalColor"
+            android:textColor="?attr/text_tertiary"
             android:textSize="14sp"
             app:layout_constraintTop_toBottomOf="@+id/snapCard" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-</com.google.android.material.card.MaterialCardView>
+</androidx.constraintlayout.widget.ConstraintLayout>
 
 
 

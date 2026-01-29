@@ -50,6 +50,7 @@ public class BlockingOverlayDisplayActivity extends AppCompatActivity {
         Log.i(TAG, "onCreate: Activity CREATED and timer scheduled.");
     }
 
+    @SuppressLint("SetTextI18n")
     private void processIntent(Intent intent) {
         // To store package name
         String currentBlockedPackageName;

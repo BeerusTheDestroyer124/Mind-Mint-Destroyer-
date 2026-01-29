@@ -42,13 +42,11 @@ public class AppSelectionAdapter extends RecyclerView.Adapter<AppSelectionAdapte
         AppInfo appInfo = appList.get(position);
         holder.appName.setText(appInfo.appName);
         holder.appIcon.setImageDrawable(appInfo.icon);
-        // Clear any previous listener to avoid triggering stale callbacks during recycling
         holder.blockSwitch.setOnCheckedChangeListener(null);
         holder.blockSwitch.setChecked(appInfo.isBlocked);
 
         holder.itemView.setOnClickListener(v -> {
             holder.blockSwitch.toggle();
-            // The setOnCheckedChangeListener will handle the logic
         });
 
         holder.blockSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {

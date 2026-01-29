@@ -6,28 +6,34 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.pm.ServiceInfo;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ServiceInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.net.Uri;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.SystemClock;
-import android.provider.Settings;
 import android.util.Log;
 import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
+import androidx.preference.PreferenceManager;
 
 import com.gxdevs.mindmint.Activities.FocusMode;
 import com.gxdevs.mindmint.R;
 import com.gxdevs.mindmint.Utils.MintCrystals;
+import com.gxdevs.mindmint.Widgets.FocusTimerWidgetProvider;
+import com.gxdevs.mindmint.Widgets.PomodoroTimerWidgetProvider;
+import com.gxdevs.mindmint.db.MindMintRoomDatabase;
+import com.gxdevs.mindmint.db.dao.FocusDao;
+import com.gxdevs.mindmint.db.entities.FocusDailyStatEntity;
+import com.gxdevs.mindmint.db.entities.FocusSessionEntity;
+import com.gxdevs.mindmint.db.entities.FocusStateEntity;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -47,24 +53,48 @@ public class FocusService extends Service {
 
     // Persistent state for robust background handling
     private static final String STATE_PREFS = "FOCUS_TIMER_STATE";
+    // Legacy keys used for migration only
     private static final String KEY_ACTIVE = "active";
     private static final String KEY_END_ELAPSED = "end_elapsed";
     private static final String KEY_DURATION = "duration";
 
     private final IBinder binder = new TimerBinder();
-    private long startTimeMillis = 0L;
-    private long currentDurationInMillis = Long.MAX_VALUE;
+
+    // Core Timer State
+    private long wallStartTimeMillis = 0L; // Wall clock start time for history
+    private long sessionStartRealtime = 0L; // elapsedRealtime() for duration logic
+    private long currentSegmentStartMillis = 0L; // Start of the current Focus or Break
+    private long accumulatedFocusTime = 0L; // Banked time from previous focus segments
+    private long currentDurationInMillis = Long.MAX_VALUE; // Total Goal
+
     public boolean isRunning = false;
+    public boolean isBreak = false;
+    public boolean isPaused = false;
+
+    // Pause State Tracking
+    private long breakStartTime = 0L;
+    private long idleTimeoutStart = 0L;
+    private float crystalRevealFraction = 0f;
+    private static final long IDLE_TIMEOUT_MS = 20 * 60 * 1000L; // 20 minutes
+
+    // Config
+    private boolean isPomodoroEnabled = false;
+    private long pomodoroFocusInterval = 25 * 60 * 1000L;
+    private long pomodoroBreakInterval = 5 * 60 * 1000L;
+    private String currentTopicName = null;
+
     public static boolean isPublicFocusRun = false;
     private final Handler notificationHandler = new Handler(Looper.getMainLooper());
     private Handler durationHandler;
     private boolean completedNaturally = false;
     private int lastCompletedDurationMinutes = 0;
     private AlarmManager alarmManager;
+    private FocusDao focusDao;
 
     private void startForegroundWithType(Notification notification) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(FocusService.NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+            startForeground(FocusService.NOTIFICATION_ID, notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
         } else {
             startForeground(FocusService.NOTIFICATION_ID, notification);
         }
@@ -84,30 +114,92 @@ public class FocusService extends Service {
         isPublicFocusRun = false;
         durationHandler = new Handler(Looper.getMainLooper());
         alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        focusDao = MindMintRoomDatabase.getInstance(this).focusDao();
 
-        // Restore running timer if the process was killed/recreated
-        SharedPreferences sp = getSharedPreferences(STATE_PREFS, MODE_PRIVATE);
-        boolean active = sp.getBoolean(KEY_ACTIVE, false);
-        if (active) {
-            long endElapsed = sp.getLong(KEY_END_ELAPSED, 0L);
-            long duration = sp.getLong(KEY_DURATION, 0L);
+        // One-time migration from SharedPreferences to Room
+        migrateFocusPrefsIfNeeded();
+
+        // Restore running timer if the process was killed/recreated (from Room)
+        FocusStateEntity existing = focusDao.getState();
+        if (existing != null && existing.active) {
             long now = SystemClock.elapsedRealtime();
-            if (endElapsed > 0L && duration > 0L) {
-                isRunning = true;
-                currentDurationInMillis = duration;
-                if (endElapsed <= now) {
-                    // Treat as a naturally completed session and finalize immediately
-                    startTimeMillis = now - duration;
-                    startForegroundWithType(createNotification(currentDurationInMillis));
-                    stopTimer();
+
+            // Reload State
+            this.currentDurationInMillis = existing.duration;
+            this.wallStartTimeMillis = existing.start_time;
+            // Since we don't persist sessionStartRealtime (it's volatile),
+            // we reconstruct duration logic relative to currentSegmentStartMillis
+            this.currentSegmentStartMillis = existing.current_segment_start;
+            this.accumulatedFocusTime = existing.accumulated_focus;
+            this.isBreak = existing.is_break;
+            this.isPomodoroEnabled = existing.is_pomodoro;
+            this.pomodoroFocusInterval = existing.pomodoro_focus_interval;
+            this.pomodoroBreakInterval = existing.pomodoro_break_interval;
+            this.currentTopicName = existing.topic_name;
+            // Restore new pause state fields
+            this.isPaused = existing.is_paused;
+            this.breakStartTime = existing.break_start_time;
+            this.idleTimeoutStart = existing.idle_timeout_start;
+            this.crystalRevealFraction = existing.crystal_reveal_fraction;
+            this.isRunning = true;
+
+            boolean isInfinite = currentDurationInMillis == Long.MAX_VALUE;
+
+            // Handle paused states
+            if (isPaused && isBreak) {
+                // BREAK_PAUSED state - check if break ended while killed
+                long breakElapsed = now - breakStartTime;
+                if (breakElapsed >= pomodoroBreakInterval) {
+                    // Break ended while killed - transition
+                    transitionPomodoroState();
                 } else {
-                    startTimeMillis = endElapsed - duration;
-                    startForegroundWithType(createNotification(getElapsedMillis()));
-                    notificationHandler.removeCallbacks(updateNotificationTask);
-                    notificationHandler.post(updateNotificationTask);
-                    scheduleStopAlarm(endElapsed);
+                    // Still in break - schedule remaining break time
+                    long remainingBreak = pomodoroBreakInterval - breakElapsed;
+                    durationHandler.postDelayed(() -> {
+                        if (isRunning && isPaused && isBreak) {
+                            transitionPomodoroState();
+                        }
+                    }, remainingBreak);
+                }
+            } else if (isPaused) {
+                // WAITING_USER state - check if idle timeout passed while killed
+                long idleElapsed = now - idleTimeoutStart;
+                if (idleElapsed >= IDLE_TIMEOUT_MS) {
+                    // Idle timeout passed - auto-kill
+                    autoKillSession();
+                    return;
+                } else {
+                    // Still waiting for user - schedule remaining idle timeout
+                    long remainingIdle = IDLE_TIMEOUT_MS - idleElapsed;
+                    durationHandler.postDelayed(() -> {
+                        if (isRunning && isPaused && !isBreak) {
+                            autoKillSession();
+                        }
+                    }, remainingIdle);
+                }
+            } else {
+                // FOCUS_RUNNING state - check progress and schedule events
+                long timeInSegment = now - currentSegmentStartMillis;
+                long totalFocusIfStillRunning = accumulatedFocusTime + timeInSegment;
+
+                // Check if we exceeded total duration while killed
+                if (!isInfinite && totalFocusIfStillRunning >= currentDurationInMillis) {
+                    stopTimer();
+                    return;
+                }
+
+                // Check Pomodoro segment transition
+                if (isPomodoroEnabled && timeInSegment >= pomodoroFocusInterval) {
+                    transitionPomodoroState();
+                } else {
+                    scheduleNextEvent();
                 }
             }
+
+            startForegroundWithType(createNotification(getElapsedMillis()));
+            notificationHandler.removeCallbacks(updateNotificationTask);
+            notificationHandler.post(updateNotificationTask);
+            updateWidgets();
         }
     }
 
@@ -118,10 +210,20 @@ public class FocusService extends Service {
             switch (intent.getAction()) {
                 case ACTION_START_FOREGROUND_SERVICE:
                     currentDurationInMillis = intent.getLongExtra("durationInMillis", Long.MAX_VALUE);
-                    Log.d(TAG, "ACTION_START_FOREGROUND_SERVICE: duration = " + currentDurationInMillis);
+
+                    // Config Extras
+                    isPomodoroEnabled = intent.getBooleanExtra("isPomodoroEnabled", false);
+                    pomodoroFocusInterval = intent.getLongExtra("pomodoroFocusInterval", 25 * 60 * 1000L);
+                    pomodoroBreakInterval = intent.getLongExtra("pomodoroBreakInterval", 5 * 60 * 1000L);
+                    currentTopicName = intent.getStringExtra("topicName");
+
+                    Log.d(TAG, "ACTION_START_FOREGROUND_SERVICE: duration = " + currentDurationInMillis +
+                            ", pomodoro=" + isPomodoroEnabled + ", topic=" + currentTopicName);
+
                     if (!isRunning) {
                         startTimer(currentDurationInMillis);
                     } else {
+                        // Update params if needed? Usually we don't change config mid-run
                         startForegroundWithType(createNotification(getElapsedMillis()));
                         notificationHandler.post(updateNotificationTask);
                     }
@@ -135,7 +237,6 @@ public class FocusService extends Service {
         return START_STICKY;
     }
 
-
     @Override
     public IBinder onBind(Intent intent) {
         Log.d(TAG, "Service onBind");
@@ -145,11 +246,17 @@ public class FocusService extends Service {
     public void startTimer(long durationInMillis) {
         if (!isRunning) {
             currentDurationInMillis = durationInMillis;
-            startTimeMillis = SystemClock.elapsedRealtime();
+            wallStartTimeMillis = System.currentTimeMillis();
+            sessionStartRealtime = SystemClock.elapsedRealtime();
+            currentSegmentStartMillis = sessionStartRealtime;
+            accumulatedFocusTime = 0L;
+            isBreak = false;
             isRunning = true;
             isPublicFocusRun = true;
             completedNaturally = false;
-            Log.d(TAG, "Timer logic started. Duration: " + (currentDurationInMillis == Long.MAX_VALUE ? "Infinite" : currentDurationInMillis + "ms"));
+
+            Log.d(TAG, "Timer logic started. Duration: "
+                    + (currentDurationInMillis == Long.MAX_VALUE ? "Infinite" : currentDurationInMillis + "ms"));
 
             startForegroundWithType(createNotification(0));
             notificationHandler.removeCallbacks(updateNotificationTask);
@@ -157,100 +264,349 @@ public class FocusService extends Service {
 
             durationHandler.removeCallbacksAndMessages(null);
 
-            if (currentDurationInMillis != Long.MAX_VALUE) {
-                long endElapsed = startTimeMillis + currentDurationInMillis;
-                // Backup in-process handler
-                durationHandler.postDelayed(() -> {
-                    if (isRunning) {
-                        Log.d(TAG, "Timer duration reached (handler). Stopping timer.");
-                        stopTimer();
-                    }
-                }, currentDurationInMillis);
-
-                // Persist state for robustness
-                SharedPreferences sp = getSharedPreferences(STATE_PREFS, MODE_PRIVATE);
-                sp.edit()
-                        .putBoolean(KEY_ACTIVE, true)
-                        .putLong(KEY_END_ELAPSED, endElapsed)
-                        .putLong(KEY_DURATION, currentDurationInMillis)
-                        .apply();
-
-                // Schedule an exact alarm so the timer stops even in doze/background
-                scheduleStopAlarm(endElapsed);
-            }
+            persistState();
+            scheduleNextEvent(); // Schedules break or stop
+            updateWidgets();
         } else {
             Log.d(TAG, "Timer is already running.");
         }
     }
 
+    private void scheduleNextEvent() {
+        if (!isRunning)
+            return;
+
+        long now = SystemClock.elapsedRealtime();
+        long nextEventDelay = Long.MAX_VALUE;
+        Runnable nextEventRunnable = null;
+
+        // 1. Check Total Goal
+        if (currentDurationInMillis != Long.MAX_VALUE) {
+            long remainingTotal = currentDurationInMillis - accumulatedFocusTime;
+            // If we are in break, total timer "pauses", so we don't schedule a total stop
+            // based on wall clock?
+            // User requested: "pause the timer... for the selected time".
+            // So, while isBreak is true, we simply wait for break to end. We DO NOT count
+            // down total.
+            // If isBreak is false, we count down.
+
+            if (!isBreak) {
+                long finishTime = currentSegmentStartMillis + remainingTotal;
+                long delay = finishTime - now;
+
+                if (delay <= 0) {
+                    stopTimer();
+                    return;
+                }
+
+                nextEventDelay = delay;
+                nextEventRunnable = this::stopTimer;
+            }
+        }
+
+        // 2. Check Pomodoro Transition
+        if (isPomodoroEnabled) {
+            long segmentDuration = isBreak ? pomodoroBreakInterval : pomodoroFocusInterval;
+            long transitionTime = currentSegmentStartMillis + segmentDuration;
+            long delay = transitionTime - now;
+
+            // If a transition happens BEFORE the total goal, prioritize it.
+            if (delay < nextEventDelay) {
+                nextEventDelay = delay;
+                nextEventRunnable = this::transitionPomodoroState;
+            }
+        }
+
+        if (nextEventDelay != Long.MAX_VALUE) {
+            // Cap delay to avoid issues, though alarms handle long delays
+            durationHandler.removeCallbacksAndMessages(null); // Remove old
+            Runnable finalNextEventRunnable = nextEventRunnable;
+            durationHandler.postDelayed(() -> {
+                if (isRunning)
+                    finalNextEventRunnable.run();
+            }, nextEventDelay);
+
+            cancelStopAlarm();
+        }
+    }
+
+    public boolean isPomodoroEnabled() {
+        return isPomodoroEnabled;
+    }
+
+    public boolean isBreak() {
+        return isBreak;
+    }
+
+    private void transitionPomodoroState() {
+        if (!isRunning)
+            return;
+
+        long now = SystemClock.elapsedRealtime();
+
+        if (!isBreak) {
+            // FOCUS -> BREAK (Enter PAUSE state)
+            long segmentTime = now - currentSegmentStartMillis;
+            accumulatedFocusTime += segmentTime;
+
+            isBreak = true;
+            isPaused = true;
+            breakStartTime = now;
+            currentSegmentStartMillis = now;
+
+            Toast.makeText(this, "Break Time! Timer Paused.", Toast.LENGTH_SHORT).show();
+
+            persistState();
+            scheduleBreakEnd();
+            updateWidgets();
+        } else {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+            boolean autoStart = prefs.getBoolean("pref_auto_start_break", true);
+
+            isBreak = false;
+            if (autoStart) {
+                isPaused = false;
+                currentSegmentStartMillis = now;
+                Toast.makeText(this, "Focus Resumed!", Toast.LENGTH_SHORT).show();
+                persistState();
+                scheduleNextEvent();
+            } else {
+                isPaused = true;
+                idleTimeoutStart = now;
+                Toast.makeText(this, "Break ended. Tap Resume to continue.", Toast.LENGTH_SHORT).show();
+                persistState();
+                scheduleIdleTimeout();
+            }
+            updateWidgets();
+        }
+
+        startForegroundWithType(createNotification(getElapsedMillis()));
+    }
+
+    private void scheduleBreakEnd() {
+        durationHandler.removeCallbacksAndMessages(null);
+        cancelStopAlarm(); // Cancel any pending stop alarm while on break
+        durationHandler.postDelayed(() -> {
+            if (isRunning && isPaused && isBreak) {
+                transitionPomodoroState(); // Break -> Focus or WAITING_USER
+            }
+        }, pomodoroBreakInterval);
+    }
+
+    private void scheduleIdleTimeout() {
+        durationHandler.removeCallbacksAndMessages(null);
+        boolean isTestMode = pomodoroFocusInterval <= 60000L; // 1 minute or less = test mode
+        long idleTimeout = isTestMode ? 30000L : IDLE_TIMEOUT_MS;
+        durationHandler.postDelayed(() -> {
+            if (isRunning && isPaused && !isBreak) {
+                // Auto-kill after idle timeout in WAITING_USER state
+                autoKillSession();
+            }
+        }, idleTimeout);
+    }
+
+    private void autoKillSession() {
+        long elapsedFocusMillis = accumulatedFocusTime;
+        saveDailyFocusStat(elapsedFocusMillis / 1000);
+
+        try {
+            FocusSessionEntity session = new FocusSessionEntity();
+            session.start_time_ms = wallStartTimeMillis;
+            session.end_time_ms = System.currentTimeMillis();
+            session.duration_ms = elapsedFocusMillis;
+            session.date_str = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+            session.topic_name = currentTopicName;
+            focusDao.insertSession(session);
+        } catch (Exception e) {
+            Log.e(TAG, "Error saving focus session on auto-kill", e);
+        }
+
+        // Reset state
+        isRunning = false;
+        isPaused = false;
+        isBreak = false;
+        isPublicFocusRun = false;
+        sessionStartRealtime = 0L;
+        wallStartTimeMillis = 0L;
+
+        // Clear persisted state
+        FocusStateEntity state = new FocusStateEntity();
+        state.id = 1;
+        state.active = false;
+        focusDao.insertOrReplaceState(state);
+
+        durationHandler.removeCallbacksAndMessages(null);
+        notificationHandler.removeCallbacks(updateNotificationTask);
+        cancelStopAlarm();
+
+        Toast.makeText(this, "Session saved due to inactivity.", Toast.LENGTH_SHORT).show();
+
+        stopForeground(true);
+        stopSelf();
+    }
+
+    public void resumeTimer() {
+        if (!isRunning || !isPaused)
+            return;
+
+        long now = SystemClock.elapsedRealtime();
+        isPaused = false;
+        isBreak = false;
+        currentSegmentStartMillis = now;
+        idleTimeoutStart = 0L;
+        breakStartTime = 0L;
+
+        persistState();
+        scheduleNextEvent();
+        startForegroundWithType(createNotification(getElapsedMillis()));
+        updateWidgets();
+
+        notificationHandler.removeCallbacks(updateNotificationTask);
+        notificationHandler.post(updateNotificationTask);
+
+        Toast.makeText(this, "Focus Resumed!", Toast.LENGTH_SHORT).show();
+    }
+
+    public boolean isPaused() {
+        return isPaused;
+    }
+
+    public long getBreakRemainingMillis() {
+        if (!isBreak || !isPaused)
+            return 0L;
+        long now = SystemClock.elapsedRealtime();
+        long breakElapsed = now - breakStartTime;
+        long remaining = pomodoroBreakInterval - breakElapsed;
+        return Math.max(0, remaining);
+    }
+
+    public float getCrystalRevealFraction() {
+        return crystalRevealFraction;
+    }
+
+    public void setCrystalRevealFraction(float fraction) {
+        this.crystalRevealFraction = fraction;
+        // Also persist to DB for app kill recovery
+        if (isRunning) {
+            persistState();
+        }
+    }
+
+    private void persistState() {
+        FocusStateEntity state = new FocusStateEntity();
+        state.id = 1;
+        state.active = isRunning;
+        state.duration = currentDurationInMillis;
+        state.start_time = wallStartTimeMillis;
+        state.current_segment_start = currentSegmentStartMillis;
+        state.accumulated_focus = accumulatedFocusTime;
+        state.is_break = isBreak;
+        state.is_pomodoro = isPomodoroEnabled;
+        state.pomodoro_focus_interval = pomodoroFocusInterval;
+        state.pomodoro_break_interval = pomodoroBreakInterval;
+        state.topic_name = currentTopicName;
+        state.is_paused = isPaused;
+        state.break_start_time = breakStartTime;
+        state.idle_timeout_start = idleTimeoutStart;
+        state.crystal_reveal_fraction = crystalRevealFraction;
+        focusDao.insertOrReplaceState(state);
+    }
+
     private void saveDailyFocusStat(long elapsedSeconds) {
-        SharedPreferences statsPrefs = getSharedPreferences("FOCUS_STATS_PREFS", MODE_PRIVATE);
-        SharedPreferences.Editor editor = statsPrefs.edit();
         String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-        String dailyKey = "focus_time_" + today;
-        long todaySeconds = statsPrefs.getLong(dailyKey, 0);
-        editor.putLong(dailyKey, todaySeconds + elapsedSeconds);
-        editor.apply();
+        Long cur = focusDao.getSecondsForDate(today);
+        long newVal = (cur != null ? cur : 0L) + elapsedSeconds;
+        FocusDailyStatEntity e = new FocusDailyStatEntity();
+        e.date = today;
+        e.seconds = newVal;
+        focusDao.insertOrReplaceDaily(e);
     }
 
     public void stopTimer() {
         if (isRunning) {
-            long elapsedMillis = getElapsedMillis();
+            // Calculate FOCUS time only (not break time)
+            long elapsedFocusMillis = accumulatedFocusTime;
+            if (!isPaused && !isBreak) {
+                // Add current segment if actively focusing
+                elapsedFocusMillis += (SystemClock.elapsedRealtime() - currentSegmentStartMillis);
+            }
+
+            // Capture start time before reset
+            final long actualStartTime = wallStartTimeMillis;
+
             boolean wasTimeLimited = currentDurationInMillis != Long.MAX_VALUE;
-            boolean stoppedEarly = wasTimeLimited && elapsedMillis < currentDurationInMillis;
+            boolean completedNaturally = wasTimeLimited && elapsedFocusMillis >= currentDurationInMillis;
             lastCompletedDurationMinutes = (int) (currentDurationInMillis / (60_000L));
-            completedNaturally = wasTimeLimited && !stoppedEarly;
+            this.completedNaturally = completedNaturally;
+
+            // Reset state
             isRunning = false;
+            isPaused = false;
+            isBreak = false;
             isPublicFocusRun = false;
-            startTimeMillis = 0L;
+            sessionStartRealtime = 0L;
+            wallStartTimeMillis = 0L;
             durationHandler.removeCallbacksAndMessages(null);
             notificationHandler.removeCallbacks(updateNotificationTask);
             cancelStopAlarm();
 
-            // Clear persisted state
-            SharedPreferences sp = getSharedPreferences(STATE_PREFS, MODE_PRIVATE);
-            sp.edit().putBoolean(KEY_ACTIVE, false).remove(KEY_END_ELAPSED).remove(KEY_DURATION).apply();
+            // Clear persisted state (Room)
+            FocusStateEntity state = new FocusStateEntity();
+            state.id = 1;
+            state.active = false;
+            state.end_elapsed = 0L;
+            state.duration = 0L;
+            focusDao.insertOrReplaceState(state);
+            updateWidgets();
 
-            Log.d(TAG, "Stopping timer. Elapsed: " + elapsedMillis + "ms");
+            Log.d(TAG, "Stopping timer. Focus time: " + elapsedFocusMillis + "ms");
 
-            // Save daily focus stats
-            long elapsedSeconds = elapsedMillis / 1000;
+            // Save daily focus stats (FOCUS TIME ONLY - no break time)
+            long elapsedSeconds = elapsedFocusMillis / 1000;
             saveDailyFocusStat(elapsedSeconds);
 
-            // Save to total focused time for HomeActivity display
-            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-            long currentTotal = prefs.getLong(TOTAL_FOCUSED_TIME_KEY, 0);
-            prefs.edit().putLong(TOTAL_FOCUSED_TIME_KEY, currentTotal + elapsedSeconds).apply();
+            // Save detailed session history (FOCUS TIME ONLY)
+            try {
+                FocusSessionEntity session = new FocusSessionEntity();
+                session.start_time_ms = actualStartTime;
+                session.end_time_ms = System.currentTimeMillis();
+                session.duration_ms = elapsedFocusMillis; // Focus time only
+                session.date_str = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+                session.topic_name = (currentTopicName != null && !currentTopicName.isEmpty()) ? currentTopicName
+                        : "Untitled";
 
-            // Award Mint Crystals only when the user completes the full time-limited session
+                focusDao.insertSession(session);
+            } catch (Exception e) {
+                Log.e(TAG, "Error saving focus session", e);
+            }
+
+            // Coin logic
             MintCrystals mintCrystals = new MintCrystals(this);
             int coinsAwarded = 0;
+
             if (completedNaturally) {
                 coinsAwarded = mapCoinsForMinutes(lastCompletedDurationMinutes);
                 if (coinsAwarded > 0) {
                     mintCrystals.addCoins(coinsAwarded);
                     Log.i(TAG, "MintCrystals: Awarded " + coinsAwarded + " coins for completing " + lastCompletedDurationMinutes + " minutes.");
                 }
-            }
-
-            // Deduct 3 coins if user stopped early in a time-limited session
-            if (stoppedEarly) {
+            } else if (wasTimeLimited) {
+                // User manually stopped early - deduct coins
                 mintCrystals.subtractCoins(3);
                 Toast.makeText(this, "3 MintCrystals deducted.", Toast.LENGTH_SHORT).show();
-                Log.i(TAG, "PeaceCoins: Deducted 3 coins for stopping early in time-limited Focus Mode.");
+                Log.i(TAG, "MintCrystals: Deducted 3 coins for stopping early.");
             }
 
-            Toast.makeText(this, "You have focused for " + formatTime(elapsedMillis), Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "You have focused for " + formatTime(elapsedFocusMillis), Toast.LENGTH_SHORT).show();
 
-            // Show a high-priority completion notification if finished naturally (background/closed cases)
-            if (completedNaturally) {
+            // Show a high-priority completion notification if finished naturally
+            if (completedNaturally)
                 showCompletionNotification(lastCompletedDurationMinutes, coinsAwarded);
-            }
 
             stopForeground(true);
-            // Ensure the service fully stops after exiting foreground
             stopSelf();
         }
+
     }
 
     public void stopService() {
@@ -264,10 +620,17 @@ public class FocusService extends Service {
     }
 
     public long getElapsedMillis() {
-        if (!isRunning || startTimeMillis == 0L) {
+        if (!isRunning)
             return 0L;
+
+        long now = SystemClock.elapsedRealtime();
+        if (isBreak) {
+            // In break, elapsed focus time is just what we accumulated
+            return accumulatedFocusTime;
+        } else {
+            // In focus, it's accumulated + current segment
+            return accumulatedFocusTime + (now - currentSegmentStartMillis);
         }
-        return SystemClock.elapsedRealtime() - startTimeMillis;
     }
 
     public long getCurrentDuration() {
@@ -307,26 +670,9 @@ public class FocusService extends Service {
         return PendingIntent.getService(this, 1001, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
-    private void scheduleStopAlarm(long triggerElapsedRealtime) {
-        if (alarmManager == null) return;
-        PendingIntent pi = getStopPendingIntent();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (!alarmManager.canScheduleExactAlarms()) {
-                Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
-                intent.setData(Uri.parse("package:" + getPackageName()));
-                startActivity(intent);
-                return;
-            }
-        }
-        try {
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerElapsedRealtime, pi);
-        } catch (Throwable t) {
-            Log.w(TAG, "Failed to schedule exact stop alarm: " + t.getMessage());
-        }
-    }
-
     private void cancelStopAlarm() {
-        if (alarmManager == null) return;
+        if (alarmManager == null)
+            return;
         try {
             alarmManager.cancel(getStopPendingIntent());
         } catch (Throwable t) {
@@ -338,35 +684,50 @@ public class FocusService extends Service {
         Intent stopIntent = new Intent(this, FocusService.class);
         stopIntent.setAction(ACTION_STOP_TIMER);
         PendingIntent stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
         Intent notificationIntent = new Intent(this, FocusMode.class);
         notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
+        String title;
         String timeString;
-        if (currentDurationInMillis == Long.MAX_VALUE) {
-            timeString = "Focusing: " + formatTime(elapsedMillis);
+
+        if (isPaused && isBreak) {
+            // BREAK_PAUSED state
+            title = "Focus Paused - Take a Break";
+            long breakRemaining = getBreakRemainingMillis();
+            timeString = "Break: " + formatTime(breakRemaining);
+        } else if (isPaused) {
+            // WAITING_USER state
+            title = "Focus Paused";
+            timeString = "Tap to Resume";
         } else {
-            long remainingMillis = currentDurationInMillis - elapsedMillis;
-            if (remainingMillis < 0) remainingMillis = 0;
-            timeString = "Time left: " + formatTime(remainingMillis);
+            // FOCUS_RUNNING state
+            title = "Focus Mode Active";
+            if (currentDurationInMillis == Long.MAX_VALUE) {
+                timeString = "Focusing: " + formatTime(elapsedMillis);
+            } else {
+                long remainingMillis = currentDurationInMillis - elapsedMillis;
+                if (remainingMillis < 0)
+                    remainingMillis = 0;
+                timeString = "Time left: " + formatTime(remainingMillis);
+            }
         }
 
         return new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("Focus Mode Active")
+                .setContentTitle(title)
                 .setContentText(timeString)
-                .setSmallIcon(R.drawable.focus)
+                .setSmallIcon(R.drawable.focus_yoga)
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
-                .addAction(R.drawable.stop_circle, "Stop Focus", stopPendingIntent)
+                .addAction(R.drawable.ic_pause, "Stop Focus", stopPendingIntent)
                 .build();
     }
 
     private void showCompletionNotification(int minutes, int coins) {
         Intent openIntent = new Intent(this, FocusMode.class);
         openIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        PendingIntent openPendingIntent = PendingIntent.getActivity(this, 0, openIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent openPendingIntent = PendingIntent.getActivity(this, 0, openIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         String content = "Completed: " + minutes + " min." + (coins > 0 ? "   +" + coins + " Mint Crystals" : "");
         Bitmap large = null;
@@ -378,7 +739,7 @@ public class FocusService extends Service {
         Notification notification = new NotificationCompat.Builder(this, COMPLETION_CHANNEL_ID)
                 .setContentTitle("Focus Complete")
                 .setContentText(content)
-                .setSmallIcon(R.drawable.focus)
+                .setSmallIcon(R.drawable.focus_yoga)
                 .setLargeIcon(large)
                 .setContentIntent(openPendingIntent)
                 .setAutoCancel(true)
@@ -399,19 +760,70 @@ public class FocusService extends Service {
         return String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds);
     }
 
+    private void migrateFocusPrefsIfNeeded() {
+        SharedPreferences migration = getSharedPreferences("focus_room_migration", MODE_PRIVATE);
+        if (migration.getBoolean("done_v1", false))
+            return;
+
+        // Migrate running state
+        SharedPreferences sp = getSharedPreferences(STATE_PREFS, MODE_PRIVATE);
+        boolean active = sp.getBoolean(KEY_ACTIVE, false);
+        long endElapsed = sp.getLong(KEY_END_ELAPSED, 0L);
+        long duration = sp.getLong(KEY_DURATION, 0L);
+        FocusStateEntity state = new FocusStateEntity();
+        state.id = 1;
+        state.active = active;
+        state.end_elapsed = endElapsed;
+        state.duration = duration;
+        focusDao.insertOrReplaceState(state);
+        sp.edit().clear().apply();
+
+        // Migrate daily stats
+        SharedPreferences statsPrefs = getSharedPreferences("FOCUS_STATS_PREFS", MODE_PRIVATE);
+        long sum = 0L;
+        for (String key : statsPrefs.getAll().keySet()) {
+            if (key.startsWith("focus_time_")) {
+                Object val = statsPrefs.getAll().get(key);
+                if (val instanceof Long) {
+                    long seconds = (Long) val;
+                    String date = key.substring("focus_time_".length());
+                    FocusDailyStatEntity e = new FocusDailyStatEntity();
+                    e.date = date;
+                    e.seconds = seconds;
+                    focusDao.insertOrReplaceDaily(e);
+                    sum += seconds;
+                }
+            }
+        }
+        statsPrefs.edit().clear().apply();
+
+        // Migrate total if higher than sum of daily
+        SharedPreferences appPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        long total = appPrefs.getLong(TOTAL_FOCUSED_TIME_KEY, 0);
+        if (total > sum) {
+            String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+            Long cur = focusDao.getSecondsForDate(today);
+            FocusDailyStatEntity e = new FocusDailyStatEntity();
+            e.date = today;
+            e.seconds = (cur != null ? cur : 0L) + (total - sum);
+            focusDao.insertOrReplaceDaily(e);
+        }
+        appPrefs.edit().remove(TOTAL_FOCUSED_TIME_KEY).apply();
+
+        migration.edit().putBoolean("done_v1", true).apply();
+    }
+
     private void createNotificationChannel() {
         NotificationChannel serviceChannel = new NotificationChannel(
                 CHANNEL_ID,
                 "Focus Timer Service Channel",
-                NotificationManager.IMPORTANCE_LOW
-        );
+                NotificationManager.IMPORTANCE_LOW);
         serviceChannel.setDescription("Channel for Focus Timer foreground service notification");
 
         NotificationChannel completionChannel = new NotificationChannel(
                 COMPLETION_CHANNEL_ID,
                 "Focus Completion Alerts",
-                NotificationManager.IMPORTANCE_HIGH
-        );
+                NotificationManager.IMPORTANCE_HIGH);
         completionChannel.setDescription("Alerts when a focus session completes");
         completionChannel.enableVibration(true);
         completionChannel.setVibrationPattern(new long[]{0, 300, 200, 300});
@@ -424,13 +836,19 @@ public class FocusService extends Service {
     }
 
     private int mapCoinsForMinutes(int minutes) {
-        if (minutes <= 0) return 0;
-        if (minutes <= 30) return 2;            // Ruby
-        if (minutes <= 60) return 5;            // Emerald
-        if (minutes <= 90) return 7;            // Amethyst
-        if (minutes <= 120) return 10;          // Moonstone
-        if (minutes <= 150) return 15;          // Aquamarine
-        return 20;                               // Amber
+        if (minutes <= 0)
+            return 0;
+        if (minutes <= 30)
+            return 2; // Ruby
+        if (minutes <= 60)
+            return 5; // Emerald
+        if (minutes <= 90)
+            return 7; // Amethyst
+        if (minutes <= 120)
+            return 10; // Moonstone
+        if (minutes <= 150)
+            return 15; // Aquamarine
+        return 20; // Amber
     }
 
     @Override
@@ -442,11 +860,23 @@ public class FocusService extends Service {
         // Ensure foreground notification is removed if still present
         try {
             stopForeground(true);
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+        }
         notificationHandler.removeCallbacksAndMessages(null);
         durationHandler.removeCallbacksAndMessages(null);
     }
+
+    private void updateWidgets() {
+        String statusText;
+        if (!isRunning) {
+            statusText = getString(R.string.tap_to_start);
+        } else if (isPaused) {
+            statusText = isBreak ? getString(R.string.break_time) : getString(R.string.paused);
+        } else {
+            statusText = isBreak ? getString(R.string.break_time) : getString(R.string.running);
+        }
+
+        FocusTimerWidgetProvider.updateWidgetStatus(this, isRunning, statusText);
+        PomodoroTimerWidgetProvider.updateWidgetStatus(this, isRunning, statusText);
+    }
 }
-
-
-
