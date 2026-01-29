@@ -1,22 +1,22 @@
 <div align="center">
 
-  <img src="https://via.placeholder.com/150/25D366/FFFFFF?text=Mind+Mint" alt="Mind Mint Logo" width="120" height="120" />
+  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="Mind Mint Logo" width="120" height="120" />
 
 # Mind Mint
 
 **Reclaim Your Focus. Master Your Time.**
 
   <p>
-    <a href="https://github.com/gtxprime/mind-mint/stargazers">
-      <img src="https://img.shields.io/github/stars/gtxprime/mind-mint?style=for-the-badge&color=yellow" alt="Stars" />
+    <a href="https://github.com/gtxPrime/Mind-Mint/stargazers">
+      <img src="https://img.shields.io/github/stars/gtxPrime/Mind-Mint?style=for-the-badge&color=yellow" alt="Stars" />
     </a>
-    <a href="https://github.com/gtxprime/mind-mint/network/members">
-      <img src="https://img.shields.io/github/forks/gtxprime/mind-mint?style=for-the-badge&color=orange" alt="Forks" />
+    <a href="https://github.com/gtxPrime/Mind-Mint/network/members">
+      <img src="https://img.shields.io/github/forks/gtxPrime/Mind-Mint?style=for-the-badge&color=orange" alt="Forks" />
     </a>
-    <a href="https://github.com/gtxprime/mind-mint/issues">
-      <img src="https://img.shields.io/github/issues/gtxprime/mind-mint?style=for-the-badge&color=blue" alt="Issues" />
+    <a href="https://github.com/gtxPrime/Mind-Mint/issues">
+      <img src="https://img.shields.io/github/issues/gtxPrime/Mind-Mint?style=for-the-badge&color=blue" alt="Issues" />
     </a>
-    <a href="https://github.com/gtxprime/mind-mint/blob/main/LICENSE">
+    <a href="https://github.com/gtxPrime/Mind-Mint/blob/main/LICENSE">
       <img src="https://img.shields.io/badge/License-Modified%20MIT-brightgreen?style=for-the-badge" alt="License" />
     </a>
      <a href="#">
@@ -68,7 +68,7 @@ Stop doomscrolling before it starts.
 - **Overlay Shield**: A non-intrusive but firm overlay prevents you from accessing blocked apps during focus hours.
 - **Usage Limits**: Set daily time allowances for specific apps. Once the time is up, the app is locked for the day.
 
-### 🪙 **Gamification & Rewards**
+### 💰 **Gamification & Rewards**
 
 Make productivity addictive in a good way.
 
