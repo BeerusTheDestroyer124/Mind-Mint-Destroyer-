@@ -161,6 +161,14 @@ Mind Mint is built with modern Android development practices, ensuring a smooth 
 
 </div>
 
+<br />
+
+## 🌟 Star History
+
+<a href="https://star-history.com/#gtxPrime/Mind-Mint&Date">
+  <img src="https://api.star-history.com/svg?repos=gtxPrime/Mind-Mint&type=Date&theme=dark" alt="Star History Chart" />
+</a>
+
 ---
 
 ## 🗺 Roadmap
