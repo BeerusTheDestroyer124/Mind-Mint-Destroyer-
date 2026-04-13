@@ -44,27 +44,38 @@ public class StreakManager {
         }
 
         int streak = 0;
+        int expectedCount = allHabits.size();
 
-        // Normalize calendar to midnight
+        // Normalize calendar to start of today (midnight)
         Calendar cal = Calendar.getInstance();
         cal.set(Calendar.HOUR_OF_DAY, 0);
         cal.set(Calendar.MINUTE, 0);
         cal.set(Calendar.SECOND, 0);
         cal.set(Calendar.MILLISECOND, 0);
 
-        // Check up to 2 years back
+        // Check today first — if today is not fully completed, start checking from yesterday
+        long todayStart = cal.getTimeInMillis();
+        long todayEnd = todayStart + (24L * 60 * 60 * 1000) - 1;
+        boolean todayComplete = habitCompletionDao.getUniqueHabitsCompletedForDate(todayStart, todayEnd) >= expectedCount;
+
+        if (!todayComplete) {
+            // Start counting from yesterday
+            cal.add(Calendar.DAY_OF_YEAR, -1);
+        }
+
+        // Walk backwards day by day — stop the moment a day is broken (consecutive streak)
         for (int daysBack = 0; daysBack < 730; daysBack++) {
             long dayStart = cal.getTimeInMillis();
-            long dayEnd = dayStart + (24 * 60 * 60 * 1000) - 1;
+            long dayEnd = dayStart + (24L * 60 * 60 * 1000) - 1;
 
-            // Count all current habits as expected
-            int expectedCount = allHabits.size();
             int actualCount = habitCompletionDao.getUniqueHabitsCompletedForDate(dayStart, dayEnd);
-
             boolean allCompleted = actualCount >= expectedCount;
 
             if (allCompleted) {
                 streak++;
+            } else {
+                // Streak is broken — stop counting
+                break;
             }
             cal.add(Calendar.DAY_OF_YEAR, -1);
         }

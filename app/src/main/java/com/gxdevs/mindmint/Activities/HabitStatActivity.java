@@ -829,6 +829,18 @@ public class HabitStatActivity extends AppCompatActivity implements CalendarDayA
         // Calculate date of clicked day
         Calendar cal = Calendar.getInstance();
         cal.set(calendarYear, calendarMonth, dayOfMonth, 12, 0, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+
+        // Block future dates — user cannot mark a future day as completed
+        Calendar today = Calendar.getInstance();
+        today.set(Calendar.HOUR_OF_DAY, 23);
+        today.set(Calendar.MINUTE, 59);
+        today.set(Calendar.SECOND, 59);
+        today.set(Calendar.MILLISECOND, 999);
+        if (!isCompleted && cal.after(today)) {
+            Toast.makeText(this, "Cannot mark future dates as completed", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         long todayMs = System.currentTimeMillis();
         long clickedMs = cal.getTimeInMillis();
