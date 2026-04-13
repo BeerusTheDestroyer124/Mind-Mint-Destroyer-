@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.room.Entity;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
+import androidx.room.Ignore;
 
 @Entity(tableName = "daily_stats", indices = { @Index("date") })
 public class DailyStatsEntity {
@@ -22,7 +23,9 @@ public class DailyStatsEntity {
         date = "";
     }
 
-    public DailyStatsEntity(@NonNull String date, int tasks_completed, int habits_completed, long total_screen_time_seconds, long total_scrolls) {
+    @Ignore
+    public DailyStatsEntity(@NonNull String date, int tasks_completed, int habits_completed,
+            long total_screen_time_seconds, long total_scrolls) {
         this.date = date;
         this.tasks_completed = tasks_completed;
         this.habits_completed = habits_completed;
@@ -31,6 +34,7 @@ public class DailyStatsEntity {
     }
 
     // Constructor for backward compatibility (optional but good for existing code)
+    @Ignore
     public DailyStatsEntity(@NonNull String date, int tasks_completed, int habits_completed) {
         this(date, tasks_completed, habits_completed, 0, 0);
     }

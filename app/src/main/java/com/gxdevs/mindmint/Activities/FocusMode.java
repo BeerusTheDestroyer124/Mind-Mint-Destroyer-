@@ -663,6 +663,9 @@ public class FocusMode extends AppCompatActivity {
             boolean isRunning = focusService.isTimerRunning();
 
             if (isRunning) {
+                // Catch-up: stop overdue timer before setting up running-state UI
+                if (checkAndStopOverdueTimer()) return;
+
                 if (revealAnimator != null && revealAnimator.isRunning()) {
                     revealAnimator.cancel();
                 }
@@ -744,6 +747,9 @@ public class FocusMode extends AppCompatActivity {
                 }
                 long totalDuration = focusService.getCurrentDuration();
                 selectedMinutes = (int) (totalDuration / (1000 * 60));
+
+                // Catch-up: stop overdue timer before setting up running-state UI
+                if (checkAndStopOverdueTimer()) return;
             } else {
                 timerText.setText(String.format(Locale.US, "%d min", selectedMinutes));
             }
@@ -854,6 +860,28 @@ public class FocusMode extends AppCompatActivity {
         }
     }
 
+    /**
+     * Checks if the timer has exceeded its duration (Doze may have delayed the stop).
+     * If overdue, stops the timer and handles UI + completion dialog.
+     * @return true if the timer was stopped; caller should skip normal running-state logic.
+     */
+    private boolean checkAndStopOverdueTimer() {
+        if (focusService == null || !focusService.isTimerRunning()) return false;
+        long dur = focusService.getCurrentDuration();
+        if (dur != Long.MAX_VALUE && !focusService.isPaused() && !focusService.isBreak()
+                && focusService.getElapsedMillis() >= dur) {
+            focusService.stopTimer();
+            updateButtonStates(false);
+            showCrystalForSelection();
+            if (focusService.consumeCompletedNaturally()) {
+                showFocusCompleteDialog(focusService.getLastCompletedDurationMinutes());
+                mintCrystalsTxt.setText(String.valueOf(mintCrystals.getCoins()));
+            }
+            return true;
+        }
+        return false;
+    }
+
     private void updateButtonStates(boolean timerIsRunning) {
         if (timerIsRunning && focusService != null) {
             if (revealAnimator != null && revealAnimator.isRunning()) {
@@ -893,6 +921,9 @@ public class FocusMode extends AppCompatActivity {
         public void run() {
             if (isBound && focusService != null) {
                 if (focusService.isTimerRunning()) {
+                    // Catch-up: stop overdue timer instead of updating UI
+                    if (checkAndStopOverdueTimer()) return;
+
                     updateTimerUI();
                     handler.postDelayed(this, 900);
                 } else {

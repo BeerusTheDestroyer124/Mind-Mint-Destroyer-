@@ -10,6 +10,7 @@ public class SettingsItem {
     public static final int TYPE_THEME = 3;
     public static final int TYPE_PERMISSION = 4;
     public static final int TYPE_BACKUP = 5;
+    public static final int TYPE_SCROLL_TAB = 6;
 
     private int id;
     private final int type;
@@ -26,6 +27,9 @@ public class SettingsItem {
     private int seekbarMax;
     private int seekbarProgress;
     private String seekbarValueText;
+
+    // For TYPE_SCROLL_TAB: true = per-app view, false = combined
+    private boolean scrollTabPerApp;
 
     // Listeners
     private View.OnClickListener onClickListener;
@@ -96,6 +100,15 @@ public class SettingsItem {
         this.seekbarProgress = progress;
         this.seekbarValueText = valueText;
         return this;
+    }
+
+    public SettingsItem setScrollTabPerApp(boolean perApp) {
+        this.scrollTabPerApp = perApp;
+        return this;
+    }
+
+    public boolean isScrollTabPerApp() {
+        return scrollTabPerApp;
     }
 
     // Getters

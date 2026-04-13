@@ -325,7 +325,17 @@ public class FocusService extends Service {
                 if (isRunning)
                     finalNextEventRunnable.run();
             }, nextEventDelay);
+        }
 
+        // Schedule AlarmManager backup for total duration stop (survives Doze mode).
+        // Handler.postDelayed() alone is unreliable for long timers (>30 min screen-off).
+        if (currentDurationInMillis != Long.MAX_VALUE && !isBreak && !isPaused) {
+            long remainingTotal = currentDurationInMillis - accumulatedFocusTime;
+            long stopDelay = (currentSegmentStartMillis + remainingTotal) - SystemClock.elapsedRealtime();
+            if (stopDelay > 0) {
+                scheduleStopAlarm(stopDelay);
+            }
+        } else {
             cancelStopAlarm();
         }
     }
@@ -539,6 +549,12 @@ public class FocusService extends Service {
             lastCompletedDurationMinutes = (int) (currentDurationInMillis / (60_000L));
             this.completedNaturally = completedNaturally;
 
+            // Cap recorded focus time to the goal duration if timer completed naturally.
+            // Doze may have delayed the stop callback, causing elapsed > goal.
+            if (completedNaturally) {
+                elapsedFocusMillis = currentDurationInMillis;
+            }
+
             // Reset state
             isRunning = false;
             isPaused = false;
@@ -652,6 +668,14 @@ public class FocusService extends Service {
         public void run() {
             if (isRunning) {
                 long elapsedMillis = getElapsedMillis();
+
+                // Catch-up: stop if total duration exceeded (Doze may have delayed Handler)
+                if (currentDurationInMillis != Long.MAX_VALUE && !isPaused && !isBreak
+                        && elapsedMillis >= currentDurationInMillis) {
+                    stopTimer();
+                    return;
+                }
+
                 Notification notification = createNotification(elapsedMillis);
                 NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
                 if (manager != null) {
@@ -677,6 +701,24 @@ public class FocusService extends Service {
             alarmManager.cancel(getStopPendingIntent());
         } catch (Throwable t) {
             Log.w(TAG, "Failed to cancel stop alarm: " + t.getMessage());
+        }
+    }
+
+    /**
+     * Schedule an exact alarm as a Doze-proof backup to stop the timer.
+     * Handler.postDelayed() is unreliable for long delays when the device enters
+     * Doze mode, so we use AlarmManager to guarantee the timer stops on time.
+     */
+    private void scheduleStopAlarm(long delayMs) {
+        if (alarmManager == null) return;
+        cancelStopAlarm();
+        long triggerAt = SystemClock.elapsedRealtime() + delayMs;
+        PendingIntent pi = getStopPendingIntent();
+        try {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, pi);
+            Log.d(TAG, "Scheduled stop alarm in " + delayMs + "ms");
+        } catch (SecurityException e) {
+            Log.w(TAG, "Cannot schedule exact alarm: " + e.getMessage());
         }
     }
 
@@ -726,8 +768,7 @@ public class FocusService extends Service {
     private void showCompletionNotification(int minutes, int coins) {
         Intent openIntent = new Intent(this, FocusMode.class);
         openIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        PendingIntent openPendingIntent = PendingIntent.getActivity(this, 0, openIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent openPendingIntent = PendingIntent.getActivity(this, 0, openIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         String content = "Completed: " + minutes + " min." + (coins > 0 ? "   +" + coins + " Mint Crystals" : "");
         Bitmap large = null;

@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.room.Entity;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
+import androidx.room.Ignore;
 
 @Entity(tableName = "habit_completions", indices = { @Index("habit_id"), @Index("completion_date_ms"),
         @Index("adjusted_date_ms") })
@@ -57,12 +58,14 @@ public class HabitCompletionEntity {
         this.count = 1; // Default to 1 completion
     }
 
+    @Ignore
     public HabitCompletionEntity(@NonNull String habit_id, long completion_date_ms) {
         this.habit_id = habit_id;
         this.completion_date_ms = completion_date_ms;
         this.count = 1;
     }
 
+    @Ignore
     public HabitCompletionEntity(@NonNull String habit_id, long completion_date_ms,
             String day_part, long adjusted_date_ms, int count) {
         this.habit_id = habit_id;

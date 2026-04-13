@@ -1,6 +1,7 @@
 package com.gxdevs.mindmint.Adapters;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,6 +15,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
+import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.materialswitch.MaterialSwitch;
@@ -75,6 +77,8 @@ public class SettingsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                 return new ThemeViewHolder(inflater.inflate(R.layout.item_settings_theme, parent, false));
             case SettingsItem.TYPE_BACKUP:
                 return new BackupViewHolder(inflater.inflate(R.layout.item_settings_backup, parent, false));
+            case SettingsItem.TYPE_SCROLL_TAB:
+                return new ScrollTabViewHolder(inflater.inflate(R.layout.item_settings_scroll_tab, parent, false));
             case SettingsItem.TYPE_PERMISSION:
             default:
                 return new PermissionViewHolder(inflater.inflate(R.layout.item_settings_permission, parent, false));
@@ -87,6 +91,9 @@ public class SettingsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
         if (holder instanceof HeaderViewHolder) {
             ((HeaderViewHolder) holder).bind(item);
+        } else if (holder instanceof ScrollTabViewHolder) {
+            ((ScrollTabViewHolder) holder).bind(item);
+            updateBackground(holder.itemView, position);
         } else if (holder instanceof CommonViewHolder) {
             ((CommonViewHolder) holder).bind(item);
             updateBackground(holder.itemView, position);
@@ -154,7 +161,8 @@ public class SettingsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         return type == SettingsItem.TYPE_SWITCH ||
                 type == SettingsItem.TYPE_SEEKBAR ||
                 type == SettingsItem.TYPE_THEME ||
-                type == SettingsItem.TYPE_BACKUP;
+                type == SettingsItem.TYPE_BACKUP ||
+                type == SettingsItem.TYPE_SCROLL_TAB;
     }
 
     @Override
@@ -430,6 +438,67 @@ public class SettingsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
             if (item.getOnClickListener() != null) {
                 root.setOnClickListener(item.getOnClickListener());
+            }
+        }
+    }
+
+    class ScrollTabViewHolder extends RecyclerView.ViewHolder {
+        TextView tabCombined, tabPerApp;
+        View divider;
+
+        ScrollTabViewHolder(View itemView) {
+            super(itemView);
+            tabCombined = itemView.findViewById(R.id.tabCombined);
+            tabPerApp   = itemView.findViewById(R.id.tabPerApp);
+            divider     = itemView.findViewById(R.id.divider);
+        }
+
+        void bind(SettingsItem item) {
+            boolean perApp = item.isScrollTabPerApp();
+            applyTabStyle(perApp);
+
+            tabCombined.setOnClickListener(v -> {
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+                prefs.edit().putBoolean("pref_scroll_counter_per_app", false).apply();
+                item.setScrollTabPerApp(false);
+                applyTabStyle(false);
+            });
+
+            tabPerApp.setOnClickListener(v -> {
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+                prefs.edit().putBoolean("pref_scroll_counter_per_app", true).apply();
+                item.setScrollTabPerApp(true);
+                applyTabStyle(true);
+            });
+        }
+
+        private void applyTabStyle(boolean perApp) {
+            int selectedBg  = ContextCompat.getColor(context, R.color.brainColor);
+            int selectedTxt = ContextCompat.getColor(context, R.color.white);
+            int normalTxt;
+            android.util.TypedValue tv = new android.util.TypedValue();
+            if (context.getTheme().resolveAttribute(R.attr.text_primary, tv, true)) {
+                normalTxt = tv.data;
+            } else {
+                normalTxt = ContextCompat.getColor(context, R.color.white);
+            }
+
+            // Combined tab
+            if (!perApp) {
+                tabCombined.setBackgroundResource(R.drawable.bg_segment_selected);
+                tabCombined.setTextColor(selectedTxt);
+            } else {
+                tabCombined.setBackground(null);
+                tabCombined.setTextColor(normalTxt);
+            }
+
+            // Per App tab
+            if (perApp) {
+                tabPerApp.setBackgroundResource(R.drawable.bg_segment_selected);
+                tabPerApp.setTextColor(selectedTxt);
+            } else {
+                tabPerApp.setBackground(null);
+                tabPerApp.setTextColor(normalTxt);
             }
         }
     }

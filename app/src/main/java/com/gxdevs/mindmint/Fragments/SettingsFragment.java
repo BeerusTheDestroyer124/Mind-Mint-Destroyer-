@@ -78,6 +78,8 @@ public class SettingsFragment extends Fragment {
     private static final int ID_ADULT_BLOCK = 7;
     private static final int ID_POPUP_DURATION = 8;
     private static final int ID_THEME = 9;
+    private static final int ID_SCROLL_COUNTER = 10;
+    private static final int ID_SCROLL_TAB = 11;
     private static final int ID_PERM_ACCESSIBILITY = 100;
     private static final int ID_PERM_NOTIFICATION = 101;
     private static final int ID_PERM_ALARM = 102;
@@ -292,6 +294,30 @@ public class SettingsFragment extends Fragment {
         boolean isKeepAlive = defaultSharedPreferences.getBoolean("keepServiceAlive", false);
         settingsItems.add(new SettingsItem(ID_KEEP_ALIVE, SettingsItem.TYPE_SWITCH, "Keep service alive",
                 "Prevent OS from killing app", R.drawable.zap, grayIcon).setSwitch(true, isKeepAlive, this::handleKeepAliveToggle));
+
+        // --- Scroll Counter ---
+        boolean isScrollCounterOn = defaultSharedPreferences.getBoolean("pref_scroll_counter_enabled", false);
+        settingsItems.add(new SettingsItem(ID_SCROLL_COUNTER, SettingsItem.TYPE_SWITCH, "Show scroll counter",
+                isScrollCounterOn ? "Pill shown on blocked app screens" : "Show daily scroll count on blocking screen",
+                R.drawable.scroll_text, tealIcon)
+                .setSwitch(true, isScrollCounterOn, (btn, isChecked) -> {
+                    if (isChecked && !isAccessibilityPermissionGranted(requireContext())) {
+                        btn.setChecked(false);
+                        defaultSharedPreferences.edit().putBoolean("pref_scroll_counter_enabled", false).apply();
+                        shakeCard(ID_PERM_ACCESSIBILITY);
+                        refreshList();
+                        return;
+                    }
+                    defaultSharedPreferences.edit().putBoolean("pref_scroll_counter_enabled", isChecked).apply();
+                    refreshList();
+                }));
+
+        if (isScrollCounterOn) {
+            boolean perApp = defaultSharedPreferences.getBoolean("pref_scroll_counter_per_app", false);
+            settingsItems.add(new SettingsItem(ID_SCROLL_TAB, SettingsItem.TYPE_SCROLL_TAB,
+                    "", "", 0, 0)
+                    .setScrollTabPerApp(perApp));
+        }
 
         // BLOCKING RULES
         settingsItems.add(new SettingsItem(SettingsItem.TYPE_HEADER, "BLOCKING RULES"));

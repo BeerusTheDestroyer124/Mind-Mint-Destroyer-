@@ -3,32 +3,36 @@ package com.gxdevs.mindmint.Activities;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.View;
 import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.AnimationSet;
 import android.view.animation.RotateAnimation;
 import android.view.animation.TranslateAnimation;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
- 
 import androidx.preference.PreferenceManager;
 
 import com.gxdevs.mindmint.R;
 import com.gxdevs.mindmint.Services.AppUsageAccessibilityService;
+import com.gxdevs.mindmint.Utils.Utils;
 
 public class BlockingOverlayDisplayActivity extends AppCompatActivity {
 
     private static final String TAG = "BlockingOverlayDisplay";
     private final Handler handler = new Handler(Looper.getMainLooper());
     private String currentBlockedAppName = "Unknown";
+    private String currentBlockedPackageName = null;
     private ImageView ivBlockedAppIcon;
     private boolean isReminderOnly = false;
 
@@ -52,8 +56,6 @@ public class BlockingOverlayDisplayActivity extends AppCompatActivity {
 
     @SuppressLint("SetTextI18n")
     private void processIntent(Intent intent) {
-        // To store package name
-        String currentBlockedPackageName;
         boolean isFocus = false;
         if (intent == null) {
             Log.w(TAG, "processIntent: Intent is null.");
@@ -64,7 +66,8 @@ public class BlockingOverlayDisplayActivity extends AppCompatActivity {
             currentBlockedPackageName = intent.getStringExtra(AppUsageAccessibilityService.EXTRA_BLOCKED_PACKAGE_NAME);
             isReminderOnly = intent.getBooleanExtra(AppUsageAccessibilityService.EXTRA_IS_REMINDER_ONLY, false);
             isFocus = intent.getBooleanExtra(AppUsageAccessibilityService.EXTRA_IS_FOCUS, false);
-            Log.i(TAG, "processIntent: Received blocked app name: " + currentBlockedAppName + ", package: " + currentBlockedPackageName + ", isReminder: " + isReminderOnly);
+            Log.i(TAG, "processIntent: Received blocked app name: " + currentBlockedAppName
+                    + ", package: " + currentBlockedPackageName + ", isReminder: " + isReminderOnly);
 
             if (TextUtils.isEmpty(currentBlockedAppName)) {
                 currentBlockedAppName = "This app";
@@ -97,7 +100,10 @@ public class BlockingOverlayDisplayActivity extends AppCompatActivity {
         } else {
             Log.e(TAG, "processIntent: ivBlockedAppIcon is NULL!");
         }
+
     }
+
+
 
     @NonNull
     private static AnimationSet getAnimationSet() {
@@ -131,9 +137,11 @@ public class BlockingOverlayDisplayActivity extends AppCompatActivity {
             popupDurationSeconds = 1;
         }
 
-        Log.i(TAG, "setupTimer: Scheduling finish() in " + popupDurationSeconds + " seconds for app: " + currentBlockedAppName + ". Is Reminder: " + isReminderOnly);
+        Log.i(TAG, "setupTimer: Scheduling finish() in " + popupDurationSeconds + " seconds for app: "
+                + currentBlockedAppName + ". Is Reminder: " + isReminderOnly);
         handler.postDelayed(() -> {
-            Log.i(TAG, "Handler postDelayed: Time elapsed for app: " + currentBlockedAppName + ". Is Reminder: " + isReminderOnly);
+            Log.i(TAG, "Handler postDelayed: Time elapsed for app: " + currentBlockedAppName
+                    + ". Is Reminder: " + isReminderOnly);
 
             if (!isReminderOnly) {
                 Log.d(TAG, "Sending broadcast to AppUsageAccessibilityService to perform GLOBAL_ACTION_HOME for blocking.");
@@ -205,4 +213,4 @@ public class BlockingOverlayDisplayActivity extends AppCompatActivity {
         Log.i(TAG, "onDestroy: Activity DESTROYED for app: " + currentBlockedAppName + ". Removing handler callbacks.");
         handler.removeCallbacksAndMessages(null);
     }
-} 
+}

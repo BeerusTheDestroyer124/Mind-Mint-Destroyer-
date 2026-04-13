@@ -164,7 +164,7 @@ public class HomeActivity extends AppCompatActivity {
         View.OnClickListener onNavClick = view -> {
             int id = view.getId();
             if (id == R.id.nav_unlink) {
-                Toast.makeText(HomeActivity.this, "Coming soon", Toast.LENGTH_SHORT).show();
+                Toast.makeText(HomeActivity.this, "Your friends are coming soon!", Toast.LENGTH_SHORT).show();
                 return;
             }
             resetNav();

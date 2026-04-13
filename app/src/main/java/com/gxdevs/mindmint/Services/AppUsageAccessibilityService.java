@@ -24,8 +24,12 @@ import android.os.Looper;
 import android.os.PowerManager;
 import android.util.Log;
 import android.util.Pair;
+import android.view.View;
+import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -55,6 +59,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+@SuppressLint("AccessibilityPolicy")
 public class AppUsageAccessibilityService extends AccessibilityService {
 
     private static final String TAG = "AppUsageAccessibilityService";
@@ -93,6 +98,12 @@ public class AppUsageAccessibilityService extends AccessibilityService {
     // Broadcast Action for internal state refresh at midnight
     public static final String ACTION_REFRESH_DAILY_STATE_INTERNAL = "com.gxdevs.mindmint.action.REFRESH_DAILY_STATE_INTERNAL";
     public static final String ACTION_UPDATE_KEEP_ALIVE = "com.gxdevs.mindmint.action.UPDATE_KEEP_ALIVE";
+    private static final String PREF_HOME_YT_SWITCH_STATE = "ytSwitchState";
+    private static final String PREF_HOME_INSTA_SWITCH_STATE = "instaSwitchState";
+    private static final String PREF_HOME_SNAP_SWITCH_STATE = "snapSwitchState";
+    private static final String EXTRA_HOME_YT_SWITCH_ON = "home_yt_switch_on";
+    private static final String EXTRA_HOME_INSTA_SWITCH_ON = "home_insta_switch_on";
+    private static final String EXTRA_HOME_SNAP_SWITCH_ON = "home_snap_switch_on";
 
     // Preference keys for service notification (not used in original)
     private SharedPreferences sharedPreferences;
@@ -151,6 +162,54 @@ public class AppUsageAccessibilityService extends AccessibilityService {
     // --- PeaceCoins Reminder Ignore Tracking ---
     private static final String PREF_REMINDER_IGNORED_COUNT_PREFIX = "reminder_ignored_count_";
 
+    // --- Overlay variables for Scroll Counter Pill ---
+    private WindowManager windowManager;
+    private View scrollPillOverlayView;
+    private TextView pillScrollCountText;
+    private ImageView pillAppIconImage;
+    private boolean isScrollCounterPillVisible = false;
+    private boolean scrollCounterEnabled = false;
+    private boolean scrollCounterPerApp = false;
+    private String lastSeenPillAppTag = null;
+    private String lastSeenPillPackageName = null;
+    private final android.os.Handler scrollPillHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable hideScrollPillRunnable = () -> {
+        if (scrollPillOverlayView != null) {
+            // First, double check if it's actually gone by requesting the root node
+            AccessibilityNodeInfo rootNode = null;
+            try {
+                rootNode = getRootInActiveWindow();
+                if (rootNode != null && lastSeenPillAppTag != null && lastSeenPillPackageName != null) {
+                    String viewId = getReminderViewIdForAppTag(lastSeenPillAppTag);
+                    if (viewId != null && isReminderViewVisible(rootNode, lastSeenPillPackageName, viewId)) {
+                        return; // It's still visible! Abort hide.
+                    }
+                }
+            } catch (Exception ignored) {
+            } finally {
+                if (rootNode != null) rootNode.recycle();
+            }
+
+            android.view.View pillContainer = scrollPillOverlayView.findViewById(R.id.pillContainer);
+            if (pillContainer != null) {
+                pillContainer.animate().alpha(0f).setDuration(250).withEndAction(() -> {
+                    if (scrollPillOverlayView != null && windowManager != null) {
+                        try {
+                            windowManager.removeView(scrollPillOverlayView);
+                        } catch (Exception ignored) {}
+                        scrollPillOverlayView = null;
+                    }
+                }).start();
+            } else {
+                if (windowManager != null) {
+                    try { windowManager.removeView(scrollPillOverlayView); } catch (Exception ignored) {}
+                }
+                scrollPillOverlayView = null;
+            }
+            isScrollCounterPillVisible = false;
+        }
+    };
+
     // --- Global action throttling ---
     private long lastActionTime = 0L;
     public static boolean serviceStatus = false;
@@ -193,12 +252,8 @@ public class AppUsageAccessibilityService extends AccessibilityService {
         IntentFilter notiFilter = new IntentFilter();
         notiFilter.addAction(RESTORE_NOTIFICATION);
         notiFilter.addAction(ACTION_UPDATE_KEEP_ALIVE);
-        ContextCompat.registerReceiver(this, notificationRestoreReceiver, notiFilter,
-                ContextCompat.RECEIVER_NOT_EXPORTED);
-
-        isYtHomeSwitchOn = false;
-        isInstaHomeSwitchOn = false;
-        isSnapHomeSwitchOn = false;
+        ContextCompat.registerReceiver(this, notificationRestoreReceiver, notiFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        restoreBlockingState();
 
         pauseServiceReceiver = new BroadcastReceiver() {
             @Override
@@ -255,6 +310,17 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                         appViewFocusAccumulatedTimeTodayMap.clear(); // Part of old view focus
                         loadLastReminderTimestampsForAppTags();
                         break;
+                    case "pref_scroll_counter_enabled":
+                    case "pref_scroll_counter_per_app":
+                        scrollCounterEnabled = sharedPreferences.getBoolean("pref_scroll_counter_enabled", false);
+                        scrollCounterPerApp = sharedPreferences.getBoolean("pref_scroll_counter_per_app", false);
+                        if (!scrollCounterEnabled) hideScrollCounterPill(true);
+                        break;
+                    case PREF_HOME_YT_SWITCH_STATE:
+                    case PREF_HOME_INSTA_SWITCH_STATE:
+                    case PREF_HOME_SNAP_SWITCH_STATE:
+                        restoreBlockingState();
+                        break;
                 }
             }
         };
@@ -263,14 +329,7 @@ public class AppUsageAccessibilityService extends AccessibilityService {
         packageReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                if (intent != null) {
-                    Bundle bundle = intent.getExtras();
-                    if (bundle != null) {
-                        isYtHomeSwitchOn = bundle.getBoolean("home_yt_switch_on", false);
-                        isInstaHomeSwitchOn = bundle.getBoolean("home_insta_switch_on", false);
-                        isSnapHomeSwitchOn = bundle.getBoolean("home_snap_switch_on", false);
-                    }
-                }
+                updateBlockingStateFromIntent(intent);
             }
         };
         IntentFilter filter = new IntentFilter(IntentActions.getActionUpdatePackages(this));
@@ -309,6 +368,7 @@ public class AppUsageAccessibilityService extends AccessibilityService {
         serviceStatus = true;
         super.onServiceConnected();
 
+        restoreBlockingState();
         updateAddonsState();
         loadLastReminderTimestampsForAppTags();
 
@@ -337,6 +397,44 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                 this.currentPackage = null;
                 this.startTimeMillis = 0L;
             }
+        }
+    }
+
+    private void ensurePreferenceStores() {
+        if (sharedPreferences == null) {
+            sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        }
+        if (prefs == null) {
+            prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        }
+    }
+
+    private void restoreBlockingState() {
+        ensurePreferenceStores();
+        isYtHomeSwitchOn = sharedPreferences.getBoolean(PREF_HOME_YT_SWITCH_STATE, false);
+        isInstaHomeSwitchOn = sharedPreferences.getBoolean(PREF_HOME_INSTA_SWITCH_STATE, false);
+        isSnapHomeSwitchOn = sharedPreferences.getBoolean(PREF_HOME_SNAP_SWITCH_STATE, false);
+    }
+
+    private void updateBlockingStateFromIntent(Intent intent) {
+        restoreBlockingState();
+        if (intent == null) {
+            return;
+        }
+
+        Bundle bundle = intent.getExtras();
+        if (bundle == null) {
+            return;
+        }
+
+        if (bundle.containsKey(EXTRA_HOME_YT_SWITCH_ON)) {
+            isYtHomeSwitchOn = bundle.getBoolean(EXTRA_HOME_YT_SWITCH_ON, isYtHomeSwitchOn);
+        }
+        if (bundle.containsKey(EXTRA_HOME_INSTA_SWITCH_ON)) {
+            isInstaHomeSwitchOn = bundle.getBoolean(EXTRA_HOME_INSTA_SWITCH_ON, isInstaHomeSwitchOn);
+        }
+        if (bundle.containsKey(EXTRA_HOME_SNAP_SWITCH_ON)) {
+            isSnapHomeSwitchOn = bundle.getBoolean(EXTRA_HOME_SNAP_SWITCH_ON, isSnapHomeSwitchOn);
         }
     }
 
@@ -423,9 +521,6 @@ public class AppUsageAccessibilityService extends AccessibilityService {
     public void onDestroy() {
         serviceStatus = false;
 
-        if (sharedPreferences != null) {
-
-        }
         unregisterScreenReceiver();
 
         if (notificationRestoreReceiver != null) {
@@ -461,6 +556,7 @@ public class AppUsageAccessibilityService extends AccessibilityService {
         processViewFocusEndIfActive(currentViewIdPackage); // Old view focus system
 
         // Clear pending tasks
+        hideScrollCounterPill(true);
         if (reminderHandler != null) {
             reminderHandler.removeCallbacksAndMessages(null);
             reminderHandler = null;
@@ -494,11 +590,11 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 startActivity(intent);
                 resetUsageAndTimersForPackage(eventPackageName); // Resets general usage and specific timers for the
-                                                                 // package
+                // package
                 return;
             }
             if (eventType != AccessibilityEvent.TYPE_VIEW_SCROLLED) {
-                if (remindDoomScrollingEnabled) {
+                if (remindDoomScrollingEnabled || scrollCounterEnabled) {
                     String activeAppTagNow = null;
                     String activeReminderViewIdNow = null;
                     boolean isTrackedViewVisibleNow = false;
@@ -520,23 +616,30 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                     String previouslyTrackedAppTag = currentAppTagForReminderViewTracking;
 
                     if (isTrackedViewVisibleNow) {
-                        if (!activeAppTagNow.equals(previouslyTrackedAppTag)) {
-                            if (previouslyTrackedAppTag != null) {
-                                endReminderViewSession(previouslyTrackedAppTag);
-                            }
-                            startReminderViewSession(activeAppTagNow, activeReminderViewIdNow);
-                        } else {
-                            if (!activeRunnables.containsKey(activeAppTagNow)) {
+                        if (scrollCounterEnabled) {
+                            showScrollCounterPill(activeAppTagNow, eventPackageName);
+                        }
+                        if (remindDoomScrollingEnabled) {
+                            if (!activeAppTagNow.equals(previouslyTrackedAppTag)) {
+                                if (previouslyTrackedAppTag != null) {
+                                    endReminderViewSession(previouslyTrackedAppTag);
+                                }
                                 startReminderViewSession(activeAppTagNow, activeReminderViewIdNow);
+                            } else {
+                                if (!activeRunnables.containsKey(activeAppTagNow)) {
+                                    startReminderViewSession(activeAppTagNow, activeReminderViewIdNow);
+                                }
                             }
                         }
                     } else {
-                        if (previouslyTrackedAppTag != null) {
+                        hideScrollCounterPill(false);
+                        if (remindDoomScrollingEnabled && previouslyTrackedAppTag != null) {
                             endReminderViewSession(previouslyTrackedAppTag);
                         }
                     }
                 }
                 if (eventPackageName == null) {
+                    hideScrollCounterPill(false);
                     if (currentPackage != null && Utils.ALL_PACKAGES.containsKey(currentPackage)
                             && startTimeMillis != 0L) {
                         long endTimeMillis = System.currentTimeMillis();
@@ -627,15 +730,20 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                 }
             }
 
-            if (currentAppTagForReminderViewTracking != null
-                    && !eventPackageName.equals(getPackageForAppTag(currentAppTagForReminderViewTracking))) {
-                String appTagToEnd = currentAppTagForReminderViewTracking;
-                if (reminderViewSessionStartTimeMs.containsKey(appTagToEnd)) {
-                    long sessionStartTime = reminderViewSessionStartTimeMs.remove(appTagToEnd);
-                    long sessionDuration = System.currentTimeMillis() - sessionStartTime;
-                    if (sessionDuration > 0) {
-                        long previouslyAccumulated = reminderViewAccumulatedTimeCurrentCycleMs.getOrDefault(appTagToEnd, 0L);
-                        long newAccumulatedTime = previouslyAccumulated + sessionDuration;
+            if (currentAppTagForReminderViewTracking != null) {
+                assert eventPackageName != null;
+                if (!eventPackageName.equals(getPackageForAppTag(currentAppTagForReminderViewTracking))) {
+                    String appTagToEnd = currentAppTagForReminderViewTracking;
+                    if (reminderViewSessionStartTimeMs.containsKey(appTagToEnd)) {
+                        Long sessionStartTimeValue = reminderViewSessionStartTimeMs.remove(appTagToEnd);
+                        long sessionStartTime = sessionStartTimeValue != null ? sessionStartTimeValue : 0L;
+                        long sessionDuration = System.currentTimeMillis() - sessionStartTime;
+                        if (sessionDuration > 0) {
+                            Long previouslyAccumulatedValue = reminderViewAccumulatedTimeCurrentCycleMs.get(appTagToEnd);
+                            long previouslyAccumulated = previouslyAccumulatedValue != null ? previouslyAccumulatedValue : 0L;
+                            long newAccumulatedTime = previouslyAccumulated + sessionDuration;
+                            reminderViewAccumulatedTimeCurrentCycleMs.put(appTagToEnd, newAccumulatedTime);
+                        }
                     }
                 }
             }
@@ -692,7 +800,8 @@ public class AppUsageAccessibilityService extends AccessibilityService {
             rootNode.recycle();
 
             long currentTime = System.currentTimeMillis();
-            long lastTime = lastScrollEventTimestamp.getOrDefault(appTag, 0L);
+            Long lastTimeValue = lastScrollEventTimestamp.get(appTag);
+            long lastTime = lastTimeValue != null ? lastTimeValue : 0L;
             if (currentTime - lastTime > debounceMs) {
                 lastScrollEventTimestamp.put(appTag, currentTime);
                 incrementScrollCount(packageName);
@@ -723,13 +832,20 @@ public class AppUsageAccessibilityService extends AccessibilityService {
         editor.putLong("total_estimated_wasted_time", currentEstimatedTime + randomSeconds);
         editor.apply();
 
+        if (isScrollCounterPillVisible && scrollCounterEnabled && scrollPillOverlayView != null) {
+            String appTag = getAppTagFromAllPackages(packageName);
+            if (appTag != null) {
+                new Handler(Looper.getMainLooper()).post(() -> updateScrollCounterPillInternal(appTag, packageName));
+            }
+        }
+
         Intent intent = new Intent(IntentActions.getActionTimeUpdated(this));
         intent.setPackage(getPackageName());
         sendBroadcast(intent);
     }
 
     private void handleBackPress(String currentEventPackageName, AccessibilityNodeInfo rootNode,
-            AccessibilityEvent event) {
+                                 AccessibilityEvent event) {
         if (rootNode == null)
             return;
 
@@ -801,8 +917,10 @@ public class AppUsageAccessibilityService extends AccessibilityService {
 
             String currentForegroundAppTag = getAppTagFromAllPackages(getForegroundPackageName());
             if (!appTag.equals(currentForegroundAppTag)) {
-                long originalDelay = appTagToOriginalDelayMs.getOrDefault(appTag, 0L);
-                long postTime = appTagToLastPostTimeMs.getOrDefault(appTag, System.currentTimeMillis());
+                Long originalDelayValue = appTagToOriginalDelayMs.get(appTag);
+                long originalDelay = originalDelayValue != null ? originalDelayValue : 0L;
+                Long postTimeValue = appTagToLastPostTimeMs.get(appTag);
+                long postTime = postTimeValue != null ? postTimeValue : System.currentTimeMillis();
                 long elapsed = System.currentTimeMillis() - postTime;
                 long timeLeft = Math.max(0, originalDelay - elapsed);
                 appTagToTimeLeftForNextSessionMs.put(appTag, timeLeft);
@@ -824,7 +942,8 @@ public class AppUsageAccessibilityService extends AccessibilityService {
             // --- End PeaceCoins logic ---
 
             long userReminderIntervalMs = (long) remindDoomScrollingMinutes * 60 * 1000;
-            long lastActualReminderShownTimeMs = lastReminderTimestampForAppTag.getOrDefault(appTag, 0L);
+            Long lastActualReminderShownTimeValue = lastReminderTimestampForAppTag.get(appTag);
+            long lastActualReminderShownTimeMs = lastActualReminderShownTimeValue != null ? lastActualReminderShownTimeValue : 0L;
 
             if ((System.currentTimeMillis() - lastActualReminderShownTimeMs) < userReminderIntervalMs) {
                 appTagToTimeLeftForNextSessionMs.put(appTag, userReminderIntervalMs);
@@ -860,6 +979,9 @@ public class AppUsageAccessibilityService extends AccessibilityService {
             return;
         }
 
+        reminderViewAccumulatedTimeCurrentCycleMs.putIfAbsent(appTag, 0L);
+        reminderViewSessionStartTimeMs.putIfAbsent(appTag, System.currentTimeMillis());
+
         ShowReminderRunnable existingRunnable = activeRunnables.get(appTag);
         if (existingRunnable != null) {
             currentAppTagForReminderViewTracking = appTag;
@@ -867,7 +989,8 @@ public class AppUsageAccessibilityService extends AccessibilityService {
         }
 
         long userReminderIntervalMs = (long) remindDoomScrollingMinutes * 60 * 1000;
-        long timeToDelayMs = appTagToTimeLeftForNextSessionMs.getOrDefault(appTag, userReminderIntervalMs);
+        Long timeToDelayValue = appTagToTimeLeftForNextSessionMs.get(appTag);
+        long timeToDelayMs = timeToDelayValue != null ? timeToDelayValue : userReminderIntervalMs;
 
         if (timeToDelayMs <= 0) {
             timeToDelayMs = userReminderIntervalMs;
@@ -895,8 +1018,20 @@ public class AppUsageAccessibilityService extends AccessibilityService {
 
         reminderHandler.removeCallbacks(activeRunnable);
 
-        long originalDelay = appTagToOriginalDelayMs.getOrDefault(appTagToEnd, 0L);
-        long lastPostTime = appTagToLastPostTimeMs.getOrDefault(appTagToEnd, System.currentTimeMillis());
+        Long sessionStartTimeValue = reminderViewSessionStartTimeMs.remove(appTagToEnd);
+        if (sessionStartTimeValue != null) {
+            long sessionDuration = System.currentTimeMillis() - sessionStartTimeValue;
+            if (sessionDuration > 0) {
+                Long accumulatedValue = reminderViewAccumulatedTimeCurrentCycleMs.get(appTagToEnd);
+                long accumulatedTime = accumulatedValue != null ? accumulatedValue : 0L;
+                reminderViewAccumulatedTimeCurrentCycleMs.put(appTagToEnd, accumulatedTime + sessionDuration);
+            }
+        }
+
+        Long originalDelayValue = appTagToOriginalDelayMs.get(appTagToEnd);
+        long originalDelay = originalDelayValue != null ? originalDelayValue : 0L;
+        Long lastPostTimeValue = appTagToLastPostTimeMs.get(appTagToEnd);
+        long lastPostTime = lastPostTimeValue != null ? lastPostTimeValue : System.currentTimeMillis();
         long elapsedOnThisPost = System.currentTimeMillis() - lastPostTime;
         long timeLeftMs = Math.max(0, originalDelay - elapsedOnThisPost);
 
@@ -972,16 +1107,12 @@ public class AppUsageAccessibilityService extends AccessibilityService {
     private String getReminderViewIdForAppTag(String appTag) {
         if (appTag == null)
             return null;
-        switch (appTag) {
-            case "yt":
-                return Utils.YtViewId;
-            case "insta":
-                return Utils.instaViewId;
-            case "snap":
-                return Utils.snapViewId;
-            default:
-                return null;
-        }
+        return switch (appTag) {
+            case "yt" -> Utils.YtViewId;
+            case "insta" -> Utils.instaViewId;
+            case "snap" -> Utils.snapViewId;
+            default -> null;
+        };
     }
 
     private boolean isReminderViewVisible(AccessibilityNodeInfo rootNode, String packageName, String viewId) {
@@ -1005,8 +1136,8 @@ public class AppUsageAccessibilityService extends AccessibilityService {
     }
 
     private void handleBlockers(String currentEventPackageName, AccessibilityEvent event) { // This handles
-                                                                                            // "blockAllFeatures" view
-                                                                                            // ID blocking
+        // "blockAllFeatures" view
+        // ID blocking
         boolean blockersGloballyEnabled = sharedPreferences.getBoolean("blockAllFeatures", false);
         AccessibilityNodeInfo src = event.getSource();
         boolean hasSource = src != null;
@@ -1064,6 +1195,9 @@ public class AppUsageAccessibilityService extends AccessibilityService {
         blockAfterWastedTimeHours = sharedPreferences.getFloat(PREF_BLOCK_AFTER_WASTED_TIME_HOURS, DEFAULT_BLOCK_AFTER_WASTED_TIME_HOURS);
         blockBrowsersDoomEnabled = sharedPreferences.getBoolean(PREF_BLOCK_BROWSERS_DOOMSCROLLING_ENABLED, false);
         blockAdultSitesEnabled = sharedPreferences.getBoolean(PREF_BLOCK_ADULT_SITES_ENABLED, false);
+
+        scrollCounterEnabled = sharedPreferences.getBoolean("pref_scroll_counter_enabled", false);
+        scrollCounterPerApp = sharedPreferences.getBoolean("pref_scroll_counter_per_app", false);
 
         long currentUserReminderIntervalMs = (long) remindDoomScrollingMinutes * 60 * 1000;
         boolean settingsChanged = oldRemindDoomScrollingEnabled != remindDoomScrollingEnabled
@@ -1292,7 +1426,7 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                     if (n == null)
                         continue;
                     CharSequence t = n.getText();
-                    if (t != null && t.length() > 0) {
+                    if (t != null && !t.toString().isEmpty()) {
                         foundText = t.toString();
                         break;
                     }
@@ -1316,7 +1450,7 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                 if (n == null)
                     continue;
                 CharSequence t = n.getText();
-                if (t != null && t.length() > 0) {
+                if (t != null && !t.toString().isEmpty()) {
                     foundText = t.toString();
                     break;
                 }
@@ -1645,7 +1779,7 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                     key.startsWith(PREF_LAST_VIEW_REMINDER_TIMESTAMP_PREFIX) || // Old view focus
                     key.startsWith(PREF_LAST_REMINDER_TIMESTAMP_APP_TAG_PREFIX) || // New reminder cooldowns
                     key.startsWith(PREF_REMINDER_VIEW_ACCUMULATED_TIME_CYCLE_MS_APP_TAG_PREFIX)) { // Old reminder
-                                                                                                   // system
+                // system
                 keysToRemove.add(key);
             }
         }
@@ -1728,16 +1862,12 @@ public class AppUsageAccessibilityService extends AccessibilityService {
     }
 
     private String getAppNameForTag(String tag) { // Helper for reminder/overlay UI
-        switch (tag) {
-            case "yt":
-                return "YouTube";
-            case "insta":
-                return "Instagram";
-            case "snap":
-                return "Snapchat";
-            default:
-                return "the app";
-        }
+        return switch (tag) {
+            case "yt" -> "YouTube";
+            case "insta" -> "Instagram";
+            case "snap" -> "Snapchat";
+            default -> "the app";
+        };
     }
 
     private void findAndBlockView(AccessibilityNodeInfo rootNode, String targetViewIdName, String packageName) {
@@ -1805,5 +1935,89 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                 "Mind Mint Service",
                 NotificationManager.IMPORTANCE_LOW);
         manager.createNotificationChannel(serviceChannel);
+    }
+
+    private void showScrollCounterPill(String appTag, String packageName) {
+        if (!scrollCounterEnabled || !serviceStatus) {
+            hideScrollCounterPill(true);
+            return;
+        }
+
+        scrollPillHandler.removeCallbacks(hideScrollPillRunnable);
+
+        if (windowManager == null) {
+            windowManager = (android.view.WindowManager) getSystemService(Context.WINDOW_SERVICE);
+        }
+
+        if (scrollPillOverlayView == null) {
+            android.view.WindowManager.LayoutParams params = new android.view.WindowManager.LayoutParams(
+                    android.view.WindowManager.LayoutParams.WRAP_CONTENT,
+                    android.view.WindowManager.LayoutParams.WRAP_CONTENT,
+                    android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                    android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE | android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                    android.graphics.PixelFormat.TRANSLUCENT);
+
+            params.gravity = android.view.Gravity.TOP | android.view.Gravity.CENTER_HORIZONTAL;
+
+            scrollPillOverlayView = android.view.LayoutInflater.from(this).inflate(R.layout.overlay_scroll_pill, null);
+            pillScrollCountText = scrollPillOverlayView.findViewById(R.id.pillScrollCount);
+            pillAppIconImage = scrollPillOverlayView.findViewById(R.id.pillAppIcon);
+
+            windowManager.addView(scrollPillOverlayView, params);
+        }
+
+        isScrollCounterPillVisible = true;
+        lastSeenPillAppTag = appTag;
+        lastSeenPillPackageName = packageName;
+        updateScrollCounterPillInternal(appTag, packageName);
+
+        // animate alpha if invisible
+        android.view.View pillContainer = scrollPillOverlayView.findViewById(R.id.pillContainer);
+        if (pillContainer != null) {
+            pillContainer.animate().cancel();
+            if (pillContainer.getAlpha() < 1f) {
+                pillContainer.animate().alpha(1f).setDuration(250).start();
+            }
+        }
+    }
+
+    private void updateScrollCounterPillInternal(String appTag, String packageName) {
+        if (scrollPillOverlayView == null || pillScrollCountText == null) return;
+
+        long scrollCount = 0;
+        if (scrollCounterPerApp) {
+            scrollCount = Utils.calculateTotalUsageScrolls(sharedPreferences, appTag);
+        } else {
+            for (String pkg : Utils.ALL_PACKAGES.keySet()) {
+                scrollCount += sharedPreferences.getLong(pkg + "_scrolls", 0L);
+            }
+        }
+
+        pillScrollCountText.setText(scrollCount + " scrolls");
+
+        if (pillAppIconImage != null) {
+            pillAppIconImage.setImageResource(getDrawableId((int) scrollCount));
+        }
+    }
+
+    private static int getDrawableId(int totalWastedScrolls) {
+        if (totalWastedScrolls < 150) return R.drawable.brain1;
+        if (totalWastedScrolls < 300) return R.drawable.brain2;
+        if (totalWastedScrolls < 500) return R.drawable.brain3;
+        if (totalWastedScrolls < 700) return R.drawable.brain4;
+        if (totalWastedScrolls < 900) return R.drawable.brain5;
+        if (totalWastedScrolls < 1100) return R.drawable.brain6;
+        if (totalWastedScrolls < 1200) return R.drawable.brain7;
+        if (totalWastedScrolls < 1400) return R.drawable.brain8;
+        return R.drawable.brain9;
+    }
+
+    private void hideScrollCounterPill(boolean immediate) {
+        scrollPillHandler.removeCallbacks(hideScrollPillRunnable);
+        if (immediate) {
+            hideScrollPillRunnable.run();
+        } else {
+            scrollPillHandler.postDelayed(hideScrollPillRunnable, 1000); // 1-second debounce
+        }
     }
 }
