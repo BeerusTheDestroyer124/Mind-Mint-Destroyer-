@@ -141,7 +141,7 @@ public class Utils {
     public static void setPad(View view, String angle, Activity context) {
         WindowCompat.setDecorFitsSystemWindows(context.getWindow(), false);
         ViewCompat.setOnApplyWindowInsetsListener(view, (v, windowInsets) -> {
-            Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.ime());
 
             ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
             if (angle.equals("top")) {

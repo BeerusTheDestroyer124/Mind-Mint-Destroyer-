@@ -19,18 +19,22 @@ import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
+import android.text.Editable;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.SpannableStringBuilder;
+import android.text.TextWatcher;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.ImageSpan;
 import android.text.style.StyleSpan;
 import android.text.style.UnderlineSpan;
 import android.util.TypedValue;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.NumberPicker;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -38,6 +42,7 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.fragment.app.Fragment;
@@ -46,6 +51,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.gxdevs.mindmint.Activities.CustomAppSelectionActivity;
 import com.gxdevs.mindmint.Activities.HomeActivity;
 import com.gxdevs.mindmint.Activities.SiteBlockerActivity;
@@ -57,6 +63,7 @@ import com.gxdevs.mindmint.Utils.AdultDomainListManager;
 import com.gxdevs.mindmint.Utils.AlarmUtils;
 import com.gxdevs.mindmint.Utils.BackupManager;
 import com.gxdevs.mindmint.Utils.BlockedSitesManager;
+import com.gxdevs.mindmint.Utils.SettingsLockManager;
 import com.gxdevs.mindmint.Utils.Utils;
 import com.gxdevs.mindmint.Utils.WarningUtils;
 
@@ -80,6 +87,8 @@ public class SettingsFragment extends Fragment {
     private static final int ID_THEME = 9;
     private static final int ID_SCROLL_COUNTER = 10;
     private static final int ID_SCROLL_TAB = 11;
+    private static final int ID_SETTINGS_LOCK = 12;
+    private static final int ID_LOCK_TYPE_TAB = 13;
     private static final int ID_PERM_ACCESSIBILITY = 100;
     private static final int ID_PERM_NOTIFICATION = 101;
     private static final int ID_PERM_ALARM = 102;
@@ -192,6 +201,33 @@ public class SettingsFragment extends Fragment {
         });
 
         adapter.setOnThemeChangeListener(this::applyTheme);
+        adapter.setOnLockTabActionListener(new SettingsAdapter.OnLockTabActionListener() {
+            @Override
+            public void onRequestLockTypeChange(String newLockType, Runnable onSuccess) {
+                authenticateToChangeSetting("Change lock type", () -> {
+                    SettingsLockManager lockMgr = new SettingsLockManager(requireContext());
+                    if (SettingsLockManager.LOCK_TYPE_DEVICE.equals(newLockType)) {
+                        lockMgr.clearCustomPin();
+                    }
+                    onSuccess.run();
+                    if (SettingsLockManager.LOCK_TYPE_CUSTOM.equals(newLockType) && !lockMgr.hasCustomPin()) {
+                        lockMgr.showSetCustomPinDialog(requireContext(), false, null);
+                    }
+                });
+            }
+
+            @Override
+            public void onEditCustomPin() {
+                SettingsLockManager lockMgr = new SettingsLockManager(requireContext());
+                if (lockMgr.hasCustomPin()) {
+                    lockMgr.showVerifyPinDialog(requireContext(), "Enter current PIN to continue", verified -> {
+                        if (verified) lockMgr.showSetCustomPinDialog(requireContext(), true, null);
+                    });
+                } else {
+                    lockMgr.showSetCustomPinDialog(requireContext(), false, null);
+                }
+            }
+        });
         adapter.setOnBackupActionListener(new SettingsAdapter.OnBackupActionListener() {
             @Override
             public void onExport() {
@@ -247,24 +283,24 @@ public class SettingsFragment extends Fragment {
         SettingsItem remindItem = new SettingsItem(ID_REMIND_DOOM, SettingsItem.TYPE_SWITCH, "Remind me",
                 "Get nudges to return to focus", R.drawable.bell, textSecondary)
                 .setSwitch(true, isRemindEnabled, (buttonView, isChecked) -> {
-                    if (isChecked && !isAccessibilityPermissionGranted(requireContext())) {
-                        buttonView.setChecked(false);
+                    lockedSwitchAction("Change Remind me", buttonView, !isChecked, isChecked, () -> {
+                        if (isChecked && !isAccessibilityPermissionGranted(requireContext())) {
+                            buttonView.setChecked(false);
+                            defaultSharedPreferences.edit()
+                                    .putBoolean(AppUsageAccessibilityService.PREF_REMIND_DOOM_SCROLLING_ENABLED, false)
+                                    .apply();
+                            shakeCard(ID_PERM_ACCESSIBILITY);
+                            return;
+                        }
                         defaultSharedPreferences.edit()
-                                .putBoolean(AppUsageAccessibilityService.PREF_REMIND_DOOM_SCROLLING_ENABLED, false)
+                                .putBoolean(AppUsageAccessibilityService.PREF_REMIND_DOOM_SCROLLING_ENABLED, isChecked)
                                 .apply();
-                        shakeCard(ID_PERM_ACCESSIBILITY);
-                        refreshList();
-                        return;
-                    }
-                    defaultSharedPreferences.edit()
-                            .putBoolean(AppUsageAccessibilityService.PREF_REMIND_DOOM_SCROLLING_ENABLED, isChecked)
-                            .apply();
-                    refreshList();
+                    });
                 });
 
         if (isRemindEnabled) {
             remindItem.setFormattedSubtitle(getRemindDoomFormattedSubtitle());
-            remindItem.setOnClickListener(v -> showTimePickerBottomSheet(true));
+            remindItem.setOnClickListener(v -> authenticateToChangeSetting("Edit Reminder Time", () -> showTimePickerBottomSheet(true)));
         }
         settingsItems.add(remindItem);
 
@@ -273,27 +309,29 @@ public class SettingsFragment extends Fragment {
                 "Automatically block content", R.drawable.eye_off, redIcon)
                 .setIconValues(R.drawable.shape_circle, eyeBg)
                 .setSwitch(true, isBlockEnabled, (buttonView, isChecked) -> {
-                    if (isChecked && !isAccessibilityPermissionGranted(requireContext())) {
-                        buttonView.setChecked(false);
-                        defaultSharedPreferences.edit().putBoolean(PREF_BLOCK_AFTER_WASTED_TIME_ENABLED, false).apply();
-                        shakeCard(ID_PERM_ACCESSIBILITY);
-                        refreshList();
-                        return;
-                    }
-                    defaultSharedPreferences.edit().putBoolean(PREF_BLOCK_AFTER_WASTED_TIME_ENABLED, isChecked).apply();
-                    refreshList();
+                    lockedSwitchAction("Change Block content", buttonView, !isChecked, isChecked, () -> {
+                        if (isChecked && !isAccessibilityPermissionGranted(requireContext())) {
+                            buttonView.setChecked(false);
+                            defaultSharedPreferences.edit().putBoolean(PREF_BLOCK_AFTER_WASTED_TIME_ENABLED, false).apply();
+                            shakeCard(ID_PERM_ACCESSIBILITY);
+                            return;
+                        }
+                        defaultSharedPreferences.edit().putBoolean(PREF_BLOCK_AFTER_WASTED_TIME_ENABLED, isChecked).apply();
+                    });
                 });
 
         if (isBlockEnabled) {
             blockItem.setFormattedSubtitle(getBlockTimeFormattedSubtitle());
-            blockItem.setOnClickListener(v -> showTimePickerBottomSheet(false));
+            blockItem.setOnClickListener(v -> authenticateToChangeSetting("Edit Block Time", () -> showTimePickerBottomSheet(false)));
         }
         settingsItems.add(blockItem);
 
         // Keep Service Alive
         boolean isKeepAlive = defaultSharedPreferences.getBoolean("keepServiceAlive", false);
         settingsItems.add(new SettingsItem(ID_KEEP_ALIVE, SettingsItem.TYPE_SWITCH, "Keep service alive",
-                "Prevent OS from killing app", R.drawable.zap, grayIcon).setSwitch(true, isKeepAlive, this::handleKeepAliveToggle));
+                "Prevent OS from killing app", R.drawable.zap, grayIcon).setSwitch(true, isKeepAlive, (buttonView, isChecked) -> {
+            lockedSwitchAction("Change Keep service alive", buttonView, !isChecked, isChecked, () -> handleKeepAliveToggle(buttonView, isChecked));
+        }));
 
         // --- Scroll Counter ---
         boolean isScrollCounterOn = defaultSharedPreferences.getBoolean("pref_scroll_counter_enabled", false);
@@ -301,15 +339,15 @@ public class SettingsFragment extends Fragment {
                 isScrollCounterOn ? "Pill shown on blocked app screens" : "Show daily scroll count on blocking screen",
                 R.drawable.scroll_text, tealIcon)
                 .setSwitch(true, isScrollCounterOn, (btn, isChecked) -> {
-                    if (isChecked && !isAccessibilityPermissionGranted(requireContext())) {
-                        btn.setChecked(false);
-                        defaultSharedPreferences.edit().putBoolean("pref_scroll_counter_enabled", false).apply();
-                        shakeCard(ID_PERM_ACCESSIBILITY);
-                        refreshList();
-                        return;
-                    }
-                    defaultSharedPreferences.edit().putBoolean("pref_scroll_counter_enabled", isChecked).apply();
-                    refreshList();
+                    lockedSwitchAction("Change Scroll counter", btn, !isChecked, isChecked, () -> {
+                        if (isChecked && !isAccessibilityPermissionGranted(requireContext())) {
+                            btn.setChecked(false);
+                            defaultSharedPreferences.edit().putBoolean("pref_scroll_counter_enabled", false).apply();
+                            shakeCard(ID_PERM_ACCESSIBILITY);
+                            return;
+                        }
+                        defaultSharedPreferences.edit().putBoolean("pref_scroll_counter_enabled", isChecked).apply();
+                    });
                 }));
 
         if (isScrollCounterOn) {
@@ -329,8 +367,7 @@ public class SettingsFragment extends Fragment {
                         .setIconValues(R.drawable.shape_circle, mobileBg)
                         .setSwitch(false, false, null)
                         .setArrow(true)
-                        .setOnClickListener(
-                                v -> startActivity(new Intent(requireContext(), CustomAppSelectionActivity.class))));
+                        .setOnClickListener(v -> authenticateToChangeSetting("Edit Blocked Apps", () -> startActivity(new Intent(requireContext(), CustomAppSelectionActivity.class)))));
 
         // Browser Blocking
         boolean isBrowserBlockEnabled = defaultSharedPreferences.getBoolean(PREF_BLOCK_BROWSERS_DOOMSCROLLING_ENABLED, false);
@@ -339,31 +376,28 @@ public class SettingsFragment extends Fragment {
                 R.drawable.globe, greenIcon)
                 .setIconValues(R.drawable.shape_circle, browserBg)
                 .setSwitch(true, isBrowserBlockEnabled, (buttonView, isChecked) -> {
-                    if (isChecked && !isAccessibilityPermissionGranted(requireContext())) {
-                        buttonView.setChecked(false);
-                        defaultSharedPreferences.edit().putBoolean(PREF_BLOCK_BROWSERS_DOOMSCROLLING_ENABLED, false).apply();
-                        shakeCard(ID_PERM_ACCESSIBILITY);
-                        refreshList();
-                        return;
-                    }
-                    defaultSharedPreferences.edit().putBoolean(PREF_BLOCK_BROWSERS_DOOMSCROLLING_ENABLED, isChecked)
-                            .apply();
-                    if (isChecked) {
-                        BlockedSitesManager.seedDefaultsIfFirstTimeAndEmpty(requireContext());
-                    }
-                    refreshList();
-                    if (isChecked) {
-                        showBrowserBlockingTutorial();
-                    }
+                    lockedSwitchAction("Change Browser Blocker", buttonView, !isChecked, isChecked, () -> {
+                        if (isChecked && !isAccessibilityPermissionGranted(requireContext())) {
+                            buttonView.setChecked(false);
+                            defaultSharedPreferences.edit().putBoolean(PREF_BLOCK_BROWSERS_DOOMSCROLLING_ENABLED, false).apply();
+                            shakeCard(ID_PERM_ACCESSIBILITY);
+                            return;
+                        }
+                        defaultSharedPreferences.edit().putBoolean(PREF_BLOCK_BROWSERS_DOOMSCROLLING_ENABLED, isChecked)
+                                .apply();
+                        if (isChecked) {
+                            BlockedSitesManager.seedDefaultsIfFirstTimeAndEmpty(requireContext());
+                            showBrowserBlockingTutorial();
+                        }
+                    });
                 })
-                .setOnClickListener(v -> {
+                .setOnClickListener(v -> authenticateToChangeSetting("Edit Blocked Sites", () -> {
                     if (!isAccessibilityPermissionGranted(requireContext())) {
                         shakeCard(ID_PERM_ACCESSIBILITY);
-                        refreshList();
                         return;
                     }
                     startActivity(new Intent(requireContext(), SiteBlockerActivity.class));
-                });
+                }));
         settingsItems.add(browserItem);
 
         // Block Adult Sites
@@ -372,23 +406,23 @@ public class SettingsFragment extends Fragment {
                 R.drawable.shield, redIcon)
                 .setIconValues(R.drawable.shape_circle, blockBg)
                 .setSwitch(true, isAdultEnabled, (buttonView, isChecked) -> {
-                    if (isChecked && !isAccessibilityPermissionGranted(requireContext())) {
-                        buttonView.setChecked(false);
-                        defaultSharedPreferences.edit().putBoolean(PREF_BLOCK_ADULT_SITES_ENABLED, false).apply();
-                        shakeCard(ID_PERM_ACCESSIBILITY);
-                        refreshList();
-                        return;
-                    }
-                    if (isChecked) {
-                        showAdultListDownloadDialogAndEnsure();
-                    } else {
-                        defaultSharedPreferences.edit().putBoolean(PREF_BLOCK_ADULT_SITES_ENABLED, false).apply();
-                        refreshList();
-                    }
+                    lockedSwitchAction("Change Adult Blocker", buttonView, !isChecked, isChecked, () -> {
+                        if (isChecked && !isAccessibilityPermissionGranted(requireContext())) {
+                            buttonView.setChecked(false);
+                            defaultSharedPreferences.edit().putBoolean(PREF_BLOCK_ADULT_SITES_ENABLED, false).apply();
+                            shakeCard(ID_PERM_ACCESSIBILITY);
+                            return;
+                        }
+                        if (isChecked) {
+                            showAdultListDownloadDialogAndEnsure();
+                        } else {
+                            defaultSharedPreferences.edit().putBoolean(PREF_BLOCK_ADULT_SITES_ENABLED, false).apply();
+                        }
+                    });
                 })
                 .setActionText(isAdultEnabled ? "Update list" : null)
                 .setArrow(isAdultEnabled)
-                .setOnClickListener(v -> showAdultListDownloadDialogAndEnsure()));
+                .setOnClickListener(v -> authenticateToChangeSetting("Update list", this::showAdultListDownloadDialogAndEnsure)));
 
         // Blocking Popup Duration
         int savedDuration = defaultSharedPreferences.getInt(AppUsageAccessibilityService.PREF_BLOCKING_POPUP_DURATION_SEC, 5);
@@ -402,6 +436,62 @@ public class SettingsFragment extends Fragment {
                 R.drawable.hourglass, purpleIcon)
                 .setIconValues(R.drawable.shape_circle, popupBg)
                 .setSeekbar(12, savedDuration - 3, savedDuration + "s"));
+
+        // Settings Lock (Password to change settings)
+        SettingsLockManager lockMgr = new SettingsLockManager(requireContext());
+        boolean isLockEnabled = lockMgr.isLockEnabled();
+        String subtitleText;
+        if (!isLockEnabled) {
+            subtitleText = "Lock settings changes";
+        } else if (lockMgr.isCustomPin()) {
+            subtitleText = "Long press to change PIN";
+        } else {
+            subtitleText = "Settings are protected";
+        }
+
+        settingsItems.add(new SettingsItem(ID_SETTINGS_LOCK, SettingsItem.TYPE_SWITCH,
+                "Require password", subtitleText,
+                R.drawable.shield, purpleIcon)
+                .setIconValues(R.drawable.shape_circle, popupBg)
+                .setSwitch(true, isLockEnabled, (buttonView, isChecked) -> {
+                    SettingsLockManager lm = new SettingsLockManager(requireContext());
+                    if (isChecked) {
+                        // Enabling: if Custom PIN mode but no PIN set yet, prompt to create one
+                        lm.setLockEnabled(true);
+                        if (lm.isCustomPin() && !lm.hasCustomPin()) {
+                            lm.showSetCustomPinDialog(requireContext(), false, null);
+                        }
+                    } else {
+                        // Disabling: gate behind current auth
+                        buttonView.setChecked(true); // revert visually until verified
+                        authenticateToChangeSetting("Disable settings lock", () -> {
+                            lm.setLockEnabled(false);
+                            lm.clearCustomPin();
+                            refreshList();
+                        });
+                        return;
+                    }
+                    refreshList();
+                })
+                .setOnLongClickListener(v -> {
+                    SettingsLockManager lm = new SettingsLockManager(requireContext());
+                    if (lm.isLockEnabled() && lm.isCustomPin()) {
+                        if (lm.hasCustomPin()) {
+                            lm.showVerifyPinDialog(requireContext(), "Enter current PIN to continue", verified -> {
+                                if (verified) lm.showSetCustomPinDialog(requireContext(), true, () -> refreshList());
+                            });
+                        } else {
+                            lm.showSetCustomPinDialog(requireContext(), false, () -> refreshList());
+                        }
+                        return true;
+                    }
+                    return false;
+                }));
+
+        // Lock type sub-tab (shown only when lock is enabled)
+        if (isLockEnabled) {
+            settingsItems.add(new SettingsItem(ID_LOCK_TYPE_TAB, SettingsItem.TYPE_LOCK_TAB, "", "", 0, 0));
+        }
 
         // APPEARANCE
         settingsItems.add(new SettingsItem(SettingsItem.TYPE_HEADER, "APPEARANCE"));
@@ -936,5 +1026,50 @@ public class SettingsFragment extends Fragment {
             else
                 doRecreate.run();
         }
+    }
+
+    // ─── Settings Lock PIN helpers ────────────────────────────────────────────
+
+    /**
+     * Authenticate via device lock or custom PIN (depending on current setting)
+     * before allowing a sensitive change. Calls onAuthenticated when verified.
+     */
+    private void authenticateToChangeSetting(String reason, Runnable onAuthenticated, Runnable onCancelled) {
+        SettingsLockManager lm = new SettingsLockManager(requireContext());
+        lm.authenticate((AppCompatActivity) requireActivity(), reason, new SettingsLockManager.AuthCallback() {
+            @Override public void onSuccess() { onAuthenticated.run(); }
+            @Override public void onFailure(String reason2) {
+                if (onCancelled != null) onCancelled.run();
+                if (!"Cancelled".equals(reason2)) {
+                    Toast.makeText(requireContext(), reason2, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+    }
+
+    private void authenticateToChangeSetting(String reason, Runnable onAuthenticated) {
+        authenticateToChangeSetting(reason, onAuthenticated, null);
+    }
+
+    private void lockedSwitchAction(String reason, android.widget.CompoundButton buttonView, boolean originalState, boolean isChecked, Runnable onVerifiedAndChanged) {
+        SettingsLockManager lm = new SettingsLockManager(requireContext());
+        if (!lm.isLockEnabled()) {
+            onVerifiedAndChanged.run();
+            refreshList();
+            return;
+        }
+        
+        // Revert switch visually first (since auth is async)
+        buttonView.setOnCheckedChangeListener(null);
+        buttonView.setChecked(originalState);
+        
+        authenticateToChangeSetting(reason, () -> {
+            buttonView.setChecked(isChecked);
+            onVerifiedAndChanged.run();
+            refreshList(); // Restore listeners by refreshing list
+        }, this::refreshList); // If cancelled or failed, refresh list to rebind the switch!
+        
+        // Temporarily assign a no-op listener until refreshList triggers
+        buttonView.setOnCheckedChangeListener((v, c) -> {});
     }
 }

@@ -71,7 +71,7 @@
             android:launchMode="singleInstance"
             android:taskAffinity=""
             android:theme="@style/Theme.MindMint.TransparentOverlay" />
-        <activity android:name="com.gxdevs.mindmint.Activities.HabitCreateActivity" />
+        <activity android:name="com.gxdevs.mindmint.Activities.HabitCreateActivity" android:windowSoftInputMode="adjustResize" />
         <activity android:name="com.gxdevs.mindmint.Activities.StatsActivity" />
         <activity android:name="com.gxdevs.mindmint.Activities.HabitStatActivity" />
         

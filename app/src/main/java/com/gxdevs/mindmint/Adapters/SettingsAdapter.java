@@ -30,6 +30,7 @@ public class SettingsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     private final List<SettingsItem> items;
     private OnSeekbarChangeListener onSeekbarChangeListener;
     private OnThemeChangeListener onThemeChangeListener;
+    private OnLockTabActionListener onLockTabActionListener;
     private String currentTheme;
 
     public interface OnSeekbarChangeListener {
@@ -38,6 +39,13 @@ public class SettingsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
 
     public interface OnThemeChangeListener {
         void onThemeChanged(String newTheme);
+    }
+
+    public interface OnLockTabActionListener {
+        /** Called when user REQUESTS to change the lock type */
+        void onRequestLockTypeChange(String newLockType, Runnable onSuccess);
+        /** Called when user long-presses on the Custom PIN row to edit the PIN. */
+        void onEditCustomPin();
     }
 
     public SettingsAdapter(Context context, List<SettingsItem> items) {
@@ -53,6 +61,10 @@ public class SettingsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         this.onThemeChangeListener = listener;
     }
 
+    public void setOnLockTabActionListener(OnLockTabActionListener listener) {
+        this.onLockTabActionListener = listener;
+    }
+
     public void setCurrentTheme(String currentTheme) {
         this.currentTheme = currentTheme;
     }
@@ -66,23 +78,24 @@ public class SettingsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         LayoutInflater inflater = LayoutInflater.from(context);
-        switch (viewType) {
-            case SettingsItem.TYPE_HEADER:
-                return new HeaderViewHolder(inflater.inflate(R.layout.item_settings_header, parent, false));
-            case SettingsItem.TYPE_SWITCH:
-                return new CommonViewHolder(inflater.inflate(R.layout.item_settings_common, parent, false));
-            case SettingsItem.TYPE_SEEKBAR:
-                return new SeekbarViewHolder(inflater.inflate(R.layout.item_settings_seekbar, parent, false));
-            case SettingsItem.TYPE_THEME:
-                return new ThemeViewHolder(inflater.inflate(R.layout.item_settings_theme, parent, false));
-            case SettingsItem.TYPE_BACKUP:
-                return new BackupViewHolder(inflater.inflate(R.layout.item_settings_backup, parent, false));
-            case SettingsItem.TYPE_SCROLL_TAB:
-                return new ScrollTabViewHolder(inflater.inflate(R.layout.item_settings_scroll_tab, parent, false));
-            case SettingsItem.TYPE_PERMISSION:
-            default:
-                return new PermissionViewHolder(inflater.inflate(R.layout.item_settings_permission, parent, false));
-        }
+        return switch (viewType) {
+            case SettingsItem.TYPE_HEADER ->
+                    new HeaderViewHolder(inflater.inflate(R.layout.item_settings_header, parent, false));
+            case SettingsItem.TYPE_SWITCH ->
+                    new CommonViewHolder(inflater.inflate(R.layout.item_settings_common, parent, false));
+            case SettingsItem.TYPE_SEEKBAR ->
+                    new SeekbarViewHolder(inflater.inflate(R.layout.item_settings_seekbar, parent, false));
+            case SettingsItem.TYPE_THEME ->
+                    new ThemeViewHolder(inflater.inflate(R.layout.item_settings_theme, parent, false));
+            case SettingsItem.TYPE_BACKUP ->
+                    new BackupViewHolder(inflater.inflate(R.layout.item_settings_backup, parent, false));
+            case SettingsItem.TYPE_SCROLL_TAB ->
+                    new ScrollTabViewHolder(inflater.inflate(R.layout.item_settings_scroll_tab, parent, false));
+            case SettingsItem.TYPE_LOCK_TAB ->
+                    new LockTabViewHolder(inflater.inflate(R.layout.item_settings_lock_type_tab, parent, false));
+            default ->
+                    new PermissionViewHolder(inflater.inflate(R.layout.item_settings_permission, parent, false));
+        };
     }
 
     @Override
@@ -93,6 +106,9 @@ public class SettingsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             ((HeaderViewHolder) holder).bind(item);
         } else if (holder instanceof ScrollTabViewHolder) {
             ((ScrollTabViewHolder) holder).bind(item);
+            updateBackground(holder.itemView, position);
+        } else if (holder instanceof LockTabViewHolder) {
+            ((LockTabViewHolder) holder).bind(item);
             updateBackground(holder.itemView, position);
         } else if (holder instanceof CommonViewHolder) {
             ((CommonViewHolder) holder).bind(item);
@@ -162,7 +178,8 @@ public class SettingsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                 type == SettingsItem.TYPE_SEEKBAR ||
                 type == SettingsItem.TYPE_THEME ||
                 type == SettingsItem.TYPE_BACKUP ||
-                type == SettingsItem.TYPE_SCROLL_TAB;
+                type == SettingsItem.TYPE_SCROLL_TAB ||
+                type == SettingsItem.TYPE_LOCK_TAB;
     }
 
     @Override
@@ -278,6 +295,12 @@ public class SettingsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                         switchView.toggle();
                     }
                 });
+            }
+
+            if (item.getOnLongClickListener() != null) {
+                root.setOnLongClickListener(item.getOnLongClickListener());
+            } else {
+                root.setOnLongClickListener(null);
             }
 
         }
@@ -473,15 +496,8 @@ public class SettingsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
         }
 
         private void applyTabStyle(boolean perApp) {
-            int selectedBg  = ContextCompat.getColor(context, R.color.brainColor);
-            int selectedTxt = ContextCompat.getColor(context, R.color.white);
-            int normalTxt;
-            android.util.TypedValue tv = new android.util.TypedValue();
-            if (context.getTheme().resolveAttribute(R.attr.text_primary, tv, true)) {
-                normalTxt = tv.data;
-            } else {
-                normalTxt = ContextCompat.getColor(context, R.color.white);
-            }
+            int selectedTxt = getAttrColor(context, R.attr.text_primary);
+            int normalTxt = getAttrColor(context, R.attr.text_tertiary);
 
             // Combined tab
             if (!perApp) {
@@ -588,5 +604,84 @@ public class SettingsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                 }
             });
         }
+    }
+
+    // ─── Lock Type Tab ViewHolder ────────────────────────────────────────────
+
+    class LockTabViewHolder extends RecyclerView.ViewHolder {
+        TextView tabDevice, tabCustomPin;
+        View divider;
+
+        LockTabViewHolder(View itemView) {
+            super(itemView);
+            tabDevice     = itemView.findViewById(R.id.tabDevice);
+            tabCustomPin  = itemView.findViewById(R.id.tabCustomPin);
+            divider       = itemView.findViewById(R.id.divider);
+        }
+
+        void bind(SettingsItem item) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+            String lockType = prefs.getString(
+                    com.gxdevs.mindmint.Utils.SettingsLockManager.PREF_LOCK_TYPE,
+                    com.gxdevs.mindmint.Utils.SettingsLockManager.LOCK_TYPE_DEVICE);
+            boolean isCustom = com.gxdevs.mindmint.Utils.SettingsLockManager.LOCK_TYPE_CUSTOM.equals(lockType);
+            applyTabStyle(isCustom);
+
+            tabDevice.setOnClickListener(v -> {
+                if (!com.gxdevs.mindmint.Utils.SettingsLockManager.LOCK_TYPE_CUSTOM.equals(lockType)) return;
+                if (onLockTabActionListener != null) {
+                    onLockTabActionListener.onRequestLockTypeChange(
+                            com.gxdevs.mindmint.Utils.SettingsLockManager.LOCK_TYPE_DEVICE,
+                            () -> {
+                                prefs.edit().putString(
+                                        com.gxdevs.mindmint.Utils.SettingsLockManager.PREF_LOCK_TYPE,
+                                        com.gxdevs.mindmint.Utils.SettingsLockManager.LOCK_TYPE_DEVICE).apply();
+                                applyTabStyle(false);
+                            });
+                }
+            });
+
+            tabCustomPin.setOnClickListener(v -> {
+                // If it is already custom, don't change
+                String current = prefs.getString(com.gxdevs.mindmint.Utils.SettingsLockManager.PREF_LOCK_TYPE, com.gxdevs.mindmint.Utils.SettingsLockManager.LOCK_TYPE_DEVICE);
+                if (com.gxdevs.mindmint.Utils.SettingsLockManager.LOCK_TYPE_CUSTOM.equals(current)) return;
+
+                if (onLockTabActionListener != null) {
+                    onLockTabActionListener.onRequestLockTypeChange(
+                            com.gxdevs.mindmint.Utils.SettingsLockManager.LOCK_TYPE_CUSTOM,
+                            () -> {
+                                prefs.edit().putString(
+                                        com.gxdevs.mindmint.Utils.SettingsLockManager.PREF_LOCK_TYPE,
+                                        com.gxdevs.mindmint.Utils.SettingsLockManager.LOCK_TYPE_CUSTOM).apply();
+                                applyTabStyle(true);
+                            });
+                }
+            });
+        }
+
+        private void applyTabStyle(boolean isCustom) {
+            int selectedTxt = getAttrColor(context, R.attr.text_primary);
+            int normalTxt = getAttrColor(context, R.attr.text_tertiary);
+
+            if (!isCustom) {
+                tabDevice.setBackgroundResource(R.drawable.bg_segment_selected);
+                tabDevice.setTextColor(selectedTxt);
+                tabCustomPin.setBackground(null);
+                tabCustomPin.setTextColor(normalTxt);
+            } else {
+                tabCustomPin.setBackgroundResource(R.drawable.bg_segment_selected);
+                tabCustomPin.setTextColor(selectedTxt);
+                tabDevice.setBackground(null);
+                tabDevice.setTextColor(normalTxt);
+            }
+        }
+    }
+
+    private static int getAttrColor(Context context, int attr) {
+        android.util.TypedValue tv = new android.util.TypedValue();
+        if (context.getTheme().resolveAttribute(attr, tv, true)) {
+            return tv.data;
+        }
+        return ContextCompat.getColor(context, R.color.white);
     }
 }

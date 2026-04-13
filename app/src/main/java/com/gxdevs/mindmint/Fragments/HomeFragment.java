@@ -79,8 +79,10 @@ import com.gxdevs.mindmint.Adapters.UpdateLogAdapter;
 import com.gxdevs.mindmint.Common.IntentActions;
 import com.gxdevs.mindmint.Models.Habit;
 import com.gxdevs.mindmint.R;
+import com.gxdevs.mindmint.Utils.BlockedSitesManager;
 import com.gxdevs.mindmint.Utils.HabitManager;
 import com.gxdevs.mindmint.Utils.MintCrystals;
+import com.gxdevs.mindmint.Utils.SettingsLockManager;
 import com.gxdevs.mindmint.Utils.StreakManager;
 import com.gxdevs.mindmint.Utils.TaskManager;
 import com.gxdevs.mindmint.Utils.UpdateLogData;
@@ -342,13 +344,11 @@ public class HomeFragment extends Fragment {
         snapModCheckbox.setEnabled(snapSwitchChecked);
 
         // YouTube Switch Listener
-        ytSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+        applyLockedSwitch(ytSwitch, "Change YouTube Blocker", (isChecked) -> {
             saveSwitchState(isChecked, ytSwitchState);
             updateTrackedPackages();
             changeVisibility(ytModHolder, isChecked);
             ytModCheckbox.setEnabled(isChecked);
-
-            // If switch is turned off, also turn off and disable the mod checkbox
             if (!isChecked) {
                 ytModCheckbox.setChecked(false);
                 saveModState(false, KEY_YT_MOD);
@@ -356,13 +356,11 @@ public class HomeFragment extends Fragment {
         });
 
         // Instagram Switch Listener
-        instaSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+        applyLockedSwitch(instaSwitch, "Change Instagram Blocker", (isChecked) -> {
             saveSwitchState(isChecked, instaSwitchState);
             updateTrackedPackages();
             changeVisibility(instaModHolder, isChecked);
             instaModCheckbox.setEnabled(isChecked);
-
-            // If switch is turned off, also turn off and disable the mod checkbox
             if (!isChecked) {
                 instaModCheckbox.setChecked(false);
                 saveModState(false, KEY_INSTA_MOD);
@@ -370,13 +368,11 @@ public class HomeFragment extends Fragment {
         });
 
         // Snapchat Switch Listener
-        snapSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+        applyLockedSwitch(snapSwitch, "Change Snapchat Blocker", (isChecked) -> {
             saveSwitchState(isChecked, snapSwitchState);
             updateTrackedPackages();
             changeVisibility(snapModHolder, isChecked);
             snapModCheckbox.setEnabled(isChecked);
-
-            // If switch is turned off, also turn off and disable the mod checkbox
             if (!isChecked) {
                 snapModCheckbox.setChecked(false);
                 saveModState(false, KEY_SNAP_MOD);
@@ -384,30 +380,55 @@ public class HomeFragment extends Fragment {
         });
 
         // YouTube Mod Checkbox Listener
-        ytModCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (ytSwitch.isChecked()) {
-                saveModState(isChecked, KEY_YT_MOD);
-            }
+        applyLockedSwitch(ytModCheckbox, "Change YouTube Mod", (isChecked) -> {
+            if (ytSwitch.isChecked()) saveModState(isChecked, KEY_YT_MOD);
         });
 
         // Instagram Mod Checkbox Listener
-        instaModCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (instaSwitch.isChecked()) {
-                saveModState(isChecked, KEY_INSTA_MOD);
-            }
+        applyLockedSwitch(instaModCheckbox, "Change Instagram Mod", (isChecked) -> {
+            if (instaSwitch.isChecked()) saveModState(isChecked, KEY_INSTA_MOD);
         });
 
         // Snapchat Mod Checkbox Listener
-        snapModCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (snapSwitch.isChecked()) {
-                saveModState(isChecked, KEY_SNAP_MOD);
-            }
+        applyLockedSwitch(snapModCheckbox, "Change Snapchat Mod", (isChecked) -> {
+            if (snapSwitch.isChecked()) saveModState(isChecked, KEY_SNAP_MOD);
         });
 
         crossBtn.setOnClickListener(v -> blockerSheet.dismiss());
 
         blockerSheet.setContentView(bottomSheetView);
         blockerSheet.show();
+    }
+
+    private void applyLockedSwitch(android.widget.CompoundButton switchView, String reason, java.util.function.Consumer<Boolean> logic) {
+        switchView.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            SettingsLockManager lm = new SettingsLockManager(requireContext());
+            if (!lm.isLockEnabled()) {
+                logic.accept(isChecked);
+                return;
+            }
+            
+            // Revert switch visually first (since auth is async)
+            buttonView.setOnCheckedChangeListener(null);
+            buttonView.setChecked(!isChecked);
+            
+            lm.authenticate(requireActivity(), reason, new SettingsLockManager.AuthCallback() {
+                @Override public void onSuccess() {
+                    buttonView.setChecked(isChecked);
+                    logic.accept(isChecked);
+                    applyLockedSwitch(switchView, reason, logic); // reattach listener
+                }
+                @Override public void onFailure(String err) {
+                    if (!"Cancelled".equals(err)) {
+                        Toast.makeText(requireContext(), err, Toast.LENGTH_SHORT).show();
+                    }
+                    applyLockedSwitch(switchView, reason, logic); // reattach listener
+                }
+            });
+            
+            // Temporarily assign a no-op listener until reattached
+            buttonView.setOnCheckedChangeListener((v, c) -> {});
+        });
     }
 
     private void changeVisibility(ConstraintLayout view, Boolean isVisible) {
@@ -518,16 +539,34 @@ public class HomeFragment extends Fragment {
             long pauseDuration = (hours * 3600L + minutes * 60L) * 1000L;
 
             if (pauseDuration > 0) {
-                Intent intent = new Intent(IntentActions.getActionPauseService(requireContext()));
-                intent.putExtra("pause_duration", pauseDuration);
-                intent.setPackage(requireContext().getPackageName());
-                requireContext().sendBroadcast(intent);
-                isServicePaused = true;
-                updatePlayPauseButton();
-                Toast.makeText(requireContext(), "Blocking paused for " + hours + "h " + minutes + "m",
-                        Toast.LENGTH_SHORT).show();
+                Runnable doPause = () -> {
+                    Intent intent = new Intent(IntentActions.getActionPauseService(requireContext()));
+                    intent.putExtra("pause_duration", pauseDuration);
+                    intent.setPackage(requireContext().getPackageName());
+                    requireContext().sendBroadcast(intent);
+                    isServicePaused = true;
+                    updatePlayPauseButton();
+                    Toast.makeText(requireContext(), "Blocking paused for " + hours + "h " + minutes + "m",
+                            Toast.LENGTH_SHORT).show();
+                    pauseTimer.dismiss();
+                };
+
+                SettingsLockManager lm = new SettingsLockManager(requireContext());
+                if (lm.isLockEnabled()) {
+                    lm.authenticate(requireActivity(), "Pause Blocker", new SettingsLockManager.AuthCallback() {
+                        @Override public void onSuccess() { doPause.run(); }
+                        @Override public void onFailure(String r) {
+                            if (!"Cancelled".equals(r)) {
+                                Toast.makeText(requireContext(), r, Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    });
+                } else {
+                    doPause.run();
+                }
+            } else {
+                pauseTimer.dismiss();
             }
-            pauseTimer.dismiss();
         });
 
         bottomSheetView.findViewById(R.id.crossBtn).setOnClickListener(v -> pauseTimer.dismiss());

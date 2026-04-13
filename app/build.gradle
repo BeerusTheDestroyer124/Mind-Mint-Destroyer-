@@ -87,6 +87,7 @@ dependencies {
     debugImplementation libs.androidx.ui.tooling
     debugImplementation libs.androidx.ui.test.manifest
     implementation libs.androidx.preference
+    implementation libs.androidx.biometric
     implementation libs.localbroadcastmanager
 
     //My Dependencies

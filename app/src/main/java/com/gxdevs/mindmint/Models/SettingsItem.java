@@ -11,6 +11,7 @@ public class SettingsItem {
     public static final int TYPE_PERMISSION = 4;
     public static final int TYPE_BACKUP = 5;
     public static final int TYPE_SCROLL_TAB = 6;
+    public static final int TYPE_LOCK_TAB = 7;
 
     private int id;
     private final int type;
@@ -33,6 +34,7 @@ public class SettingsItem {
 
     // Listeners
     private View.OnClickListener onClickListener;
+    private View.OnLongClickListener onLongClickListener;
     private CompoundButton.OnCheckedChangeListener onCheckedChangeListener;
     // For seekbar, we might need a custom listener or handle it in adapter
 
@@ -88,6 +90,11 @@ public class SettingsItem {
 
     public SettingsItem setOnClickListener(View.OnClickListener listener) {
         this.onClickListener = listener;
+        return this;
+    }
+
+    public SettingsItem setOnLongClickListener(View.OnLongClickListener listener) {
+        this.onLongClickListener = listener;
         return this;
     }
 
@@ -206,6 +213,10 @@ public class SettingsItem {
 
     public View.OnClickListener getOnClickListener() {
         return onClickListener;
+    }
+
+    public View.OnLongClickListener getOnLongClickListener() {
+        return onLongClickListener;
     }
 
     public CompoundButton.OnCheckedChangeListener getOnCheckedChangeListener() {
