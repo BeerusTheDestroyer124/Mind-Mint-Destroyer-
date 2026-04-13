@@ -239,6 +239,18 @@ public class HomeActivity extends AppCompatActivity {
                         float absDx = Math.abs(dx);
                         float absDy = Math.abs(dy);
 
+                        // Vertical swipe detection
+                        if (absDy > absDx && absDy > SWIPE_MIN_DISTANCE_PX && Math.abs(velocityY) > SWIPE_MIN_VELOCITY) {
+                            if (dy < 0) {
+                                // Swipe UP - check if we are on HomeFragment to show bottom sheet
+                                Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.nav_host_container);
+                                if (currentFragment instanceof HomeFragment) {
+                                    ((HomeFragment) currentFragment).showBlockerBottomSheet();
+                                }
+                            }
+                            return false;
+                        }
+
                         // Must be clearly horizontal: distance threshold + velocity + direction ratio
                         if (absDx < SWIPE_MIN_DISTANCE_PX) return false;
                         if (Math.abs(velocityX) < SWIPE_MIN_VELOCITY) return false;
@@ -251,10 +263,10 @@ public class HomeActivity extends AppCompatActivity {
 
                         int current = getCurrentTabIndex(); // -1=Home, 1=Tasks, 2=Habits, 3=Settings
                         if (dx < 0) {
-                            // Swipe LEFT
+                            // Swipe LEFT (Right to Left)
                             handleSwipe(current, true);
                         } else {
-                            // Swipe RIGHT
+                            // Swipe RIGHT (Left to Right)
                             handleSwipe(current, false);
                         }
                         return false; // never consume — child views keep the event
@@ -292,13 +304,13 @@ public class HomeActivity extends AppCompatActivity {
     private void handleSwipe(int currentIndex, boolean swipeLeft) {
         int target;
         if (currentIndex == -1) {          // Home
-            target = swipeLeft ? 1 : 2;    //   LEFT→Tasks, RIGHT→Habits
+            target = swipeLeft ? 2 : 1;    // Right to Left -> Habits, Left to Right -> Tasks
         } else if (currentIndex == 1) {    // Tasks
-            target = swipeLeft ? -99 : -1; //   LEFT→nothing, RIGHT→Home
+            target = swipeLeft ? -1 : -99; // Right to Left -> Home, Left to Right -> nothing
         } else if (currentIndex == 2) {    // Habits
-            target = swipeLeft ? -1 : 3;   //   LEFT→Home, RIGHT→Settings
+            target = swipeLeft ? 3 : -1;   // Right to Left -> Settings, Left to Right -> Home
         } else if (currentIndex == 3) {    // Settings
-            target = swipeLeft ? 2 : -99;  //   LEFT→Habits, RIGHT→nothing
+            target = swipeLeft ? -99 : 2;  // Right to Left -> nothing, Left to Right -> Habits
         } else {
             return; // unknown state
         }

@@ -9,6 +9,7 @@
         <item name="switchThumb">#9EABB8</item>
         <item name="embeddedCards">@color/sexyGrey</item>
         <item name="glassTints">#25252E </item>
+        <item name="materialAlertDialogTheme">@style/CustomMaterialAlertDialog</item>
 
         <!--The final colors-->
         <!-- Backgrounds -->

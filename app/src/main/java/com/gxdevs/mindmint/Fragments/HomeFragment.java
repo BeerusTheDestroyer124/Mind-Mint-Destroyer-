@@ -60,6 +60,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.checkbox.MaterialCheckBox;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textview.MaterialTextView;
@@ -292,7 +293,7 @@ public class HomeFragment extends Fragment {
         greetings.setText(finalTxt);
     }
 
-    private void showBlockerBottomSheet() {
+    public void showBlockerBottomSheet() {
         BottomSheetDialog blockerSheet = new BottomSheetDialog(requireContext(), R.style.CustomBottomSheetTheme);
         View bottomSheetView = LayoutInflater.from(requireContext()).inflate(R.layout.bottom_sheet_blocker,
                 view.findViewById(R.id.bottomSheetBlockerLayout));
@@ -1304,23 +1305,24 @@ public class HomeFragment extends Fragment {
             return;
         }
 
-        Dialog dialog = new Dialog(requireContext());
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        dialog.setContentView(R.layout.dialog_first_name);
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            dialog.getWindow().setDimAmount(0.7f);
-            dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        }
-
-        TextInputEditText firstNameEditText = dialog.findViewById(R.id.firstNameEditText);
-        MaterialButton saveButton = dialog.findViewById(R.id.saveNameButton);
+        View customView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_first_name, null);
+        TextInputEditText firstNameEditText = customView.findViewById(R.id.firstNameEditText);
 
         if (force && savedName != null) {
             firstNameEditText.setText(savedName);
         }
 
-        saveButton.setOnClickListener(v -> {
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.what_s_your_first_name)
+                .setView(customView)
+                .setCancelable(true)
+                .setPositiveButton(R.string.save, null);
+
+        androidx.appcompat.app.AlertDialog dialog = builder.create();
+        dialog.show();
+
+        // Override the positive button click to prevent automatic dismissal on empty input
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             String name = firstNameEditText.getText() != null ? firstNameEditText.getText().toString().trim() : "";
             if (name.isEmpty()) {
                 firstNameEditText.setError("Enter first name");
@@ -1336,9 +1338,6 @@ public class HomeFragment extends Fragment {
                 updateGuidanceBalloon();
             }
         });
-
-        dialog.setCanceledOnTouchOutside(false);
-        dialog.show();
     }
 
     private String getAffirmationText() {

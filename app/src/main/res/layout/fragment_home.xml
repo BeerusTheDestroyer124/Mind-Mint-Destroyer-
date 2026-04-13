@@ -285,6 +285,7 @@
                     android:layout_gravity="center"
                     android:contentDescription="@string/app_name"
                     android:elevation="2dp"
+                    android:transitionName="brainTransition"
                     android:src="@drawable/brain1" />
 
                 <View

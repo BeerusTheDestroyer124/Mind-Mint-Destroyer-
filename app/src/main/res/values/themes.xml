@@ -9,6 +9,7 @@
         <item name="switchThumb">#FFF6F6</item>
         <item name="embeddedCards">#FFB8BC</item>
         <item name="glassTints">#FFF6F6</item>
+        <item name="materialAlertDialogTheme">@style/CustomMaterialAlertDialog</item>
 
         <!--The final colors-->
         <!-- Backgrounds -->
@@ -168,6 +169,25 @@
         <item name="android:textColorSecondary">?attr/tintGlobalColor</item>
         <item name="colorPrimary">@color/brainColor</item>
         <item name="colorOnSurface">@color/white</item>
+    </style>
+
+    <style name="CustomMaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="colorSurface">?attr/surface_card</item>
+        <item name="colorOnSurface">?attr/text_primary</item>
+        <item name="colorOnSurfaceVariant">?attr/text_secondary</item>
+        <item name="colorPrimary">?attr/brand_pink</item>
+        <item name="shapeAppearanceOverlay">@style/CustomDialogShape</item>
+        <item name="buttonBarPositiveButtonStyle">@style/CustomDialogButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/CustomDialogButton</item>
+    </style>
+
+    <style name="CustomDialogShape" parent="ShapeAppearance.Material3.Corner.ExtraLarge">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">24dp</item>
+    </style>
+
+    <style name="CustomDialogButton" parent="Widget.Material3.Button.TextButton.Dialog">
+        <item name="android:textColor">?attr/brand_pink</item>
     </style>
 
     <style name="CalendarViewCustom" parent="android:Theme.Material">
