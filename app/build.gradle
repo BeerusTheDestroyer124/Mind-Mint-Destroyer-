@@ -13,7 +13,7 @@ android {
         applicationId "com.gxdevs.mindmint"
         minSdk 28
         targetSdk 37
-        versionCode 14
+        versionCode 15
         versionName 'Pumpkin 10'
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
