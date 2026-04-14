@@ -437,7 +437,7 @@ public class SettingsFragment extends Fragment {
                 .setIconValues(R.drawable.shape_circle, popupBg)
                 .setSeekbar(12, savedDuration - 3, savedDuration + "s"));
 
-        // Settings Lock (Password to change settings)
+        
         SettingsLockManager lockMgr = new SettingsLockManager(requireContext());
         boolean isLockEnabled = lockMgr.isLockEnabled();
         String subtitleText;
@@ -1053,22 +1053,24 @@ public class SettingsFragment extends Fragment {
 
     private void lockedSwitchAction(String reason, android.widget.CompoundButton buttonView, boolean originalState, boolean isChecked, Runnable onVerifiedAndChanged) {
         SettingsLockManager lm = new SettingsLockManager(requireContext());
-        if (!lm.isLockEnabled()) {
+
+        // Lock is only required when TURNING OFF (disabling a feature)
+        if (!lm.isLockEnabled() || isChecked) {
             onVerifiedAndChanged.run();
             refreshList();
             return;
         }
-        
+
         // Revert switch visually first (since auth is async)
         buttonView.setOnCheckedChangeListener(null);
         buttonView.setChecked(originalState);
-        
+
         authenticateToChangeSetting(reason, () -> {
             buttonView.setChecked(isChecked);
             onVerifiedAndChanged.run();
             refreshList(); // Restore listeners by refreshing list
         }, this::refreshList); // If cancelled or failed, refresh list to rebind the switch!
-        
+
         // Temporarily assign a no-op listener until refreshList triggers
         buttonView.setOnCheckedChangeListener((v, c) -> {});
     }
