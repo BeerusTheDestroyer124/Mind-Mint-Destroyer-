@@ -9,7 +9,13 @@ public class UpdateLogData {
     public static List<UpdateLogItem> getLogs() {
         List<UpdateLogItem> list = new ArrayList<>();
 
-        addVersion(list, "Pumpkin 9 (Current)",
+        addVersion(list, "Pumpkin 10 (Current)",
+                "Implemented lock protection on settings",
+                "Implemented live scroll counter",
+                "Improved blocking mechanism",
+                "Major / Minor bugs fixed");
+
+        addVersion(list, "Pumpkin 9",
                 "Added dedicated stats for all habits (tap on any habit)",
                 "Added in depth overall stats for - Habits, Focus and Tasks",
                 "Redesigned stats screen",
@@ -53,7 +59,7 @@ public class UpdateLogData {
                 "PlayStore launch");
 
         addVersion(list, "Pumpkin 3",
-                "Initial beta v2");
+                "Initial beta v3");
 
         addVersion(list, "Pumpkin 2",
                 "Initial beta v2");

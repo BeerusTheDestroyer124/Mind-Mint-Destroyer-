@@ -12,9 +12,9 @@ android {
     defaultConfig {
         applicationId "com.gxdevs.mindmint"
         minSdk 28
-        targetSdk 36
-        versionCode 13
-        versionName 'Pumpkin 9'
+        targetSdk 37
+        versionCode 14
+        versionName 'Pumpkin 10'
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -130,6 +130,7 @@ dependencies {
     // Room (SQLite ORM)
     implementation libs.androidx.room.runtime
     annotationProcessor libs.androidx.room.compiler
+    implementation libs.androidx.viewpager2
 }
 
 

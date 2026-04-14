@@ -403,15 +403,15 @@ public class HomeFragment extends Fragment {
     private void applyLockedSwitch(android.widget.CompoundButton switchView, String reason, java.util.function.Consumer<Boolean> logic) {
         switchView.setOnCheckedChangeListener((buttonView, isChecked) -> {
             SettingsLockManager lm = new SettingsLockManager(requireContext());
-            if (!lm.isLockEnabled()) {
+
+            if (!lm.isLockEnabled() || isChecked) {
                 logic.accept(isChecked);
                 return;
             }
-            
-            // Revert switch visually first (since auth is async)
+
             buttonView.setOnCheckedChangeListener(null);
             buttonView.setChecked(!isChecked);
-            
+
             lm.authenticate(requireActivity(), reason, new SettingsLockManager.AuthCallback() {
                 @Override public void onSuccess() {
                     buttonView.setChecked(isChecked);
@@ -425,8 +425,7 @@ public class HomeFragment extends Fragment {
                     applyLockedSwitch(switchView, reason, logic); // reattach listener
                 }
             });
-            
-            // Temporarily assign a no-op listener until reattached
+
             buttonView.setOnCheckedChangeListener((v, c) -> {});
         });
     }
@@ -1137,12 +1136,16 @@ public class HomeFragment extends Fragment {
         int visits = sharedPreferences.getInt(KEY_AFFIRM_VISIT_COUNT, 0);
         if (visits >= 5) {
             sharedPreferences.edit().putInt(KEY_AFFIRM_VISIT_COUNT, 0).apply();
-            // Randomly decide between affirmation and Instagram follow balloon
-            int choice = new java.util.Random().nextInt(2); // 0 or 1
+            // Randomly decide between affirmation, Instagram, Telegram, or GitHub balloons
+            int choice = new java.util.Random().nextInt(4);
             if (choice == 0) {
                 showAffirmationBalloon();
-            } else {
+            } else if (choice == 1) {
                 showInstagramBalloon();
+            } else if (choice == 2) {
+                showTelegramBalloon();
+            } else {
+                showGithubBalloon();
             }
         } else {
             // No balloon this time
@@ -1448,6 +1451,128 @@ public class HomeFragment extends Fragment {
                 clipboard.setPrimaryClip(clip);
                 Toast.makeText(requireContext(), "Link copied to clipboard", Toast.LENGTH_SHORT).show();
             }
+        }
+    }
+
+    private void showTelegramBalloon() {
+        int bgColor;
+        if (totalWastedScrolls >= 700) {
+            bgColor = R.color.rotBrainColor;
+        } else {
+            bgColor = R.color.brainColor;
+        }
+
+        if (balloon != null && balloon.isShowing()) {
+            balloon.dismiss();
+        }
+
+        balloon = new Balloon.Builder(requireContext())
+                .setArrowSize(10)
+                .setAutoDismissDuration(7000)
+                .setArrowOrientation(ArrowOrientation.BOTTOM)
+                .setArrowPosition(0.5f)
+                .setWidthRatio(0.7f)
+                .setTextTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL))
+                .setHeight(BalloonSizeSpec.WRAP)
+                .setTextSize(16f)
+                .setCornerRadius(12f)
+                .setAlpha(0.95f)
+                .setPadding(2)
+                .setMarginRight(5)
+                .setText("Join on Telegram")
+                .setTextColorResource(R.color.white)
+                .setBackgroundColorResource(bgColor)
+                .setBalloonAnimation(BalloonAnimation.ELASTIC)
+                .setLifecycleOwner(getViewLifecycleOwner())
+                .setOnBalloonClickListener(v -> {
+                    if (balloon != null && balloon.isShowing()) {
+                        balloon.dismiss();
+                    }
+                    openTelegram();
+                })
+                .build();
+        brain.post(() -> {
+            if (isAdded() && balloon != null) {
+                balloon.showAlignTop(view.findViewById(R.id.brainHolder));
+            }
+        });
+    }
+
+    private void openTelegram() {
+        Uri uri = Uri.parse("https://t.me/mindmintapp");
+        Intent telegramIntent = new Intent(Intent.ACTION_VIEW, uri);
+        telegramIntent.setPackage("org.telegram.messenger");
+        try {
+            startActivity(telegramIntent);
+        } catch (ActivityNotFoundException e) {
+            Intent fallback = new Intent(Intent.ACTION_VIEW, uri);
+            try {
+                startActivity(fallback);
+            } catch (Exception ignored) {
+                ClipboardManager clipboard = (ClipboardManager) requireContext()
+                        .getSystemService(Context.CLIPBOARD_SERVICE);
+                ClipData clip = ClipData.newPlainText("Hardcoded Text", String.valueOf(uri));
+                clipboard.setPrimaryClip(clip);
+                Toast.makeText(requireContext(), "Link copied to clipboard", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void showGithubBalloon() {
+        int bgColor;
+        if (totalWastedScrolls >= 700) {
+            bgColor = R.color.rotBrainColor;
+        } else {
+            bgColor = R.color.brainColor;
+        }
+
+        if (balloon != null && balloon.isShowing()) {
+            balloon.dismiss();
+        }
+
+        balloon = new Balloon.Builder(requireContext())
+                .setArrowSize(10)
+                .setAutoDismissDuration(7000)
+                .setArrowOrientation(ArrowOrientation.BOTTOM)
+                .setArrowPosition(0.5f)
+                .setWidthRatio(0.7f)
+                .setTextTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL))
+                .setHeight(BalloonSizeSpec.WRAP)
+                .setTextSize(16f)
+                .setCornerRadius(12f)
+                .setAlpha(0.95f)
+                .setPadding(2)
+                .setMarginRight(5)
+                .setText("Star on Github")
+                .setTextColorResource(R.color.white)
+                .setBackgroundColorResource(bgColor)
+                .setBalloonAnimation(BalloonAnimation.ELASTIC)
+                .setLifecycleOwner(getViewLifecycleOwner())
+                .setOnBalloonClickListener(v -> {
+                    if (balloon != null && balloon.isShowing()) {
+                        balloon.dismiss();
+                    }
+                    openGithub();
+                })
+                .build();
+        brain.post(() -> {
+            if (isAdded() && balloon != null) {
+                balloon.showAlignTop(view.findViewById(R.id.brainHolder));
+            }
+        });
+    }
+
+    private void openGithub() {
+        Uri uri = Uri.parse("https://github.com/gtxprime/mind-mint");
+        Intent githubIntent = new Intent(Intent.ACTION_VIEW, uri);
+        try {
+            startActivity(githubIntent);
+        } catch (Exception ignored) {
+            ClipboardManager clipboard = (ClipboardManager) requireContext()
+                    .getSystemService(Context.CLIPBOARD_SERVICE);
+            ClipData clip = ClipData.newPlainText("Hardcoded Text", String.valueOf(uri));
+            clipboard.setPrimaryClip(clip);
+            Toast.makeText(requireContext(), "Link copied to clipboard", Toast.LENGTH_SHORT).show();
         }
     }
 
