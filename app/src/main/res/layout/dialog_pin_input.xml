@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="24dp"
+    android:paddingEnd="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/pin_digit_1"
+            style="@style/PinDigitBox"
+            android:imeOptions="actionNext" />
+        <View android:layout_width="8dp" android:layout_height="0dp" />
+        <EditText
+            android:id="@+id/pin_digit_2"
+            style="@style/PinDigitBox"
+            android:imeOptions="actionNext" />
+        <View android:layout_width="8dp" android:layout_height="0dp" />
+        <EditText
+            android:id="@+id/pin_digit_3"
+            style="@style/PinDigitBox"
+            android:imeOptions="actionNext" />
+        <View android:layout_width="8dp" android:layout_height="0dp" />
+        <EditText
+            android:id="@+id/pin_digit_4"
+            style="@style/PinDigitBox"
+            android:imeOptions="actionNext" />
+        <View android:layout_width="8dp" android:layout_height="0dp" />
+        <EditText
+            android:id="@+id/pin_digit_5"
+            style="@style/PinDigitBox"
+            android:imeOptions="actionNext" />
+        <View android:layout_width="8dp" android:layout_height="0dp" />
+        <EditText
+            android:id="@+id/pin_digit_6"
+            style="@style/PinDigitBox"
+            android:imeOptions="actionDone" />
+            
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/pin_error_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:fontFamily="@font/inter18regular"
+        android:textColor="@color/redIcon"
+        android:textSize="12sp"
+        android:visibility="invisible" />
+
+</LinearLayout>
