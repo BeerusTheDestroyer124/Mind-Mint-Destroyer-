@@ -11,6 +11,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
 
 import com.gxdevs.mindmint.db.dao.DailyStatsDao;
 import com.gxdevs.mindmint.db.dao.FocusDao;
+import com.gxdevs.mindmint.db.dao.FocusScheduleDao;
 import com.gxdevs.mindmint.db.dao.HabitCachedStatsDao;
 import com.gxdevs.mindmint.db.dao.HabitCompletionDao;
 import com.gxdevs.mindmint.db.dao.HabitDao;
@@ -18,6 +19,7 @@ import com.gxdevs.mindmint.db.dao.TaskDao;
 import com.gxdevs.mindmint.db.dao.FocusTopicDao;
 import com.gxdevs.mindmint.db.entities.DailyStatsEntity;
 import com.gxdevs.mindmint.db.entities.FocusDailyStatEntity;
+import com.gxdevs.mindmint.db.entities.FocusScheduleEntity;
 import com.gxdevs.mindmint.db.entities.FocusSessionEntity;
 import com.gxdevs.mindmint.db.entities.FocusStateEntity;
 import com.gxdevs.mindmint.db.entities.FocusTopicEntity;
@@ -36,8 +38,9 @@ import java.util.concurrent.Executors;
         FocusDailyStatEntity.class,
         FocusSessionEntity.class,
         DailyStatsEntity.class,
-        FocusTopicEntity.class
-}, version = 15, exportSchema = false)
+        FocusTopicEntity.class,
+        FocusScheduleEntity.class
+}, version = 16, exportSchema = false)
 public abstract class MindMintRoomDatabase extends RoomDatabase {
     private static volatile MindMintRoomDatabase INSTANCE;
 
@@ -52,6 +55,8 @@ public abstract class MindMintRoomDatabase extends RoomDatabase {
     public abstract FocusDao focusDao();
 
     public abstract FocusTopicDao focusTopicDao();
+
+    public abstract FocusScheduleDao focusScheduleDao();
 
     public abstract DailyStatsDao dailyStatsDao();
 
@@ -210,6 +215,34 @@ public abstract class MindMintRoomDatabase extends RoomDatabase {
         }
     };
 
+    /**
+     * Migration from 15 to 16
+     * - Add focus mode fields to tasks table
+     * - Create focus_schedules table
+     */
+    static final Migration MIGRATION_15_16 = new Migration(15, 16) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            // Focus mode columns for tasks
+            database.execSQL("ALTER TABLE tasks ADD COLUMN focus_mode_enabled INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE tasks ADD COLUMN focus_duration_minutes INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE tasks ADD COLUMN focus_time_spent_ms INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE tasks ADD COLUMN focus_status TEXT DEFAULT 'IDLE'");
+
+            // Recurring focus schedule table
+            database.execSQL("CREATE TABLE IF NOT EXISTS focus_schedules ("
+                    + "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "
+                    + "label TEXT, "
+                    + "startHour INTEGER NOT NULL DEFAULT 0, "
+                    + "startMinute INTEGER NOT NULL DEFAULT 0, "
+                    + "durationMinutes INTEGER NOT NULL DEFAULT 25, "
+                    + "daysOfWeek TEXT, "
+                    + "isLockedIn INTEGER NOT NULL DEFAULT 0, "
+                    + "isEnabled INTEGER NOT NULL DEFAULT 1)");
+        }
+    };
+
+
     public static MindMintRoomDatabase getInstance(@NonNull Context context) {
         if (INSTANCE == null) {
             synchronized (MindMintRoomDatabase.class) {
@@ -219,7 +252,8 @@ public abstract class MindMintRoomDatabase extends RoomDatabase {
                             MindMintRoomDatabase.class,
                             "mindmint.db")
                             .addMigrations(MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11,
-                                    MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
+                                    MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15,
+                                    MIGRATION_15_16)
                             .addCallback(new Callback() {
                                 @Override
                                 public void onCreate(@NonNull SupportSQLiteDatabase db) {

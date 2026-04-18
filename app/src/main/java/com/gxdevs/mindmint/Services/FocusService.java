@@ -25,8 +25,10 @@ import androidx.core.app.NotificationCompat;
 import androidx.preference.PreferenceManager;
 
 import com.gxdevs.mindmint.Activities.FocusMode;
+import com.gxdevs.mindmint.Models.Task;
 import com.gxdevs.mindmint.R;
 import com.gxdevs.mindmint.Utils.MintCrystals;
+import com.gxdevs.mindmint.Utils.TaskManager;
 import com.gxdevs.mindmint.Widgets.FocusTimerWidgetProvider;
 import com.gxdevs.mindmint.Widgets.PomodoroTimerWidgetProvider;
 import com.gxdevs.mindmint.db.MindMintRoomDatabase;
@@ -82,6 +84,18 @@ public class FocusService extends Service {
     private long pomodoroFocusInterval = 25 * 60 * 1000L;
     private long pomodoroBreakInterval = 5 * 60 * 1000L;
     private String currentTopicName = null;
+    // Task-linked focus extras
+    public static final String EXTRA_TASK_ID = "taskId";
+    public static final String EXTRA_IS_LOCKED_IN = "isLockedIn";
+    public static final String EXTRA_IS_OPEN_ENDED = "isOpenEnded";
+    public static final String ACTION_TASK_FOCUS_UPDATE = "com.gxdevs.mindmint.action.TASK_FOCUS_UPDATE";
+    public static final String PREF_IS_LOCKED_IN = "pref_focus_is_locked_in";
+    public static final String PREF_LINKED_TASK_ID = "pref_focus_linked_task_id";
+    public static final String PREF_IS_OPEN_ENDED = "pref_focus_is_open_ended";
+
+    private String linkedTaskId = null;  // null if not task-linked
+    private boolean isLockedIn = false;  // true = block ALL non-essentials
+    private boolean isOpenEnded = false; // true = count-up mode (no auto-stop)
 
     public static boolean isPublicFocusRun = false;
     private final Handler notificationHandler = new Handler(Looper.getMainLooper());
@@ -105,6 +119,7 @@ public class FocusService extends Service {
             return FocusService.this;
         }
     }
+
 
     @Override
     public void onCreate() {
@@ -143,7 +158,12 @@ public class FocusService extends Service {
             this.crystalRevealFraction = existing.crystal_reveal_fraction;
             this.isRunning = true;
 
-            boolean isInfinite = currentDurationInMillis == Long.MAX_VALUE;
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+            this.linkedTaskId = prefs.getString(PREF_LINKED_TASK_ID, null);
+            this.isLockedIn = prefs.getBoolean(PREF_IS_LOCKED_IN, false);
+            this.isOpenEnded = prefs.getBoolean(PREF_IS_OPEN_ENDED, false);
+
+            boolean isInfinite = currentDurationInMillis == Long.MAX_VALUE || isOpenEnded;
 
             // Handle paused states
             if (isPaused && isBreak) {
@@ -216,6 +236,29 @@ public class FocusService extends Service {
                     pomodoroFocusInterval = intent.getLongExtra("pomodoroFocusInterval", 25 * 60 * 1000L);
                     pomodoroBreakInterval = intent.getLongExtra("pomodoroBreakInterval", 5 * 60 * 1000L);
                     currentTopicName = intent.getStringExtra("topicName");
+
+                    // Task-linked & Locked-In extras
+                    linkedTaskId = intent.getStringExtra(EXTRA_TASK_ID);
+                    boolean alwaysLockIn = PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_always_lock_in", false);
+                    isLockedIn = intent.getBooleanExtra(EXTRA_IS_LOCKED_IN, false) || alwaysLockIn;
+                    isOpenEnded = intent.getBooleanExtra(EXTRA_IS_OPEN_ENDED, false);
+
+                    // If open-ended, cap duration to 12 hours (auto-stop)
+                    if (isOpenEnded) {
+                        currentDurationInMillis = 12 * 60 * 60 * 1000L;
+                    }
+
+                    // Persist state for service recreation
+                    PreferenceManager.getDefaultSharedPreferences(this).edit()
+                            .putBoolean(PREF_IS_LOCKED_IN, isLockedIn)
+                            .putBoolean(PREF_IS_OPEN_ENDED, isOpenEnded)
+                            .putString(PREF_LINKED_TASK_ID, linkedTaskId)
+                            .apply();
+
+                    // If task is linked, mark it IN_PROGRESS
+                    if (linkedTaskId != null) {
+                        updateLinkedTaskStatus(linkedTaskId, "IN_PROGRESS", 0);
+                    }
 
                     Log.d(TAG, "ACTION_START_FOREGROUND_SERVICE: duration = " + currentDurationInMillis +
                             ", pomodoro=" + isPomodoroEnabled + ", topic=" + currentTopicName);
@@ -481,6 +524,14 @@ public class FocusService extends Service {
         return isPaused;
     }
 
+    public boolean isOpenEnded() {
+        return isOpenEnded;
+    }
+
+    public String getLinkedTaskId() {
+        return linkedTaskId;
+    }
+
     public long getBreakRemainingMillis() {
         if (!isBreak || !isPaused)
             return 0L;
@@ -534,6 +585,9 @@ public class FocusService extends Service {
 
     public void stopTimer() {
         if (isRunning) {
+            // Capture session type BEFORE any state is cleared
+            final boolean wasTaskSession = (linkedTaskId != null) || isLockedIn;
+
             // Calculate FOCUS time only (not break time)
             long elapsedFocusMillis = accumulatedFocusTime;
             if (!isPaused && !isBreak) {
@@ -581,6 +635,23 @@ public class FocusService extends Service {
             long elapsedSeconds = elapsedFocusMillis / 1000;
             saveDailyFocusStat(elapsedSeconds);
 
+            // --- Save elapsed time to linked task ---
+            if (linkedTaskId != null) {
+                updateLinkedTaskStatus(linkedTaskId, "IDLE", elapsedFocusMillis);
+                // Broadcast so TasksFragment can refresh the list
+                Intent taskUpdate = new Intent(ACTION_TASK_FOCUS_UPDATE);
+                taskUpdate.putExtra(EXTRA_TASK_ID, linkedTaskId);
+                sendBroadcast(taskUpdate);
+                linkedTaskId = null;
+            }
+
+            // Clear prefs
+            PreferenceManager.getDefaultSharedPreferences(this).edit()
+                    .putBoolean(PREF_IS_LOCKED_IN, false)
+                    .putBoolean(PREF_IS_OPEN_ENDED, false)
+                    .remove(PREF_LINKED_TASK_ID)
+                    .apply();
+
             // Save detailed session history (FOCUS TIME ONLY)
             try {
                 FocusSessionEntity session = new FocusSessionEntity();
@@ -596,33 +667,60 @@ public class FocusService extends Service {
                 Log.e(TAG, "Error saving focus session", e);
             }
 
-            // Coin logic
+
+            // Coin logic — only for standalone (non-task-linked, non-locked-in) sessions
             MintCrystals mintCrystals = new MintCrystals(this);
             int coinsAwarded = 0;
 
-            if (completedNaturally) {
-                coinsAwarded = mapCoinsForMinutes(lastCompletedDurationMinutes);
-                if (coinsAwarded > 0) {
-                    mintCrystals.addCoins(coinsAwarded);
-                    Log.i(TAG, "MintCrystals: Awarded " + coinsAwarded + " coins for completing " + lastCompletedDurationMinutes + " minutes.");
+            if (!wasTaskSession) {
+                if (completedNaturally) {
+                    coinsAwarded = mapCoinsForMinutes(lastCompletedDurationMinutes);
+                    if (coinsAwarded > 0) {
+                        mintCrystals.addCoins(coinsAwarded);
+                        Log.i(TAG, "MintCrystals: Awarded " + coinsAwarded + " coins for completing " + lastCompletedDurationMinutes + " minutes.");
+                    }
+                } else if (wasTimeLimited) {
+                    // User manually stopped a timed standalone session early — deduct penalty
+                    mintCrystals.subtractCoins(3);
+                    Toast.makeText(this, "3 MintCrystals deducted for stopping early.", Toast.LENGTH_SHORT).show();
+                    Log.i(TAG, "MintCrystals: Deducted 3 coins for stopping early.");
                 }
-            } else if (wasTimeLimited) {
-                // User manually stopped early - deduct coins
-                mintCrystals.subtractCoins(3);
-                Toast.makeText(this, "3 MintCrystals deducted.", Toast.LENGTH_SHORT).show();
-                Log.i(TAG, "MintCrystals: Deducted 3 coins for stopping early.");
             }
 
             Toast.makeText(this, "You have focused for " + formatTime(elapsedFocusMillis), Toast.LENGTH_SHORT).show();
 
-            // Show a high-priority completion notification if finished naturally
-            if (completedNaturally)
+            // Show a high-priority completion notification if finished naturally (only for non-task sessions)
+            if (completedNaturally && !wasTaskSession)
                 showCompletionNotification(lastCompletedDurationMinutes, coinsAwarded);
 
             stopForeground(true);
             stopSelf();
         }
 
+    }
+
+    /**
+     * Update the linked task's focus status and accumulate spent time.
+     * Called on-thread (allowMainThreadQueries is enabled for this db).
+     */
+    private void updateLinkedTaskStatus(String taskId, String newStatus, long additionalMs) {
+        try {
+            TaskManager tm = new TaskManager(this);
+            Task task = tm.getTaskById(taskId);
+            if (task != null) {
+                task.setFocusStatus(newStatus);
+                if (additionalMs > 0) {
+                    task.setFocusTimeSpentMs(task.getFocusTimeSpentMs() + additionalMs);
+                }
+                tm.updateTask(task);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error updating linked task focus status", e);
+        }
+    }
+
+    public boolean isLockedIn() {
+        return isLockedIn;
     }
 
     public void stopService() {
@@ -743,8 +841,17 @@ public class FocusService extends Service {
             timeString = "Tap to Resume";
         } else {
             // FOCUS_RUNNING state
-            title = "Focus Mode Active";
-            if (currentDurationInMillis == Long.MAX_VALUE) {
+            if (isLockedIn) {
+                title = "Locked In: Eliminating distractions";
+            } else if (linkedTaskId != null) {
+                title = "Focusing on Task";
+                if (currentTopicName != null && !currentTopicName.trim().isEmpty()) {
+                    title = "Focusing on: " + currentTopicName;
+                }
+            } else {
+                title = "Focus Mode Active";
+            }
+            if (currentDurationInMillis == Long.MAX_VALUE || isOpenEnded) {
                 timeString = "Focusing: " + formatTime(elapsedMillis);
             } else {
                 long remainingMillis = currentDurationInMillis - elapsedMillis;

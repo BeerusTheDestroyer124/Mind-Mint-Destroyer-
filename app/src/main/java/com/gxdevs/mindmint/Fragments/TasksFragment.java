@@ -9,6 +9,8 @@ import android.animation.ValueAnimator;
 import android.app.AlarmManager;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
@@ -41,17 +43,21 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.apachat.swipereveallayout.core.SwipeLayout;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
+import com.gxdevs.mindmint.Activities.FocusMode;
 import com.gxdevs.mindmint.Adapters.TaskAdapter;
 import com.gxdevs.mindmint.Models.Habit;
 import com.gxdevs.mindmint.Models.Task;
 import com.gxdevs.mindmint.R;
+import com.gxdevs.mindmint.Services.FocusService;
 import com.gxdevs.mindmint.Utils.HabitManager;
 import com.gxdevs.mindmint.Utils.MintCrystals;
 import com.gxdevs.mindmint.Utils.StreakManager;
 import com.gxdevs.mindmint.Utils.TaskManager;
 import com.gxdevs.mindmint.Utils.TaskNotificationManager;
 import com.gxdevs.mindmint.Utils.Utils;
+import com.gxdevs.mindmint.Utils.CustomDialogUtils;
 import com.skydoves.balloon.ArrowOrientation;
 import com.skydoves.balloon.Balloon;
 import com.skydoves.balloon.BalloonAnimation;
@@ -68,6 +74,9 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskClickLi
     private static final String KEY_TASK_CREATE_TUTORIAL_SHOWN = "task_create_tutorial_shown";
     private static final String KEY_TASK_SWIPE_FOCUS_TUTORIAL_SHOWN = "task_swipe_focus_tutorial_shown";
     private static final String KEY_TASK_SWIPE_LIST_TUTORIAL_SHOWN = "task_swipe_list_tutorial_shown";
+    private static final String KEY_TASK_FOCUS_GUIDE_SHOWN = "task_focus_guide_shown";
+    // Tracks whether this fragment has been seen at least once this app session
+    private boolean tutorialsShownThisSession = false;
     private View view;
     private MaterialButton addTaskButton;
     private EditText searchEditText;
@@ -95,7 +104,10 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskClickLi
     private Task currentFocusTask;
     private TextView currentFocusLabel;
     private ImageView currentFocusMenu;
+    private TextView currentFocusMarkButtonText;
     private TextView dateDetails;
+    private android.content.BroadcastReceiver focusUpdateReceiver;
+    
     private final ActivityResultLauncher<String> permissionLauncher = registerForActivityResult(
             new ActivityResultContracts.RequestPermission(), isGranted -> {
                 if (isGranted) {
@@ -123,6 +135,19 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskClickLi
         loadTasks();
         checkPermissionAndMoveOn();
         setupSearchAndFilter();
+
+        focusUpdateReceiver = new android.content.BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, android.content.Intent intent) {
+                if (FocusService.ACTION_TASK_FOCUS_UPDATE.equals(intent.getAction())) {
+                    // Full reload ensures the focus card hides/updates immediately
+                    loadTasks();
+                    updateCurrentFocusCardVisibility();
+                }
+            }
+        };
+        IntentFilter filter = new android.content.IntentFilter(FocusService.ACTION_TASK_FOCUS_UPDATE);
+        ContextCompat.registerReceiver(requireContext(), focusUpdateReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         return view;
     }
@@ -161,7 +186,15 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskClickLi
         super.onResume();
         checkPermissionAndMoveOn();
         updateNotificationPermissionCard();
-        view.postDelayed(this::checkAndShowTaskTutorials, 500);
+        // Reload tasks when returning from FocusMode so the list and focus card
+        // reflect any changes made during the focus session (status, time spent, etc.)
+        loadTasks();
+        // Only show tutorials on the very first time we land on this fragment (per session).
+        // Returning from FocusMode repeatedly should not re-trigger tutorial balloons.
+        if (!tutorialsShownThisSession) {
+            tutorialsShownThisSession = true;
+            view.postDelayed(this::checkAndShowTaskTutorials, 600);
+        }
     }
 
     private void checkAndShowTaskTutorials() {
@@ -174,27 +207,84 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskClickLi
 
         // 1. Create Task Tutorial (Only if empty)
         if (!createShown && (taskList == null || taskList.isEmpty())) {
-            showTutorialBalloon(addTaskButton, "Add your first task",
+            showTutorialBalloon(addTaskButton, "Add your first task and tap it to start a focus session!",
                     () -> prefs.edit().putBoolean(KEY_TASK_CREATE_TUTORIAL_SHOWN, true).apply(), 0.85f);
             return;
         }
 
-        // 2. Focus Card Swipe Tutorial (If Focus Card is visible)
+        // 2. Task Focus Guide bottom sheet (shown once when tasks exist)
+        checkAndShowTaskFocusGuide(prefs);
+
+        // 3. Focus Card Swipe Tutorial (If Focus Card is visible)
         if (!focusSwipeShown && currentFocusCard != null && currentFocusCard.getVisibility() == VISIBLE) {
-            showTutorialBalloon(currentFocusCard, "Swipe the card down to quick edit or delete",
+            showTutorialBalloon(currentFocusCard, "Tap the card to jump into your focus session ·  Swipe down for quick edit/delete",
                     () -> prefs.edit().putBoolean(KEY_TASK_SWIPE_FOCUS_TUTORIAL_SHOWN, true).apply(), 0.5f);
         }
 
-        // 3. List Swipe Tutorial (If List has items)
+        // 4. List Swipe Tutorial (If List has items)
         if (!listSwipeShown && taskAdapter != null && taskAdapter.getItemCount() > 0) {
             tasksRecyclerView.postDelayed(() -> {
                 RecyclerView.ViewHolder vh = tasksRecyclerView.findViewHolderForAdapterPosition(0);
                 if (vh != null) {
-                    showTutorialBalloon(vh.itemView, "Swipe task left to quick edit or delete",
+                    showTutorialBalloon(vh.itemView, "Tap to focus · Checkbox to mark done · Swipe left for edit/delete",
                             () -> prefs.edit().putBoolean(KEY_TASK_SWIPE_LIST_TUTORIAL_SHOWN, true).apply(), 0.5f);
                 }
             }, 200);
         }
+    }
+
+    private void checkAndShowTaskFocusGuide(SharedPreferences prefs) {
+        if (taskList == null || taskList.isEmpty()) return;
+        if (prefs.getBoolean(KEY_TASK_FOCUS_GUIDE_SHOWN, false)) return;
+        if (getContext() == null || getViewLifecycleOwner() == null) return;
+
+        BottomSheetDialog guideSheet = new BottomSheetDialog(requireContext(), R.style.CustomBottomSheetTheme);
+        View sheetView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.bottom_sheet_task_focus_guide,
+                        view.findViewById(R.id.bottomSheetTaskFocusGuideLayout));
+
+        sheetView.findViewById(R.id.crossBtn).setOnClickListener(v -> guideSheet.dismiss());
+        sheetView.findViewById(R.id.gotItBtn).setOnClickListener(v -> guideSheet.dismiss());
+
+        guideSheet.setContentView(sheetView);
+        guideSheet.setOnDismissListener(d -> {
+            prefs.edit().putBoolean(KEY_TASK_FOCUS_GUIDE_SHOWN, true).apply();
+            // After dismissal, show an interaction balloon on the first task
+            showTaskFocusInteractionBalloon();
+        });
+        guideSheet.show();
+    }
+
+    private void showTaskFocusInteractionBalloon() {
+        if (taskAdapter == null || taskAdapter.getItemCount() == 0 || tasksRecyclerView == null) return;
+
+        tasksRecyclerView.postDelayed(() -> {
+            tasksRecyclerView.smoothScrollToPosition(0);
+            tasksRecyclerView.postDelayed(() -> {
+                RecyclerView.ViewHolder vh = tasksRecyclerView.findViewHolderForAdapterPosition(0);
+                View target = (vh != null) ? vh.itemView : tasksRecyclerView.getChildAt(0);
+                if (target != null && isAdded()) {
+                    Balloon balloon = new Balloon.Builder(requireContext())
+                            .setArrowSize(10)
+                            .setArrowOrientation(ArrowOrientation.BOTTOM)
+                            .setArrowPosition(0.5f)
+                            .setWidthRatio(0.78f)
+                            .setHeight(BalloonSizeSpec.WRAP)
+                            .setTextSize(13f)
+                            .setCornerRadius(10f)
+                            .setAlpha(0.92f)
+                            .setPadding(10)
+                            .setText("Tap to start a focus session · Checkbox marks it done")
+                            .setTextColor(ContextCompat.getColor(requireContext(), R.color.white))
+                            .setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.brainColor))
+                            .setBalloonAnimation(BalloonAnimation.ELASTIC)
+                            .setDismissWhenClicked(true)
+                            .setLifecycleOwner(getViewLifecycleOwner())
+                            .build();
+                    balloon.showAlignTop(target);
+                }
+            }, 300);
+        }, 300);
     }
 
     private void showTutorialBalloon(View target, String text, Runnable onDismiss, float position) {
@@ -241,6 +331,7 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskClickLi
         currentFocusMarkButton = view.findViewById(R.id.currentFocusMarkButton);
         currentFocusLabel = view.findViewById(R.id.currentFocusLabel);
         currentFocusMenu = view.findViewById(R.id.currentFocusMenu);
+        currentFocusMarkButtonText = view.findViewById(R.id.currentFocusMarkButtonText);
         dateDetails = view.findViewById(R.id.dateDetails);
 
         // Initialize card as hidden
@@ -261,7 +352,28 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskClickLi
         if (currentFocusMarkButton != null) {
             currentFocusMarkButton.setOnClickListener(v -> {
                 if (currentFocusTask != null && !currentFocusTask.isCompleted()) {
-                    animateMarkComplete();
+                    // Card action button ALWAYS opens focus mode for any task
+                    int pos = findTaskPosition(currentFocusTask);
+                    onTaskClick(currentFocusTask, Math.max(pos, 0));
+                }
+            });
+        }
+
+        if (currentFocusCard != null) {
+            currentFocusCard.setOnClickListener(v -> {
+                if (currentFocusTask != null && !currentFocusTask.isCompleted()) {
+                    int pos = findTaskPosition(currentFocusTask);
+                    onTaskClick(currentFocusTask, Math.max(pos, 0));
+                }
+            });
+        }
+
+        View currentFocusInner = view.findViewById(R.id.currentFocusInner);
+        if (currentFocusInner != null) {
+            currentFocusInner.setOnClickListener(v -> {
+                if (currentFocusTask != null && !currentFocusTask.isCompleted()) {
+                    int pos = findTaskPosition(currentFocusTask);
+                    onTaskClick(currentFocusTask, Math.max(pos, 0));
                 }
             });
         }
@@ -486,7 +598,21 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskClickLi
         });
 
         if (!incompleteTasks.isEmpty() && incompleteTasks.get(0) != null) {
-            currentFocusTask = incompleteTasks.get(0);
+            // First check if ANY task is currently IN_PROGRESS
+            Task runningTask = null;
+            for (Task task : incompleteTasks) {
+                if ("IN_PROGRESS".equals(task.getFocusStatus())) {
+                    runningTask = task;
+                    break;
+                }
+            }
+            
+            currentFocusTask = runningTask != null ? runningTask : incompleteTasks.get(0);
+            
+            if (currentFocusLabel != null) {
+                currentFocusLabel.setText(runningTask != null ? "Currently Working On" : "Suggested Task");
+            }
+            
             populateCurrentFocusCard(currentFocusTask);
             showCurrentFocusCard();
         } else {
@@ -634,11 +760,20 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskClickLi
             currentFocusDueDate.setText("No due date");
         }
 
-        // Reset button state to initial (white background, black icon)
-        TypedValue typedValue = new TypedValue();
-        requireContext().getTheme().resolveAttribute(R.attr.text_primary, typedValue, true);
-        ColorStateList colorStateList = ColorStateList.valueOf(typedValue.data);
-        currentFocusMarkButton.setBackgroundTintList(colorStateList);
+        // Set state-aware button label and priority badge
+        boolean isRunning = "IN_PROGRESS".equals(task.getFocusStatus());
+        if (currentFocusMarkButtonText != null) {
+            currentFocusMarkButtonText.setText(isRunning ? "Go to Focus" : "Start Focus");
+        }
+
+        // Overlay priority label with a live "● WORKING" badge when task is running
+        if (isRunning) {
+            currentFocusDueDate.setText("Status: Task running");
+            currentFocusPriorityLabel.setText("● WORKING");
+            currentFocusPriorityLabel.setBackgroundTintList(
+                    ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.brainColor)));
+            currentFocusPriorityLabel.setTextColor(android.graphics.Color.WHITE);
+        }
     }
 
     private void animateMarkComplete() {
@@ -694,11 +829,109 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskClickLi
     @Override
     public void onDestroy() {
         super.onDestroy();
+        if (focusUpdateReceiver != null) {
+            requireContext().unregisterReceiver(focusUpdateReceiver);
+        }
         saveTasks();
     }
 
     @Override
     public void onTaskClick(Task task, int position) {
+        if (task.isCompleted()) return;
+
+        Runnable startNewFocus = () -> {
+            // Stop any existing session just in case
+            Intent stopIntent = new Intent(requireContext(), FocusService.class);
+            stopIntent.setAction(FocusService.ACTION_STOP_TIMER);
+            requireContext().startService(stopIntent);
+
+            // Start new task-linked focus session
+            Intent startIntent = new Intent(requireContext(), FocusService.class);
+            startIntent.setAction(FocusService.ACTION_START_FOREGROUND_SERVICE);
+            
+            long durationMs = task.isFocusModeEnabled() ? (task.getFocusDurationMinutes() * 60000L) : 0L;
+            startIntent.putExtra("durationInMillis", durationMs);
+            startIntent.putExtra("topicName", task.getName());
+            startIntent.putExtra(FocusService.EXTRA_TASK_ID, task.getId());
+            startIntent.putExtra(FocusService.EXTRA_IS_OPEN_ENDED, durationMs == 0);
+            
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                requireContext().startForegroundService(startIntent);
+            } else {
+                requireContext().startService(startIntent);
+            }
+            
+            Intent focusIntent = new Intent(requireContext(), FocusMode.class);
+            focusIntent.putExtra(FocusService.EXTRA_TASK_ID, task.getId());
+            focusIntent.putExtra("topicName", task.getName());
+            focusIntent.putExtra(FocusService.EXTRA_IS_OPEN_ENDED, durationMs == 0);
+            startActivity(focusIntent);
+            Toast.makeText(requireContext(), "Starting focus: " + task.getName(), Toast.LENGTH_SHORT).show();
+        };
+
+        if (FocusService.isPublicFocusRun) {
+            // Check if this task IS the one currently running
+            boolean isThisTaskRunning = "IN_PROGRESS".equals(task.getFocusStatus());
+            if (!isThisTaskRunning) {
+                // Fallback: check persisted linked task id (handles stale in-memory status)
+                String persistedTaskId = androidx.preference.PreferenceManager
+                        .getDefaultSharedPreferences(requireContext())
+                        .getString(FocusService.PREF_LINKED_TASK_ID, null);
+                isThisTaskRunning = task.getId().equals(persistedTaskId);
+            }
+
+            if (isThisTaskRunning) {
+                // Re-open the running session directly
+                Intent focusIntent = new Intent(requireContext(), FocusMode.class);
+                focusIntent.putExtra(FocusService.EXTRA_TASK_ID, task.getId());
+                focusIntent.putExtra("topicName", task.getName());
+                long durMs = task.isFocusModeEnabled() ? (task.getFocusDurationMinutes() * 60000L) : 0L;
+                focusIntent.putExtra(FocusService.EXTRA_IS_OPEN_ENDED, durMs == 0);
+                startActivity(focusIntent);
+            } else {
+                // Different task running: check whether it's a task-linked session or standalone.
+                String persistedTaskId = androidx.preference.PreferenceManager
+                        .getDefaultSharedPreferences(requireContext())
+                        .getString(FocusService.PREF_LINKED_TASK_ID, null);
+                boolean isLinkedSession = persistedTaskId != null && !persistedTaskId.isEmpty();
+
+                if (isLinkedSession) {
+                    // BUG-11 fix: for a task-linked session, open FocusMode so the user is asked
+                    // "Did you complete the task?" before the session is force-stopped.
+                    // We keep the new-task info in a holder so startNewFocus can be triggered
+                    // after FocusMode handles the completion dialog (user will re-tap on return).
+                    CustomDialogUtils.showCustomDialog(requireContext(),
+                        "Active Session Detected",
+                        "You already have an active focus session for another task. Would you like to view it to stop or complete it first?",
+                        "View Session",
+                        "Cancel",
+                        () -> {
+                            // Re-open the running FocusMode with the ACTIVE task id
+                            Intent focusIntent = new Intent(requireContext(), FocusMode.class);
+                            focusIntent.putExtra(FocusService.EXTRA_TASK_ID, persistedTaskId);
+                            boolean persistedOE = androidx.preference.PreferenceManager
+                                    .getDefaultSharedPreferences(requireContext())
+                                    .getBoolean(FocusService.PREF_IS_OPEN_ENDED, false);
+                            focusIntent.putExtra(FocusService.EXTRA_IS_OPEN_ENDED, persistedOE);
+                            startActivity(focusIntent);
+                        },
+                        null);
+                } else {
+                    // Standalone session: safe to force-stop and start new
+                    CustomDialogUtils.showCustomDialog(requireContext(),
+                        "Active Session Detected",
+                        "You have a standard focus session running. Would you like to stop it and start focusing on this task instead?",
+                        "Stop and Start Task",
+                        "Cancel",
+                        () -> startNewFocus.run(),
+                        null);
+                }
+            }
+            return;
+        }
+
+        // No running session — jump directly
+        startNewFocus.run();
     }
 
     @Override
@@ -778,10 +1011,12 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskClickLi
 
     @Override
     public void onTaskDelete(Task task, int position) {
-        new AlertDialog.Builder(requireContext(), R.style.AlertDialogTheme)
-                .setTitle("Delete Task")
-                .setMessage("Are you sure you want to delete requireContext() task?")
-                .setPositiveButton("Delete", (dialog, which) -> {
+        CustomDialogUtils.showCustomDialog(requireContext(),
+                "Delete Task",
+                "Are you sure you want to delete this task?",
+                "Delete",
+                "Cancel",
+                () -> {
                     // Cancel any scheduled notifications for requireContext() task
                     notificationManager.cancelTaskReminder(task);
 
@@ -799,9 +1034,8 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskClickLi
                     updateEmptyState();
                     updateRemainingTasksCount();
                     Toast.makeText(requireContext(), "Task deleted", Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
+                },
+                null);
     }
 
     @Override
@@ -818,7 +1052,18 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskClickLi
 
         updateEmptyState();
         updateRemainingTasksCount();
-        view.postDelayed(this::checkAndShowTaskTutorials, 300);
+
+        // Show guide if this is the very first task the user created
+        SharedPreferences prefs = requireContext().getSharedPreferences("AppData", Context.MODE_PRIVATE);
+        boolean guideAlreadyShown = prefs.getBoolean(KEY_TASK_FOCUS_GUIDE_SHOWN, false);
+        if (taskList.size() == 1 && !guideAlreadyShown) {
+            // First task ever — delay slightly so the card animates in first
+            view.postDelayed(() -> checkAndShowTaskFocusGuide(prefs), 800);
+        } else {
+            // Not the first task — just run normal tutorial check (swipe hints etc.)
+            view.postDelayed(this::checkAndShowTaskTutorials, 300);
+        }
+
         Toast.makeText(requireContext(), "Task added successfully", Toast.LENGTH_SHORT).show();
     }
 
@@ -836,7 +1081,7 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskClickLi
         }
 
         updateRemainingTasksCount();
-        view.postDelayed(this::checkAndShowTaskTutorials, 300);
+        // No tutorial trigger on update — edits don't need to re-show hints
         Toast.makeText(requireContext(), "Task updated successfully", Toast.LENGTH_SHORT).show();
     }
 
@@ -867,30 +1112,22 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskClickLi
         if (task.getPriority() == null) {
             return Color.parseColor("#1B3D37");
         }
-        switch (task.getPriority()) {
-            case HIGH:
-                return Color.parseColor("#4e2A35");
-            case MEDIUM:
-                return Color.parseColor("#3C3020");
-            case LOW:
-            default:
-                return Color.parseColor("#1B3D37");
-        }
+        return switch (task.getPriority()) {
+            case HIGH -> Color.parseColor("#4e2A35");
+            case MEDIUM -> Color.parseColor("#3C3020");
+            default -> Color.parseColor("#1B3D37");
+        };
     }
 
     private int getPriorityTxtColor(Task task) {
         if (task.getPriority() == null) {
             return Color.parseColor("#34D399");
         }
-        switch (task.getPriority()) {
-            case HIGH:
-                return Color.parseColor("#FB7185");
-            case MEDIUM:
-                return Color.parseColor("#E3AE24");
-            case LOW:
-            default:
-                return Color.parseColor("#34D399");
-        }
+        return switch (task.getPriority()) {
+            case HIGH -> Color.parseColor("#FB7185");
+            case MEDIUM -> Color.parseColor("#E3AE24");
+            default -> Color.parseColor("#34D399");
+        };
     }
 
     private void updateNotificationPermissionCard() {

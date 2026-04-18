@@ -329,6 +329,239 @@
             android:layout_height="10dp"
             app:layout_constraintTop_toBottomOf="@+id/breakCard" />
 
+        <!-- Scheduled Focus Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/scheduleCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="15dp"
+            android:elevation="4dp"
+            app:cardBackgroundColor="?attr/surface_nested"
+            app:cardCornerRadius="25dp"
+            app:layout_constraintTop_toBottomOf="@+id/breakCard"
+            app:strokeColor="@color/glass_stroke"
+            app:strokeWidth="2dp">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="18dp">
+
+                <ImageView
+                    android:id="@+id/scheduleLogo"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/glass_circle"
+                    android:padding="10dp"
+                    android:src="@drawable/clock"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:tint="?attr/text_primary" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:gravity="center"
+                    android:text="Scheduled Focus"
+                    android:textColor="?attr/text_primary"
+                    android:textSize="15sp"
+                    app:layout_constraintBottom_toBottomOf="@+id/scheduleLogo"
+                    app:layout_constraintStart_toEndOf="@+id/scheduleLogo"
+                    app:layout_constraintTop_toTopOf="@+id/scheduleLogo" />
+
+                <ImageView
+                    android:id="@+id/addScheduleBtn"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/glass_circle"
+                    android:padding="8dp"
+                    android:src="@drawable/ic_add"
+                    app:layout_constraintBottom_toBottomOf="@+id/scheduleLogo"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@+id/scheduleLogo"
+                    app:tint="?attr/text_primary" />
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/schedulesContainer"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/scheduleLogo">
+
+                    <View
+                        android:id="@+id/border3"
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/glass_stroke"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/scheduleRecyclerView"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        app:layout_constraintTop_toBottomOf="@+id/border3" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="10dp"
+            app:layout_constraintTop_toBottomOf="@+id/scheduleCard" />
+
+        <!-- Always Lock In Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/alwaysLockInCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="15dp"
+            android:elevation="4dp"
+            app:cardBackgroundColor="?attr/surface_nested"
+            app:cardCornerRadius="25dp"
+            app:layout_constraintTop_toBottomOf="@+id/scheduleCard"
+            app:strokeColor="@color/glass_stroke"
+            app:strokeWidth="2dp">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="18dp">
+
+                <ImageView
+                    android:id="@+id/alwaysLockInLogo"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/glass_circle"
+                    android:padding="10dp"
+                    android:src="@drawable/smartphone"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:tint="?attr/text_primary" />
+
+                <TextView
+                    android:id="@+id/alwaysLockInTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:gravity="center"
+                    android:text="Always Lock In"
+                    android:textColor="?attr/text_primary"
+                    android:textSize="15sp"
+                    app:layout_constraintStart_toEndOf="@+id/alwaysLockInLogo"
+                    app:layout_constraintTop_toTopOf="@+id/alwaysLockInLogo" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginEnd="16dp"
+                    android:fontFamily="sans-serif"
+                    android:text="Start focus mode with essential apps only"
+                    android:textColor="?attr/text_secondary"
+                    android:textSize="11sp"
+                    app:layout_constraintEnd_toStartOf="@+id/alwaysLockInSwitch"
+                    app:layout_constraintStart_toStartOf="@+id/alwaysLockInTitle"
+                    app:layout_constraintTop_toBottomOf="@+id/alwaysLockInTitle" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/alwaysLockInSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:layout_constraintBottom_toBottomOf="@+id/alwaysLockInLogo"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@+id/alwaysLockInLogo"
+                    app:thumbTint="?attr/switchThumb"
+                    app:trackTint="?attr/switchTrack" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Custom App Blocking Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/customAppBlockCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="15dp"
+            android:elevation="4dp"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="?attr/surface_nested"
+            app:cardCornerRadius="25dp"
+            app:layout_constraintTop_toBottomOf="@+id/alwaysLockInCard"
+            app:strokeColor="@color/glass_stroke"
+            app:strokeWidth="2dp">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="18dp">
+
+                <ImageView
+                    android:id="@+id/customAppBlockLogo"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/glass_circle"
+                    android:padding="10dp"
+                    android:src="@drawable/smartphone"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:tint="?attr/text_primary" />
+
+                <TextView
+                    android:id="@+id/customAppBlockTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:gravity="center"
+                    android:text="@string/custom_app_blocking"
+                    android:textColor="?attr/text_primary"
+                    android:textSize="15sp"
+                    app:layout_constraintStart_toEndOf="@+id/customAppBlockLogo"
+                    app:layout_constraintTop_toTopOf="@+id/customAppBlockLogo" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginEnd="16dp"
+                    android:fontFamily="sans-serif"
+                    android:text="@string/select_apps_to_block_during_focus_mode"
+                    android:textColor="?attr/text_secondary"
+                    android:textSize="11sp"
+                    app:layout_constraintEnd_toStartOf="@+id/customAppBlockArrow"
+                    app:layout_constraintStart_toStartOf="@+id/customAppBlockTitle"
+                    app:layout_constraintTop_toBottomOf="@+id/customAppBlockTitle" />
+
+                <ImageView
+                    android:id="@+id/customAppBlockArrow"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_right_arrow"
+                    app:layout_constraintBottom_toBottomOf="@+id/customAppBlockLogo"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@+id/customAppBlockLogo"
+                    app:tint="?attr/text_secondary" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="10dp"
+            app:layout_constraintTop_toBottomOf="@+id/customAppBlockCard" />
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

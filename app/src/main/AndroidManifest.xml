@@ -176,6 +176,15 @@
             android:exported="false" />
 
         <receiver
+            android:name=".Receivers.FocusScheduleAlarmReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.gxdevs.mindmint.action.CANCEL_SCHEDULE_FIRE" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
             android:name="com.gxdevs.mindmint.Receivers.AccessibilityCheckReceiver"
             android:exported="false" />
 

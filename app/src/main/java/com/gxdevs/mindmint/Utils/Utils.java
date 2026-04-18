@@ -228,152 +228,149 @@ public class Utils {
 
     public interface PermissionLauncher {
         void launchAccessibility(Intent intent);
-
         void launchBattery(Intent intent);
-
         void launchNotification(String permission);
     }
 
     public static void showPermissionSheet(Context context, PermissionType type, PermissionLauncher launcher, Runnable onCancel) {
-        View view = LayoutInflater.from(context).inflate(R.layout.bottom_sheet_permission, null);
-        BottomSheetDialog dialog = new BottomSheetDialog(context, R.style.CustomBottomSheetTheme);
-        dialog.setContentView(view);
+            View view = LayoutInflater.from(context).inflate(R.layout.bottom_sheet_permission, null);
+            BottomSheetDialog dialog = new BottomSheetDialog(context, R.style.CustomBottomSheetTheme);
+            dialog.setContentView(view);
 
-        PermissionConfig config = getConfigForType(type);
-        int themeColor = Color.parseColor(config.colorHex);
+            PermissionConfig config = getConfigForType(type);
+            int themeColor = Color.parseColor(config.colorHex);
 
-        ImageView ivMainIcon = view.findViewById(R.id.ivMainIcon);
-        TextView tvTitle = view.findViewById(R.id.tvTitle);
-        TextView tvDesc = view.findViewById(R.id.tvDesc);
+            ImageView ivMainIcon = view.findViewById(R.id.ivMainIcon);
+            TextView tvTitle = view.findViewById(R.id.tvTitle);
+            TextView tvDesc = view.findViewById(R.id.tvDesc);
 
-        ivMainIcon.setImageResource(config.mainIconRes);
-        ivMainIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_IN);
+            ivMainIcon.setImageResource(config.mainIconRes);
+            ivMainIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_IN);
 
-        tvTitle.setText(config.title);
-        tvDesc.setText(config.description);
+            tvTitle.setText(config.title);
+            tvDesc.setText(config.description);
 
-        // Style trust badge
-        LinearLayout trustBadge = view.findViewById(R.id.trustBadge);
-        ImageView ivTrustIcon = view.findViewById(R.id.ivTrustIcon);
-        TextView tvTrustTitle = view.findViewById(R.id.tvTrustTitle);
-        TextView tvTrustDesc = view.findViewById(R.id.tvTrustDesc);
+            // Style trust badge
+            LinearLayout trustBadge = view.findViewById(R.id.trustBadge);
+            ImageView ivTrustIcon = view.findViewById(R.id.ivTrustIcon);
+            TextView tvTrustTitle = view.findViewById(R.id.tvTrustTitle);
+            TextView tvTrustDesc = view.findViewById(R.id.tvTrustDesc);
 
-        trustBadge.setBackgroundTintList(ColorStateList.valueOf(adjustAlpha(themeColor, 0.1f)));
-        ivTrustIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_IN);
+            trustBadge.setBackgroundTintList(ColorStateList.valueOf(adjustAlpha(themeColor, 0.1f)));
+            ivTrustIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_IN);
 
-        tvTrustTitle.setText(config.trustTitle);
-        tvTrustTitle.setTextColor(themeColor);
-        tvTrustDesc.setText(config.trustDesc);
-        tvTrustDesc.setTextColor(adjustAlpha(themeColor, 0.8f));
+            tvTrustTitle.setText(config.trustTitle);
+            tvTrustTitle.setTextColor(themeColor);
+            tvTrustDesc.setText(config.trustDesc);
+            tvTrustDesc.setTextColor(adjustAlpha(themeColor, 0.8f));
 
-        // Style buttons
-        TextView btnProceed = view.findViewById(R.id.btnProceed);
-        TextView btnCancel = view.findViewById(R.id.btnCancel);
+            // Style buttons
+            TextView btnProceed = view.findViewById(R.id.btnProceed);
+            TextView btnCancel = view.findViewById(R.id.btnCancel);
 
-        btnProceed.setText(config.buttonText);
-        btnProceed.setBackgroundTintList(ColorStateList.valueOf(themeColor));
-        btnProceed.setTextColor(Color.WHITE);
+            btnProceed.setText(config.buttonText);
+            btnProceed.setBackgroundTintList(ColorStateList.valueOf(themeColor));
+            btnProceed.setTextColor(Color.WHITE);
 
-        btnProceed.setOnClickListener(v -> {
-            dialog.dismiss();
-            handlePermissionRequestWithLauncher(context, type, launcher);
-        });
+            btnProceed.setOnClickListener(v -> {
+                dialog.dismiss();
+                handlePermissionRequestWithLauncher(context, type, launcher);
+            });
 
-        btnCancel.setOnClickListener(v -> {
-            dialog.dismiss();
-            if (onCancel != null) {
-                onCancel.run();
-            }
-        });
-
-        // Setup steps
-        int[] stepLayoutIds = {R.id.layoutStep1, R.id.layoutStep2, R.id.layoutStep3};
-        for (int i = 0; i < stepLayoutIds.length; i++) {
-            View stepView = view.findViewById(stepLayoutIds[i]);
-
-            if (i < config.steps.size()) {
-                stepView.setVisibility(View.VISIBLE);
-                Step stepData = config.steps.get(i);
-
-                TextView tvStepNum = stepView.findViewById(R.id.tvStepNum);
-                TextView tvStepLabel = stepView.findViewById(R.id.tvStepLabel);
-                TextView tvStepAction = stepView.findViewById(R.id.tvStepAction);
-                ImageView ivStepIcon = stepView.findViewById(R.id.ivStepIcon);
-
-                tvStepNum.setText(String.valueOf(i + 1));
-                tvStepNum.setTextColor(themeColor);
-                tvStepNum.setBackgroundTintList(ColorStateList.valueOf(adjustAlpha(themeColor, 0.15f)));
-
-                tvStepLabel.setText(stepData.label);
-                tvStepAction.setText(stepData.highlight);
-
-                if (stepData.iconRes != 0) {
-                    ivStepIcon.setVisibility(View.VISIBLE);
-                    ivStepIcon.setImageResource(stepData.iconRes);
-                    ivStepIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_IN);
-                } else {
-                    ivStepIcon.setVisibility(View.GONE);
+            btnCancel.setOnClickListener(v -> {
+                dialog.dismiss();
+                if (onCancel != null) {
+                    onCancel.run();
                 }
-            } else {
-                stepView.setVisibility(View.GONE);
+            });
+
+            // Setup steps
+            int[] stepLayoutIds = {R.id.layoutStep1, R.id.layoutStep2, R.id.layoutStep3};
+            for (int i = 0; i < stepLayoutIds.length; i++) {
+                View stepView = view.findViewById(stepLayoutIds[i]);
+
+                if (i < config.steps.size()) {
+                    stepView.setVisibility(View.VISIBLE);
+                    Step stepData = config.steps.get(i);
+
+                    TextView tvStepNum = stepView.findViewById(R.id.tvStepNum);
+                    TextView tvStepLabel = stepView.findViewById(R.id.tvStepLabel);
+                    TextView tvStepAction = stepView.findViewById(R.id.tvStepAction);
+                    ImageView ivStepIcon = stepView.findViewById(R.id.ivStepIcon);
+
+                    tvStepNum.setText(String.valueOf(i + 1));
+                    tvStepNum.setTextColor(themeColor);
+                    tvStepNum.setBackgroundTintList(ColorStateList.valueOf(adjustAlpha(themeColor, 0.15f)));
+
+                    tvStepLabel.setText(stepData.label);
+                    tvStepAction.setText(stepData.highlight);
+
+                    if (stepData.iconRes != 0) {
+                        ivStepIcon.setVisibility(View.VISIBLE);
+                        ivStepIcon.setImageResource(stepData.iconRes);
+                        ivStepIcon.setColorFilter(themeColor, PorterDuff.Mode.SRC_IN);
+                    } else {
+                        ivStepIcon.setVisibility(View.GONE);
+                    }
+                } else {
+                    stepView.setVisibility(View.GONE);
+                }
             }
+
+            dialog.show();
         }
 
-        dialog.show();
-    }
-
-    private static void handlePermissionRequestWithLauncher(Context context, PermissionType type, PermissionLauncher launcher) {
-        try {
-            switch (type) {
-                case ACCESSIBILITY:
-                    Intent accessibilityIntent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
-                    if (launcher != null) {
-                        launcher.launchAccessibility(accessibilityIntent);
-                    } else {
-                        context.startActivity(accessibilityIntent);
-                    }
-                    break;
-
-                case NOTIFICATION:
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        private static void handlePermissionRequestWithLauncher(Context context, PermissionType type, PermissionLauncher launcher) {
+            try {
+                switch (type) {
+                    case ACCESSIBILITY:
+                        Intent accessibilityIntent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
                         if (launcher != null) {
-                            launcher.launchNotification(Manifest.permission.POST_NOTIFICATIONS);
+                            launcher.launchAccessibility(accessibilityIntent);
                         } else {
-                            Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
-                            intent.putExtra(Settings.EXTRA_APP_PACKAGE, context.getPackageName());
+                            context.startActivity(accessibilityIntent);
+                        }
+                        break;
+
+                    case NOTIFICATION:
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            if (launcher != null) {
+                                launcher.launchNotification(Manifest.permission.POST_NOTIFICATIONS);
+                            } else {
+                                Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+                                intent.putExtra(Settings.EXTRA_APP_PACKAGE, context.getPackageName());
+                                context.startActivity(intent);
+                            }
+                        }
+                        break;
+
+                    case ALARM:
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+                            intent.setData(Uri.parse("package:" + context.getPackageName()));
                             context.startActivity(intent);
                         }
-                    }
-                    break;
+                        break;
 
-                case ALARM:
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
-                        intent.setData(Uri.parse("package:" + context.getPackageName()));
-                        context.startActivity(intent);
-                    }
-                    break;
-
-                case BATTERY:
-                    Intent batteryIntent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
-                    batteryIntent.setData(Uri.parse("package:" + context.getPackageName()));
-                    if (launcher != null) {
-                        launcher.launchBattery(batteryIntent);
-                    } else {
-                        context.startActivity(batteryIntent);
-                    }
-                    break;
+                    case BATTERY:
+                        Intent batteryIntent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                        batteryIntent.setData(Uri.parse("package:" + context.getPackageName()));
+                        if (launcher != null) {
+                            launcher.launchBattery(batteryIntent);
+                        } else {
+                            context.startActivity(batteryIntent);
+                        }
+                        break;
+                }
+            } catch (Exception e) {
+                Intent fallbackIntent = new Intent(Settings.ACTION_SETTINGS);
+                context.startActivity(fallbackIntent);
             }
-        } catch (Exception e) {
-            Intent fallbackIntent = new Intent(Settings.ACTION_SETTINGS);
-            context.startActivity(fallbackIntent);
         }
-    }
 
-    private static PermissionConfig getConfigForType(PermissionType type) {
-        switch (type) {
-            case ACCESSIBILITY:
-                return new PermissionConfig(
+        private static PermissionConfig getConfigForType(PermissionType type) {
+            return switch (type) {
+                case ACCESSIBILITY -> new PermissionConfig(
                         "#FF6B6B", // Brand Pink
                         R.drawable.shield_check, // Replace with R.drawable.ic_shield_check
                         "Enable Monk Mode",
@@ -387,9 +384,7 @@ public class Utils {
                         "We strictly process data locally. No personal data collection.",
                         "Proceed to Settings"
                 );
-
-            case NOTIFICATION:
-                return new PermissionConfig(
+                case NOTIFICATION -> new PermissionConfig(
                         "#3B82F6", // Blue
                         R.drawable.bell, // Replace with R.drawable.ic_bell_ring
                         "Stay in the Loop",
@@ -402,9 +397,7 @@ public class Utils {
                         "We only send notifications for the goals you explicitly set.",
                         "Enable Notifications"
                 );
-
-            case ALARM:
-                return new PermissionConfig(
+                case ALARM -> new PermissionConfig(
                         "#F59E0B", // Amber
                         R.drawable.alarm, // Replace with R.drawable.ic_clock
                         "Exact Alarms",
@@ -417,9 +410,7 @@ public class Utils {
                         "Required for reliable timer notifications even when locked.",
                         "Allow Alarms"
                 );
-
-            case BATTERY:
-                return new PermissionConfig(
+                case BATTERY -> new PermissionConfig(
                         "#10B981", // Emerald
                         R.drawable.battery, // Replace with R.drawable.ic_battery_warning
                         "Run in Background",
@@ -432,17 +423,15 @@ public class Utils {
                         "Ensures your block sessions aren't interrupted by OS cleanup.",
                         "Ignore Optimization"
                 );
-
-            default:
-                return getConfigForType(PermissionType.ACCESSIBILITY);
+                default -> getConfigForType(PermissionType.ACCESSIBILITY);
+            };
         }
-    }
 
-    private static int adjustAlpha(int color, float factor) {
-        int alpha = Math.round(Color.alpha(color) * factor);
-        int red = Color.red(color);
-        int green = Color.green(color);
-        int blue = Color.blue(color);
-        return Color.argb(alpha, red, green, blue);
-    }
+        private static int adjustAlpha(int color, float factor) {
+            int alpha = Math.round(Color.alpha(color) * factor);
+            int red = Color.red(color);
+            int green = Color.green(color);
+            int blue = Color.blue(color);
+            return Color.argb(alpha, red, green, blue);
+        }
 }

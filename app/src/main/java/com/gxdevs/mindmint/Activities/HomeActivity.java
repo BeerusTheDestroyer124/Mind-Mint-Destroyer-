@@ -27,6 +27,15 @@ import com.gxdevs.mindmint.R;
 import com.gxdevs.mindmint.Utils.MidnightResetManager;
 import com.gxdevs.mindmint.Utils.Utils;
 
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.Button;
+import android.widget.NumberPicker;
+import android.widget.TextView;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.button.MaterialButton;
+import com.gxdevs.mindmint.Services.FocusService;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,9 +52,12 @@ public class HomeActivity extends AppCompatActivity {
     private static final String KEY_COUNT      = "launch_count";
     private static final String KEY_REVIEW_DONE = "review_done";
 
+    private static final String PREF_LOCK_IN_SAVED_MS = "pref_lock_in_saved_ms";
+
     private ViewPager2 viewPager;
     private HomePagerAdapter pagerAdapter;
     private ImageButton btnHome;
+    private MaterialButton lockInPill;
 
     private final List<FrameLayout> navItems = new ArrayList<>();
     private final List<ImageView>   navIcons = new ArrayList<>();
@@ -102,6 +114,10 @@ public class HomeActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         MidnightResetManager.checkAndPerformReset(this);
+        // Re-check accessibility permission so the Lock In pill shows/hides instantly
+        updateLockInPillLabel();
+        
+        lockInPill.postDelayed(this::checkAndShowLockInTutorial, 500);
     }
 
     @Override
@@ -123,6 +139,9 @@ public class HomeActivity extends AppCompatActivity {
         navIcons.add(findViewById(R.id.taskIcon));
         navIcons.add(findViewById(R.id.habitIcon));
         navIcons.add(findViewById(R.id.settingsIcon));
+        
+        lockInPill = findViewById(R.id.lockInPill);
+        updateLockInPillLabel();
     }
 
     private void setupAdapter() {
@@ -161,7 +180,124 @@ public class HomeActivity extends AppCompatActivity {
             return true;
         });
 
+        lockInPill.setOnClickListener(v -> {
+            SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+            long savedMs = sharedPreferences.getLong(PREF_LOCK_IN_SAVED_MS, 0);
+            if (savedMs > 0) {
+                // One-tap lock: start immediately with saved time
+                startLockInMode(savedMs);
+            } else {
+                showLockInSheet();
+            }
+        });
+
+        lockInPill.setOnLongClickListener(v -> {
+            // Long press always shows the picker so user can change the saved time
+            showLockInSheet();
+            return true;
+        });
+
         viewPager.post(() -> syncNavToPage(viewPager.getCurrentItem()));
+    }
+    
+    private void showLockInSheet() {
+        BottomSheetDialog sheet = new BottomSheetDialog(this);
+        View sheetView = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_time, null);
+
+        // Customize title
+        TextView titleLabel = sheetView.findViewById(R.id.greetings);
+        if (titleLabel != null) titleLabel.setText("Lock In");
+        TextView subtitle = sheetView.findViewById(R.id.dateDetails);
+        if (subtitle != null) subtitle.setText("SET DURATION");
+
+        NumberPicker hourPicker = sheetView.findViewById(R.id.hours_selector_bottom_sheet);
+        NumberPicker minutePicker = sheetView.findViewById(R.id.minutes_selector_bottom_sheet);
+        Button confirmBtn = sheetView.findViewById(R.id.setLimitBtnBottomSheet);
+        View rememberRow = sheetView.findViewById(R.id.rememberTimeRow);
+        com.google.android.material.materialswitch.MaterialSwitch rememberSwitch =
+                sheetView.findViewById(R.id.rememberTimeSwitch);
+
+        if (confirmBtn != null) confirmBtn.setText("Lock In");
+        if (rememberRow != null) rememberRow.setVisibility(View.VISIBLE);
+
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        long savedMs = sharedPreferences.getLong(PREF_LOCK_IN_SAVED_MS, 0);
+        int savedHours = (int) (savedMs / 3600000);
+        int savedMinutes = (int) ((savedMs % 3600000) / 60000);
+
+        hourPicker.setMinValue(0);
+        hourPicker.setMaxValue(3);
+        minutePicker.setMinValue(0);
+        minutePicker.setMaxValue(59);
+        hourPicker.setValue(savedHours);
+        minutePicker.setValue(savedMinutes > 0 ? savedMinutes : 25);
+
+        if (rememberSwitch != null && savedMs > 0) {
+            rememberSwitch.setChecked(true);
+        }
+
+        if (confirmBtn != null) {
+            confirmBtn.setOnClickListener(v -> {
+                int hours = hourPicker.getValue();
+                int minutes = minutePicker.getValue();
+                long durationMs = (hours * 3600L + minutes * 60L) * 1000L;
+                if (durationMs <= 0) {
+                    Toast.makeText(this, "Pick a duration", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                if (rememberSwitch != null && rememberSwitch.isChecked()) {
+                    sharedPreferences.edit().putLong(PREF_LOCK_IN_SAVED_MS, durationMs).apply();
+                } else {
+                    sharedPreferences.edit().remove(PREF_LOCK_IN_SAVED_MS).apply();
+                }
+                startLockInMode(durationMs);
+                updateLockInPillLabel();
+                sheet.dismiss();
+            });
+        }
+
+        sheetView.findViewById(R.id.crossBtn).setOnClickListener(v -> sheet.dismiss());
+
+        sheet.setContentView(sheetView);
+        sheet.show();
+    }
+
+    private void startLockInMode(long durationMs) {
+        Intent serviceIntent = new Intent(this, FocusService.class);
+        serviceIntent.setAction(FocusService.ACTION_START_FOREGROUND_SERVICE);
+        serviceIntent.putExtra("durationInMillis", durationMs);
+        serviceIntent.putExtra(FocusService.EXTRA_IS_LOCKED_IN, true);
+        serviceIntent.putExtra("topicName", "Locked In");
+        startService(serviceIntent);
+        // Open FocusMode activity for visual feedback
+        Intent focusIntent = new Intent(this, FocusMode.class);
+        startActivity(focusIntent);
+        Toast.makeText(this, "Locked In!", Toast.LENGTH_SHORT).show();
+    }
+
+    public void updateLockInPillLabel() {
+        if (lockInPill == null) return;
+        
+        boolean isHome = viewPager != null && viewPager.getCurrentItem() == HomePagerAdapter.PAGE_HOME;
+
+        if (!Utils.isAccessibilityPermissionGranted(this) || !isHome) {
+            lockInPill.setVisibility(View.GONE);
+            return;
+        } else {
+            lockInPill.setVisibility(View.VISIBLE);
+        }
+        
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        long savedMs = sharedPreferences.getLong(PREF_LOCK_IN_SAVED_MS, 0);
+        if (savedMs > 0) {
+            int totalMin = (int) (savedMs / 60000);
+            int h = totalMin / 60;
+            int m = totalMin % 60;
+            String label = h > 0 ? "Lock In · " + h + "h" + (m > 0 ? m + "m" : "") : "Lock In · " + m + "m";
+            lockInPill.setText(label);
+        } else {
+            lockInPill.setText("Lock In");
+        }
     }
 
     private void setupBackPressHandler() {
@@ -239,5 +375,31 @@ public class HomeActivity extends AppCompatActivity {
                                 prefs.edit().putBoolean(KEY_REVIEW_DONE, true).apply());
             }
         });
+    }
+
+    private void checkAndShowLockInTutorial() {
+        if (lockInPill == null || lockInPill.getVisibility() != View.VISIBLE) return;
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        if (prefs.getBoolean("lock_in_tutorial_shown", false)) return;
+
+        com.skydoves.balloon.Balloon balloon = new com.skydoves.balloon.Balloon.Builder(this)
+                .setArrowSize(10)
+                .setArrowOrientation(com.skydoves.balloon.ArrowOrientation.BOTTOM)
+                .setArrowPosition(0.5f)
+                .setWidthRatio(0.7f)
+                .setHeight(com.skydoves.balloon.BalloonSizeSpec.WRAP)
+                .setTextSize(14f)
+                .setCornerRadius(10f)
+                .setAlpha(0.95f)
+                .setPadding(12)
+                .setText("Tap to lock in and block distractive apps!")
+                .setTextColor(ContextCompat.getColor(this, R.color.white))
+                .setBackgroundColor(ContextCompat.getColor(this, R.color.brainColor))
+                .setBalloonAnimation(com.skydoves.balloon.BalloonAnimation.ELASTIC)
+                .setDismissWhenClicked(true)
+                .setLifecycleOwner(this)
+                .setOnBalloonDismissListener(() -> prefs.edit().putBoolean("lock_in_tutorial_shown", true).apply())
+                .build();
+        balloon.showAlignTop(lockInPill);
     }
 }

@@ -25,6 +25,7 @@ import androidx.preference.PreferenceManager;
 
 import com.gxdevs.mindmint.R;
 import com.gxdevs.mindmint.Services.AppUsageAccessibilityService;
+import com.gxdevs.mindmint.Services.FocusService;
 import com.gxdevs.mindmint.Utils.Utils;
 
 public class BlockingOverlayDisplayActivity extends AppCompatActivity {
@@ -86,7 +87,12 @@ public class BlockingOverlayDisplayActivity extends AppCompatActivity {
                 if (!isFocus) {
                     tv_blocking_subtitle.setText("Access blocked - you've restricted " + currentBlockedAppName + ".");
                 } else {
-                    tv_blocking_subtitle.setText("You're in Focus Mode - you've restricted " + currentBlockedAppName + ".");
+                    boolean locked = PreferenceManager.getDefaultSharedPreferences(this).getBoolean(FocusService.PREF_IS_LOCKED_IN, false);
+                    if (locked) {
+                        tv_blocking_subtitle.setText("You're Locked In - you've restricted " + currentBlockedAppName + ".");
+                    } else {
+                        tv_blocking_subtitle.setText("You're in Focus Mode - you've restricted " + currentBlockedAppName + ".");
+                    }
                 }
             }
         } else {

@@ -1,6 +1,9 @@
 package com.gxdevs.mindmint.Models;
 
+import androidx.annotation.NonNull;
+
 import java.util.Date;
+import java.util.Objects;
 
 public class Task {
     private String id;
@@ -19,6 +22,12 @@ public class Task {
     private boolean isHabit; // mark if this task represents a Habit
     private String habitId; // optional link to Habit
     private int icon; // drawable resource ID for the task icon
+
+    // --- Focus Mode fields ---
+    private boolean focusModeEnabled; // user linked this task to focus mode
+    private int focusDurationMinutes; // 0 = open-ended (count-up); 1-180 = timed
+    private long focusTimeSpentMs;    // cumulative focus time recorded for this task
+    private String focusStatus;       // "IDLE", "IN_PROGRESS", "PAUSED"
 
     public enum Priority {
         LOW("Low", 1),
@@ -222,22 +231,49 @@ public class Task {
         this.icon = icon;
     }
 
+    public boolean isFocusModeEnabled() {
+        return focusModeEnabled;
+    }
+
+    public void setFocusModeEnabled(boolean focusModeEnabled) {
+        this.focusModeEnabled = focusModeEnabled;
+        if (!focusModeEnabled) {
+            this.focusStatus = "IDLE";
+        }
+    }
+
+    public int getFocusDurationMinutes() {
+        return focusDurationMinutes;
+    }
+
+    public void setFocusDurationMinutes(int focusDurationMinutes) {
+        this.focusDurationMinutes = focusDurationMinutes;
+    }
+
+    public long getFocusTimeSpentMs() {
+        return focusTimeSpentMs;
+    }
+
+    public void setFocusTimeSpentMs(long focusTimeSpentMs) {
+        this.focusTimeSpentMs = focusTimeSpentMs;
+    }
+
+    /** Returns one of: "IDLE", "IN_PROGRESS", "PAUSED" */
+    public String getFocusStatus() {
+        return focusStatus != null ? focusStatus : "IDLE";
+    }
+
+    public void setFocusStatus(String focusStatus) {
+        this.focusStatus = focusStatus;
+    }
+
+    public boolean isFocusInProgress() {
+        return "IN_PROGRESS".equals(focusStatus);
+    }
+
     // Helper methods
     private String generateId() {
         return "task_" + System.currentTimeMillis() + "_" + (int)(Math.random() * 1000);
-    }
-
-    public String getPriorityColor() {
-        switch (priority) {
-            case HIGH:
-                return "#EE4B37"; // Red
-            case MEDIUM:
-                return "#A998FD"; // Purple
-            case LOW:
-                return "#9EABB8"; // Gray
-            default:
-                return "#9EABB8";
-        }
     }
 
     @Override
@@ -245,7 +281,7 @@ public class Task {
         if (this == obj) return true;
         if (obj == null || getClass() != obj.getClass()) return false;
         Task task = (Task) obj;
-        return id != null ? id.equals(task.id) : task.id == null;
+        return Objects.equals(id, task.id);
     }
 
     @Override
@@ -271,20 +307,16 @@ public class Task {
 
     private Date calculateNextDate() {
         Date baseDate = scheduledDate != null ? scheduledDate : new Date();
-        
-        switch (recurringType) {
-            case DAILY:
-                return new Date(baseDate.getTime() + 24 * 60 * 60 * 1000); // Add 1 day
-            case WEEKLY:
-                return new Date(baseDate.getTime() + 7 * 24 * 60 * 60 * 1000); // Add 1 week
-            case MONTHLY:
-                // Add 1 month (approximately 30 days)
-                return new Date(baseDate.getTime() + 30L * 24 * 60 * 60 * 1000);
-            default:
-                return new Date();
-        }
+
+        return switch (recurringType) {
+            case DAILY -> new Date(baseDate.getTime() + 24 * 60 * 60 * 1000); // Add 1 day
+            case WEEKLY -> new Date(baseDate.getTime() + 7 * 24 * 60 * 60 * 1000); // Add 1 week
+            case MONTHLY -> new Date(baseDate.getTime() + 30L * 24 * 60 * 60 * 1000);
+            default -> new Date();
+        };
     }
 
+    @NonNull
     @Override
     public String toString() {
         return "Task{" +

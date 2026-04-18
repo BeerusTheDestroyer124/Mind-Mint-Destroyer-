@@ -35,7 +35,7 @@ import com.github.mikephil.charting.data.RadarData;
 import com.github.mikephil.charting.data.RadarDataSet;
 import com.github.mikephil.charting.data.RadarEntry;
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.gxdevs.mindmint.Utils.CustomDialogUtils;
 import com.gxdevs.mindmint.Adapters.CalendarDayAdapter;
 import com.gxdevs.mindmint.R;
 import com.gxdevs.mindmint.Utils.HabitManager;
@@ -850,24 +850,24 @@ public class HabitStatActivity extends AppCompatActivity implements CalendarDayA
         boolean isOldHistory = daysDiff > 7;
 
         if (!isCompleted && isOldHistory) {
-            new MaterialAlertDialogBuilder(this)
-                    .setTitle("Update Old History?")
-                    .setMessage("You are fulfilling a habit from more than 7 days ago. This will be saved to your history stats, but it will NOT repair your streak.")
-                    .setPositiveButton("Mark Anyway", (dialog, which) -> {
-                        toggleDayCompletion(dayOfMonth, false);
-                    })
-                    .setNegativeButton("Cancel", null)
-                    .show();
+            CustomDialogUtils.showCustomDialog(this,
+                    "Update Old History?",
+                    "You are fulfilling a habit from more than 7 days ago. This will be saved to your history stats, but it will NOT repair your streak.",
+                    "Mark Anyway",
+                    "Cancel",
+                    () -> toggleDayCompletion(dayOfMonth, false),
+                    null);
             return;
         }
 
         String message = isCompleted ? "Remove completion for day " + dayOfMonth + "?" : "Mark day " + dayOfMonth + " as completed?";
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("Confirm " + (isCompleted ? "Removal" : "Completion"))
-                .setMessage(message)
-                .setPositiveButton(isCompleted ? "Remove" : "Complete", (dialog, which) -> toggleDayCompletion(dayOfMonth, isCompleted))
-                .setNegativeButton("Cancel", null)
-                .show();
+        CustomDialogUtils.showCustomDialog(this,
+                "Confirm " + (isCompleted ? "Removal" : "Completion"),
+                message,
+                isCompleted ? "Remove" : "Complete",
+                "Cancel",
+                () -> toggleDayCompletion(dayOfMonth, isCompleted),
+                null);
     }
 
     private void toggleDayCompletion(int dayOfMonth, boolean wasCompleted) {

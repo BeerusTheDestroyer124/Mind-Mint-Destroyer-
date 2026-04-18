@@ -38,6 +38,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.NumberPicker;
@@ -79,7 +80,6 @@ import com.gxdevs.mindmint.Adapters.UpdateLogAdapter;
 import com.gxdevs.mindmint.Common.IntentActions;
 import com.gxdevs.mindmint.Models.Habit;
 import com.gxdevs.mindmint.R;
-import com.gxdevs.mindmint.Utils.BlockedSitesManager;
 import com.gxdevs.mindmint.Utils.HabitManager;
 import com.gxdevs.mindmint.Utils.MintCrystals;
 import com.gxdevs.mindmint.Utils.SettingsLockManager;
@@ -94,6 +94,7 @@ import com.skydoves.balloon.BalloonAnimation;
 import com.skydoves.balloon.BalloonSizeSpec;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 import antonkozyriatskyi.circularprogressindicator.CircularProgressIndicator;
 
@@ -230,7 +231,6 @@ public class HomeFragment extends Fragment {
             showFirstNameDialog(true);
             return true;
         });
-
     }
 
     private void initViews() {
@@ -400,7 +400,7 @@ public class HomeFragment extends Fragment {
         blockerSheet.show();
     }
 
-    private void applyLockedSwitch(android.widget.CompoundButton switchView, String reason, java.util.function.Consumer<Boolean> logic) {
+    private void applyLockedSwitch(CompoundButton switchView, String reason, Consumer<Boolean> logic) {
         switchView.setOnCheckedChangeListener((buttonView, isChecked) -> {
             SettingsLockManager lm = new SettingsLockManager(requireContext());
 
@@ -410,15 +410,18 @@ public class HomeFragment extends Fragment {
             }
 
             buttonView.setOnCheckedChangeListener(null);
-            buttonView.setChecked(!isChecked);
+            buttonView.setChecked(true);
 
             lm.authenticate(requireActivity(), reason, new SettingsLockManager.AuthCallback() {
-                @Override public void onSuccess() {
-                    buttonView.setChecked(isChecked);
-                    logic.accept(isChecked);
+                @Override
+                public void onSuccess() {
+                    buttonView.setChecked(false);
+                    logic.accept(false);
                     applyLockedSwitch(switchView, reason, logic); // reattach listener
                 }
-                @Override public void onFailure(String err) {
+
+                @Override
+                public void onFailure(String err) {
                     if (!"Cancelled".equals(err)) {
                         Toast.makeText(requireContext(), err, Toast.LENGTH_SHORT).show();
                     }
@@ -426,7 +429,8 @@ public class HomeFragment extends Fragment {
                 }
             });
 
-            buttonView.setOnCheckedChangeListener((v, c) -> {});
+            buttonView.setOnCheckedChangeListener((v, c) -> {
+            });
         });
     }
 
@@ -553,8 +557,13 @@ public class HomeFragment extends Fragment {
                 SettingsLockManager lm = new SettingsLockManager(requireContext());
                 if (lm.isLockEnabled()) {
                     lm.authenticate(requireActivity(), "Pause Blocker", new SettingsLockManager.AuthCallback() {
-                        @Override public void onSuccess() { doPause.run(); }
-                        @Override public void onFailure(String r) {
+                        @Override
+                        public void onSuccess() {
+                            doPause.run();
+                        }
+
+                        @Override
+                        public void onFailure(String r) {
                             if (!"Cancelled".equals(r)) {
                                 Toast.makeText(requireContext(), r, Toast.LENGTH_SHORT).show();
                             }
@@ -627,11 +636,14 @@ public class HomeFragment extends Fragment {
                     if (isAccessibilityPermissionGranted(requireContext())) {
                         Toast.makeText(requireContext(), "Thank you for granting Accessibility permission!",
                                 Toast.LENGTH_SHORT).show();
-                        checkAndShowPermissionCard();
                     } else {
                         Toast.makeText(requireContext(), "Accessibility permission not granted.", Toast.LENGTH_SHORT)
                                 .show();
-                        checkAndShowPermissionCard();
+                    }
+                    checkAndShowPermissionCard();
+                    // Also refresh the Lock In pill in HomeActivity
+                    if (getActivity() instanceof HomeActivity) {
+                        ((HomeActivity) getActivity()).updateLockInPillLabel();
                     }
                 });
     }
@@ -990,7 +1002,7 @@ public class HomeFragment extends Fragment {
         habit.resetProgressIfNeeded();
 
         // Use an array to hold mutable progress value in lambda
-        final int[] currentProgress = { habit.getCurrentProgress() };
+        final int[] currentProgress = {habit.getCurrentProgress()};
         final int targetCount = habit.getTargetCount();
         final int oneTapValue = habit.getOneTapValue();
 
@@ -1397,22 +1409,22 @@ public class HomeFragment extends Fragment {
         java.util.Calendar cal = java.util.Calendar.getInstance();
         int hour = cal.get(java.util.Calendar.HOUR_OF_DAY);
 
-        String[] lateNight = new String[] {
+        String[] lateNight = new String[]{
                 "It’s late—keep screens away and protect your sleep.",
                 "Night time: slow down and unplug a little.",
                 "Late hours—wind down, not scroll down."
         };
-        String[] morning = new String[] {
+        String[] morning = new String[]{
                 "Good morning—start light, avoid doom‑scrolling.",
                 "Fresh start—set a small goal, not a scroll.",
                 "Morning focus beats morning feed."
         };
-        String[] midday = new String[] {
+        String[] midday = new String[]{
                 "Midday check‑in: energy low? Rest a minute.",
                 "Quick reset > quick scroll. Breathe.",
                 "Hydrate, stretch, then continue."
         };
-        String[] evening = new String[] {
+        String[] evening = new String[]{
                 "Evening wind‑down: keep it calm.",
                 "Unplug a bit—your mind will thank you.",
                 "Wrap up strong, not endless scrolling."
@@ -1616,6 +1628,9 @@ public class HomeFragment extends Fragment {
 
     public void onResume() {
         super.onResume();
+        if (view != null) {
+            setupTaskList();
+        }
         // Always refresh service state from prefs on resume
         isServicePaused = sharedPreferences.getBoolean("isServicePaused", false);
         updatePlayPauseButton();

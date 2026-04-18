@@ -166,6 +166,12 @@ public class TaskManager {
             e.completed_time_str = null;
         }
 
+        // Focus mode fields
+        e.focus_mode_enabled = t.isFocusModeEnabled() ? 1 : 0;
+        e.focus_duration_minutes = t.getFocusDurationMinutes();
+        e.focus_time_spent_ms = t.getFocusTimeSpentMs();
+        e.focus_status = t.getFocusStatus();
+
         return e;
     }
 
@@ -201,6 +207,13 @@ public class TaskManager {
             iconRes = R.drawable.list_todo;
         }
         t.setIcon(iconRes);
+
+        // Focus mode fields
+        t.setFocusModeEnabled(e.focus_mode_enabled == 1);
+        t.setFocusDurationMinutes(e.focus_duration_minutes);
+        t.setFocusTimeSpentMs(e.focus_time_spent_ms);
+        t.setFocusStatus(e.focus_status != null ? e.focus_status : "IDLE");
+
         return t;
     }
 

@@ -1,5 +1,6 @@
 package com.gxdevs.mindmint.Adapters;
 
+import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -11,12 +12,16 @@ import android.widget.RadioButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.gxdevs.mindmint.Activities.FocusMode;
 import com.gxdevs.mindmint.Models.Habit;
 import com.gxdevs.mindmint.Models.Task;
 import com.gxdevs.mindmint.R;
+import com.gxdevs.mindmint.Services.FocusService;
 import com.gxdevs.mindmint.Utils.HabitManager;
+import com.gxdevs.mindmint.Utils.MintCrystals;
 import com.gxdevs.mindmint.Utils.TaskManager;
 
 import java.text.SimpleDateFormat;
@@ -75,23 +80,75 @@ public class HomeTaskAdapter extends RecyclerView.Adapter<HomeTaskAdapter.TaskVi
         holder.radioButton.setChecked(false);
         holder.title.setPaintFlags(holder.title.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
 
-        holder.radioButton.setOnClickListener(v -> handleTaskCompletion(holder));
+        // Whole-item tap → always go to focus mode (open-ended, or timed if focus is enabled)
+        holder.itemView.setOnClickListener(v -> handleTaskTap(holder, task));
+
+        // Radio/checkbox → mark complete directly (or open focus if task is focus-linked)
+        holder.radioButton.setOnClickListener(v -> handleRadioClick(holder, task));
     }
 
-    @Override
-    public int getItemCount() {
-        return tasks.size();
+    private void handleTaskTap(TaskViewHolder holder, Task task) {
+        // Navigate to the appropriate focus mode
+        android.content.Context ctx = holder.itemView.getContext();
+
+        Runnable startFocus = () -> {
+            // Stop any existing session
+            Intent stopIntent = new Intent(ctx, FocusService.class);
+            stopIntent.setAction(FocusService.ACTION_STOP_TIMER);
+            ctx.startService(stopIntent);
+
+            // Start new focus session
+            Intent startIntent = new Intent(ctx, FocusService.class);
+            startIntent.setAction(FocusService.ACTION_START_FOREGROUND_SERVICE);
+
+            long durationMs = task.isFocusModeEnabled() ? (task.getFocusDurationMinutes() * 60000L) : 0L;
+            boolean isOpenEnded = (durationMs == 0);
+
+            startIntent.putExtra("durationInMillis", durationMs);
+            startIntent.putExtra("topicName", task.getName());
+            startIntent.putExtra(FocusService.EXTRA_TASK_ID, task.getId());
+            startIntent.putExtra(FocusService.EXTRA_IS_OPEN_ENDED, isOpenEnded);
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                ctx.startForegroundService(startIntent);
+            } else {
+                ctx.startService(startIntent);
+            }
+
+            Intent focusIntent = new Intent(ctx, FocusMode.class);
+            focusIntent.putExtra(FocusService.EXTRA_TASK_ID, task.getId());
+            focusIntent.putExtra("topicName", task.getName());
+            focusIntent.putExtra(FocusService.EXTRA_IS_OPEN_ENDED, isOpenEnded);
+            ctx.startActivity(focusIntent);
+        };
+
+        if (FocusService.isPublicFocusRun) {
+            // Another session is running — ask what to do
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx, R.style.AlertDialogTheme)
+                .setTitle("Focus Session Running")
+                .setMessage("Another focus session is already running. Stop it and start this task?")
+                .setPositiveButton("Stop & Start", (dialog, which) -> startFocus.run())
+                .setNegativeButton("Cancel", null)
+                .show();
+        } else {
+            startFocus.run();
+        }
     }
 
-    private void handleTaskCompletion(TaskViewHolder holder) {
+    private void handleRadioClick(TaskViewHolder holder, Task task) {
         int adapterPosition = holder.getBindingAdapterPosition();
-        if (adapterPosition == RecyclerView.NO_POSITION) {
+        if (adapterPosition == RecyclerView.NO_POSITION) return;
+
+        if (task.isFocusModeEnabled()) {
+            // Focus-linked task: radio also goes to focus instead of marking directly
+            handleTaskTap(holder, task);
+            // Reset radio so it doesn't appear checked
+            holder.radioButton.setChecked(false);
             return;
         }
 
-        Task task = tasks.get(adapterPosition);
+        // Normal task: animate and mark complete
         holder.title.setPaintFlags(holder.title.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
-
         holder.itemView.animate()
                 .alpha(0f)
                 .translationX(100f)
@@ -99,6 +156,9 @@ public class HomeTaskAdapter extends RecyclerView.Adapter<HomeTaskAdapter.TaskVi
                 .withEndAction(() -> {
                     task.setCompleted(true);
                     task.setCompletedDate(new Date());
+                    if (!task.isHabit()) {
+                        new MintCrystals(holder.itemView.getContext()).addCoins(2);
+                    }
                     taskManager.updateTask(task);
 
                     if (task.isHabit() && task.getHabitId() != null) {
@@ -118,6 +178,11 @@ public class HomeTaskAdapter extends RecyclerView.Adapter<HomeTaskAdapter.TaskVi
                     notifyItemRangeChanged(adapterPosition, tasks.size());
                 })
                 .start();
+    }
+
+    @Override
+    public int getItemCount() {
+        return tasks.size();
     }
 
     private int getPriorityColor(Task task) {
@@ -165,4 +230,3 @@ public class HomeTaskAdapter extends RecyclerView.Adapter<HomeTaskAdapter.TaskVi
         }
     }
 }
-

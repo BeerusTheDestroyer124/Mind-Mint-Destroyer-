@@ -23,6 +23,7 @@ import android.graphics.Color;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.drawable.ColorDrawable;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -30,7 +31,9 @@ import android.os.IBinder;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.VibratorManager;
+import android.provider.Settings;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
@@ -41,6 +44,7 @@ import android.view.animation.DecelerateInterpolator;
 import android.view.animation.OvershootInterpolator;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -48,20 +52,32 @@ import android.widget.Toast;
 import androidx.activity.EdgeToEdge;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.airbnb.lottie.LottieAnimationView;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textview.MaterialTextView;
+import com.google.android.material.timepicker.MaterialTimePicker;
+import com.google.android.material.timepicker.TimeFormat;
+import com.gxdevs.mindmint.Adapters.FocusScheduleAdapter;
+import com.gxdevs.mindmint.Models.Habit;
+import com.gxdevs.mindmint.Utils.FocusScheduleManager;
+import com.gxdevs.mindmint.Utils.HabitManager;
+import com.gxdevs.mindmint.Utils.StreakManager;
+import com.gxdevs.mindmint.Utils.TaskNotificationManager;
 import com.gxdevs.mindmint.Views.NebulaStarfieldView;
 import com.gxdevs.mindmint.R;
 import com.gxdevs.mindmint.Services.FocusService;
@@ -69,7 +85,10 @@ import com.gxdevs.mindmint.Utils.MintCrystals;
 import com.gxdevs.mindmint.Utils.Utils;
 import com.gxdevs.mindmint.Views.RevealMaskImageView;
 import com.gxdevs.mindmint.db.MindMintRoomDatabase;
+import com.gxdevs.mindmint.db.entities.FocusScheduleEntity;
 import com.gxdevs.mindmint.db.entities.FocusTopicEntity;
+import com.gxdevs.mindmint.Models.Task;
+import com.gxdevs.mindmint.Utils.TaskManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -108,6 +127,14 @@ public class FocusMode extends AppCompatActivity {
     private View topicsContainer;
     private boolean isTestMode = false;
 
+    // Task-Linked Mode Views
+    private View taskCardOverlay;
+    private TextView linkedTaskName;
+    private Button markTaskCompleteBtn;
+    private String linkedTaskIdExtra;
+    private String linkedTopicNameExtra;
+    private boolean isOpenEndedExtra;
+
     // Pomodoro Preferences
     private static final String PREF_POMODORO_ENABLED = "pref_pomodoro_enabled";
     private static final String PREF_FOCUS_DURATION = "pref_focus_duration";
@@ -136,8 +163,184 @@ public class FocusMode extends AppCompatActivity {
         setupCircularSeekBar();
         loadTopics();
 
+        // Check if started from Task click
+        linkedTaskIdExtra = getIntent().getStringExtra(FocusService.EXTRA_TASK_ID);
+        linkedTopicNameExtra = getIntent().getStringExtra("topicName");
+        isOpenEndedExtra = getIntent().getBooleanExtra(FocusService.EXTRA_IS_OPEN_ENDED, false);
+
+        // If extras are missing (app killed/restored), they will be filled in onServiceConnected
+        setupTaskCardIfLinked();
+
         // Setup blur on permission card and update its visibility
         checkPermissionAndMoveOn();
+    }
+
+    /**
+     * Restores session context from a running FocusService when the activity is
+     * recreated without Intent extras (e.g. app was killed and user re-opens).
+     */
+    private void restoreStateFromService() {
+        if (focusService == null) return;
+        if (linkedTaskIdExtra == null || linkedTaskIdExtra.isEmpty()) {
+            linkedTaskIdExtra = focusService.getLinkedTaskId();
+        }
+        if (!isOpenEndedExtra) {
+            isOpenEndedExtra = focusService.isOpenEnded();
+        }
+        // Restore task name from TaskManager if it was not passed via Intent (app killed/restored)
+        if (linkedTopicNameExtra == null || linkedTopicNameExtra.isEmpty()) {
+            if (linkedTaskIdExtra != null && !linkedTaskIdExtra.isEmpty()) {
+                try {
+                    Task t = new TaskManager(this).getTaskById(linkedTaskIdExtra);
+                    if (t != null) linkedTopicNameExtra = t.getName();
+                } catch (Throwable ignored) {}
+            }
+        }
+        // Re-run setup so the task card and open-ended UI show correctly
+        setupTaskCardIfLinked();
+    }
+
+    private void setupTaskCardIfLinked() {
+        if (linkedTaskIdExtra != null && !linkedTaskIdExtra.isEmpty()) {
+            taskCardOverlay.setVisibility(View.VISIBLE);
+            linkedTaskName.setText(linkedTopicNameExtra != null ? linkedTopicNameExtra : "Focus Task");
+
+            topicsContainer.setVisibility(View.GONE);
+            settingsBtn.setVisibility(View.GONE);
+
+            // Always hide coin UI for task-linked sessions
+            findViewById(R.id.coinImg).setVisibility(View.GONE);
+            mintCrystalsTxt.setVisibility(View.GONE);
+
+            if (isOpenEndedExtra) {
+                // Open Ended Mode setup: hide crystal/seekbar/coins, center timer text
+                circularSeekBar.setVisibility(View.GONE);
+                lottieAnimation.setVisibility(View.GONE);
+                crystalBase.setVisibility(View.GONE);
+                crystalColor.setVisibility(View.GONE);
+                View progressContainer = findViewById(R.id.progressContainer);
+                if (progressContainer != null) progressContainer.setVisibility(View.GONE);
+                instructionText.setText("Open Ended Focus");
+
+                // Center the timer text by disconnecting it from progressContainer
+                androidx.constraintlayout.widget.ConstraintLayout mainLayout = findViewById(R.id.main);
+                androidx.constraintlayout.widget.ConstraintSet set = new androidx.constraintlayout.widget.ConstraintSet();
+                set.clone(mainLayout);
+                set.connect(R.id.timerText, androidx.constraintlayout.widget.ConstraintSet.TOP,
+                        androidx.constraintlayout.widget.ConstraintSet.PARENT_ID,
+                        androidx.constraintlayout.widget.ConstraintSet.TOP);
+                set.connect(R.id.timerText, androidx.constraintlayout.widget.ConstraintSet.BOTTOM,
+                        androidx.constraintlayout.widget.ConstraintSet.PARENT_ID,
+                        androidx.constraintlayout.widget.ConstraintSet.BOTTOM);
+                set.applyTo(mainLayout);
+                timerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 65f);
+            }
+
+            markTaskCompleteBtn.setOnClickListener(v -> {
+                completeLinkedTask();
+                finish();
+            });
+        } else {
+            // Non-task-linked: check if locked-in to hide coins
+            boolean isLockedInExt = getIntent().getBooleanExtra(FocusService.EXTRA_IS_LOCKED_IN, false) ||
+                    PreferenceManager.getDefaultSharedPreferences(this).getBoolean(FocusService.PREF_IS_LOCKED_IN, false);
+            if (isLockedInExt) {
+                findViewById(R.id.coinImg).setVisibility(View.GONE);
+                mintCrystalsTxt.setVisibility(View.GONE);
+            }
+        }
+    }
+
+    /**
+     * Shows "Did you complete the task?" dialog.
+     * @param finishAfter  if true, finish() is called after the dialog choice.
+     * @param alreadyCompleting  if true, the positive path invokes completeLinkedTask().
+     *                           if false, both paths stop the service and finish.
+     */
+    private void showStopTaskDialog(boolean finishAfter, boolean alreadyCompleting) {
+        String activeTaskId = (linkedTaskIdExtra != null && !linkedTaskIdExtra.isEmpty())
+                ? linkedTaskIdExtra
+                : (focusService != null ? focusService.getLinkedTaskId() : null);
+        if (activeTaskId == null || activeTaskId.isEmpty()) {
+            // No task linked — just stop normally
+            if (isBound && focusService != null) focusService.stopService();
+            if (finishAfter) finish();
+            return;
+        }
+        com.gxdevs.mindmint.Utils.CustomDialogUtils.showCustomDialog(this,
+                "Stop Focus",
+                "Did you complete the task?",
+                "Yes, mark complete",
+                "No, keep it pending",
+                () -> {
+                    completeLinkedTask();
+                    if (finishAfter) finish();
+                },
+                () -> {
+                    if (isBound && focusService != null) {
+                        focusService.stopService();
+                    }
+                    sendBroadcast(new Intent(FocusService.ACTION_TASK_FOCUS_UPDATE));
+                    if (finishAfter) finish();
+                });
+    }
+
+    private void completeLinkedTask() {
+        if (isBound && focusService != null) {
+            focusService.stopService(); // This saves time and stops timer
+        }
+
+        TaskManager tm = new TaskManager(this);
+        List<Task> tasks = tm.loadTasks();
+        boolean updated = false;
+        Task completedTask = null;
+        for (Task t : tasks) {
+            if (t.getId().equals(linkedTaskIdExtra)) {
+                t.setCompleted(true);
+                t.setCompletedDate(new java.util.Date()); // Make sure date is set
+                t.setFocusStatus("IDLE");
+                updated = true;
+                completedTask = t;
+                break;
+            }
+        }
+        if (updated) {
+            tm.saveTasks(tasks);
+
+            if (!completedTask.isHabit()) {
+                new MintCrystals(this).addCoins(2);
+            }
+            new TaskNotificationManager(this).cancelTaskReminder(completedTask);
+
+            if (completedTask.isHabit() && completedTask.getHabitId() != null) {
+                HabitManager hm = new HabitManager(this);
+                boolean allComplete = true;
+                for (Task t : tasks) {
+                    if (completedTask.getHabitId().equals(t.getHabitId()) && !t.isCompleted()) {
+                        allComplete = false;
+                        break;
+                    }
+                }
+                if (allComplete) {
+                    List<Habit> habits = hm.loadHabits();
+                    for (Habit h : habits) {
+                        if (h.getId().equals(completedTask.getHabitId())) {
+                            h.markDoneToday();
+                            break;
+                        }
+                    }
+                    hm.saveHabits(habits);
+                    new StreakManager(this).updateStreakOnHabitCompletion();
+                }
+            }
+
+            Toast.makeText(this, completedTask.isRecurring() ? "Task completed for today!" : "Task completed: " + completedTask.getName(), Toast.LENGTH_SHORT).show();
+            // NOTE: FocusService.stopTimer() already sends ACTION_TASK_FOCUS_UPDATE broadcast
+            // for the linked task. We only send an extra broadcast here to cover the case
+            // where the service stopped before marking the task complete (race condition safety).
+            // TasksFragment handles duplicate broadcasts gracefully (just reloads list).
+            sendBroadcast(new Intent(FocusService.ACTION_TASK_FOCUS_UPDATE));
+        }
     }
 
     private void setupOnUI() {
@@ -147,16 +350,26 @@ public class FocusMode extends AppCompatActivity {
 
         focusStop.setOnClickListener(v -> {
             if (isBound && focusService != null) {
-                focusService.stopService();
+                String activeTaskId = (linkedTaskIdExtra != null && !linkedTaskIdExtra.isEmpty())
+                        ? linkedTaskIdExtra : focusService.getLinkedTaskId();
+                if (activeTaskId != null && !activeTaskId.isEmpty()) {
+                    // Task-linked session: ask complete or pending
+                    showStopTaskDialog(/*finishAfter=*/ true, /*alreadyCompleting=*/ false);
+                } else {
+                    // Normal standalone session: just stop
+                    focusService.stopService();
+                }
             }
         });
 
         startButton.setOnLongClickListener(v -> {
-            isTestMode = !isTestMode;
-            String msg = isTestMode ? "Test Mode: Enabled (1 min focus / 30 sec break)" : "Test Mode: Disabled";
-            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+            // Long-press: show timer picker bottom sheet when timer is NOT running
+            if (isBound && focusService != null && focusService.isTimerRunning()) {
+                Toast.makeText(this, "Stop the session first to change the timer.", Toast.LENGTH_SHORT).show();
+                return true;
+            }
+            showTimerPickerSheet();
             v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
-            updatePomodoroIndicator();
             return true;
         });
 
@@ -178,8 +391,16 @@ public class FocusMode extends AppCompatActivity {
                             updateButtonStates(true);
                             handler.post(updateUITask);
                         } else {
-                            // Running or in break - Stop the timer
-                            focusService.stopService();
+                            // Running or in break — need to stop
+                            String activeTaskId = (linkedTaskIdExtra != null && !linkedTaskIdExtra.isEmpty())
+                                    ? linkedTaskIdExtra
+                                    : (focusService != null ? focusService.getLinkedTaskId() : null);
+                            if (activeTaskId != null && !activeTaskId.isEmpty()) {
+                                // Task-linked: ask complete or pending before stopping
+                                showStopTaskDialog(/*finishAfter=*/ true, /*alreadyCompleting=*/ false);
+                            } else {
+                                focusService.stopService();
+                            }
                         }
                     } else {
                         if (selectedMinutes < 10) {
@@ -293,6 +514,10 @@ public class FocusMode extends AppCompatActivity {
         focusStop = findViewById(R.id.focusStop);
         btnDivider = findViewById(R.id.btnDivider);
         topicsContainer = findViewById(R.id.topicsContainer);
+
+        taskCardOverlay = findViewById(R.id.taskCardOverlay);
+        linkedTaskName = findViewById(R.id.linkedTaskName);
+        markTaskCompleteBtn = findViewById(R.id.markTaskCompleteBtn);
 
         circularSeekBar = findViewById(R.id.circularProgress);
         crystalBase = findViewById(R.id.crystalBase);
@@ -447,40 +672,67 @@ public class FocusMode extends AppCompatActivity {
     }
 
     private void showTimerRunningState() {
-        String topicName = "Deep Focus";
-        if (selectedTopicId != -1) {
-            for (FocusTopicEntity t : currentTopics) {
-                if (t.id == selectedTopicId) {
-                    topicName = t.name;
-                    break;
+        boolean isLinked = linkedTaskIdExtra != null && !linkedTaskIdExtra.isEmpty();
+        boolean isOE = isOpenEndedExtra || (focusService != null && focusService.isOpenEnded());
+
+        if (isOE) {
+            // Open-ended: show elapsed-time label, hide everything else
+            instructionText.setText("Time Elapsed");
+        } else if (isLinked && linkedTopicNameExtra != null) {
+            instructionText.setText("Focusing: " + linkedTopicNameExtra);
+        } else {
+            String topicName = "Deep Focus";
+            if (selectedTopicId != -1) {
+                for (FocusTopicEntity t : currentTopics) {
+                    if (t.id == selectedTopicId) {
+                        topicName = t.name;
+                        break;
+                    }
                 }
             }
+            instructionText.setText("Focusing: " + topicName);
         }
-        instructionText.setText("Focusing: " + topicName);
 
         // Hide settings and topics to prevent changes during run
-        if (settingsBtn != null)
-            settingsBtn.setVisibility(INVISIBLE);
-        if (topicsContainer != null)
-            topicsContainer.setVisibility(INVISIBLE);
+        // Only touch these if not in task-linked mode (they are already GONE there)
+        if (!isLinked) {
+            if (settingsBtn != null)
+                settingsBtn.setVisibility(INVISIBLE);
+            if (topicsContainer != null)
+                topicsContainer.setVisibility(INVISIBLE);
+        }
 
-        fadeIn(lottieAnimation);
+        // BUG-7 fix: do NOT show lottie/seekbar in open-ended or task-linked modes
+        if (!isOE) {
+            fadeIn(lottieAnimation);
+        }
         circularSeekBar.setEnabled(false);
-        circularSeekBar.setVisibility(INVISIBLE);
+        // Use GONE for open-ended so layout does not reserve space
+        circularSeekBar.setVisibility(isOE ? GONE : INVISIBLE);
     }
 
     private void showTimerStoppedState() {
-        instructionText.setText(getString(R.string.set_your_focus_time));
+        boolean isLinked = linkedTaskIdExtra != null && !linkedTaskIdExtra.isEmpty();
+        boolean isOE = isOpenEndedExtra || (focusService != null && focusService.isOpenEnded());
 
-        // restore settings and topics
-        if (settingsBtn != null)
-            settingsBtn.setVisibility(VISIBLE);
-        if (topicsContainer != null)
-            topicsContainer.setVisibility(VISIBLE);
+        if (isOE) {
+            instructionText.setText("Open Ended Focus");
+        } else {
+            instructionText.setText(getString(R.string.set_your_focus_time));
+        }
+
+        // restore settings and topics — only if not in task-linked mode
+        if (!isLinked) {
+            if (settingsBtn != null)
+                settingsBtn.setVisibility(VISIBLE);
+            if (topicsContainer != null)
+                topicsContainer.setVisibility(VISIBLE);
+        }
 
         fadeOut(lottieAnimation);
-        circularSeekBar.setEnabled(true);
-        circularSeekBar.setVisibility(VISIBLE);
+        circularSeekBar.setEnabled(!isOE); // Seekbar useless in open-ended
+        // BUG-6 fix: do NOT flash seekbar visible in task-linked or open-ended modes
+        circularSeekBar.setVisibility(isOE ? GONE : (isLinked ? INVISIBLE : VISIBLE));
     }
 
     private void showCrystalForSelection() {
@@ -702,7 +954,10 @@ public class FocusMode extends AppCompatActivity {
                 handler.post(updateUITask);
             } else {
                 updateButtonStates(false);
-                timerText.setText(String.format(Locale.US, "%d min", selectedMinutes));
+                // Only reset to "X min" text in standalone (non task-linked) mode
+                if (linkedTaskIdExtra == null || linkedTaskIdExtra.isEmpty()) {
+                    timerText.setText(String.format(Locale.US, "%d min", selectedMinutes));
+                }
             }
         }
     }
@@ -739,6 +994,10 @@ public class FocusMode extends AppCompatActivity {
             FocusService.TimerBinder binder = (FocusService.TimerBinder) service;
             focusService = binder.getService();
             isBound = true;
+
+            // Restore session context from service if missing from intent extras
+            restoreStateFromService();
+
             boolean isRunning = focusService.isTimerRunning();
 
             if (isRunning) {
@@ -746,19 +1005,34 @@ public class FocusMode extends AppCompatActivity {
                     revealAnimator.cancel();
                 }
                 long totalDuration = focusService.getCurrentDuration();
-                selectedMinutes = (int) (totalDuration / (1000 * 60));
+
+                // For open-ended sessions, selectedMinutes is irrelevant (no seekbar shown)
+                // For timed sessions, sync selectedMinutes from service duration
+                if (!focusService.isOpenEnded()) {
+                    selectedMinutes = (int) (totalDuration / (1000 * 60));
+                }
 
                 // Catch-up: stop overdue timer before setting up running-state UI
                 if (checkAndStopOverdueTimer()) return;
             } else {
-                timerText.setText(String.format(Locale.US, "%d min", selectedMinutes));
+                // Only reset to "X min" for standalone (non task-linked) sessions
+                boolean isLinked = linkedTaskIdExtra != null && !linkedTaskIdExtra.isEmpty();
+                boolean isOE = isOpenEndedExtra || (focusService != null && focusService.isOpenEnded());
+                if (!isLinked && !isOE) {
+                    timerText.setText(String.format(Locale.US, "%d min", selectedMinutes));
+                }
             }
 
             updateButtonStates(isRunning);
 
             // If timer is NOT running, animate crystal to full reveal for selection
+            // (but not in task-linked or open-ended mode where crystals are hidden)
             if (!isRunning) {
-                showCrystalForSelection();
+                boolean isLinked = linkedTaskIdExtra != null && !linkedTaskIdExtra.isEmpty();
+                boolean isOE = isOpenEndedExtra || focusService.isOpenEnded();
+                if (!isLinked && !isOE) {
+                    showCrystalForSelection();
+                }
             }
 
             if (isRunning) {
@@ -771,16 +1045,19 @@ public class FocusMode extends AppCompatActivity {
                         crystalColor.setRevealFraction(savedFraction);
                     }
                 } else {
-                    // Normal running - sync crystal from progress
-                    long elapsedMillis = focusService.getElapsedMillis();
-                    long totalDuration = focusService.getCurrentDuration();
-                    if (totalDuration > 0 && crystalColor != null) {
-                        float progress = elapsedMillis / (float) totalDuration;
-                        float targetReveal = Math.min(1f, progress / REVEAL_COMPLETE_AT);
-                        crystalColor.setRevealFraction(targetReveal);
+                    // Normal running - sync crystal from progress (only for timed sessions)
+                    if (!focusService.isOpenEnded()) {
+                        long elapsedMillis = focusService.getElapsedMillis();
+                        long totalDuration = focusService.getCurrentDuration();
+                        if (totalDuration > 0 && crystalColor != null) {
+                            float progress = elapsedMillis / (float) totalDuration;
+                            float targetReveal = Math.min(1f, progress / REVEAL_COMPLETE_AT);
+                            crystalColor.setRevealFraction(targetReveal);
+                        }
                     }
                 }
 
+                handler.removeCallbacks(updateUITask);
                 handler.post(updateUITask);
             }
         }
@@ -814,55 +1091,75 @@ public class FocusMode extends AppCompatActivity {
 
             // FOCUS_RUNNING state - normal logic
             long elapsedMillis = focusService.getElapsedMillis();
-            long totalDuration = focusService.getCurrentDuration();
 
-            if (totalDuration <= 0) {
-                totalDuration = 1;
-            }
-            if (elapsedMillis < 0) {
-                elapsedMillis = 0;
-            }
-            if (elapsedMillis > totalDuration) {
-                elapsedMillis = totalDuration;
-            }
+            if (isOpenEndedExtra || (focusService != null && focusService.isOpenEnded())) {
+                // Open Ended Mode: Timer counts UP
+                long minutes = elapsedMillis / (1000 * 60);
+                long seconds = (elapsedMillis / 1000) % 60;
+                String timeStr = String.format(Locale.US, "%02d:%02d", minutes, seconds);
+                timerText.setText(timeStr);
+                instructionText.setText("Time Elapsed");
+            } else {
+                // Timed Mode: Timer counts DOWN
+                long totalDuration = focusService.getCurrentDuration();
 
-            long remainingMillis = totalDuration - elapsedMillis;
+                if (totalDuration <= 0) {
+                    totalDuration = 1;
+                }
+                if (elapsedMillis < 0) {
+                    elapsedMillis = 0;
+                }
+                if (elapsedMillis > totalDuration) {
+                    elapsedMillis = totalDuration;
+                }
 
-            // Update timer text
-            long minutes = remainingMillis / (1000 * 60);
-            long seconds = (remainingMillis / 1000) % 60;
-            String timeStr = String.format(Locale.US, "%02d:%02d", minutes, seconds);
-            timerText.setText(timeStr);
+                long remainingMillis = totalDuration - elapsedMillis;
+
+                // Update timer text
+                long minutes = remainingMillis / (1000 * 60);
+                long seconds = (remainingMillis / 1000) % 60;
+                String timeStr = String.format(Locale.US, "%02d:%02d", minutes, seconds);
+                timerText.setText(timeStr);
+            }
 
             updatePomodoroIndicator();
 
-            float progress = elapsedMillis / (float) totalDuration;
-            float seekbarProgress = progress * 180f;
-            if (Float.isNaN(seekbarProgress) || Float.isInfinite(seekbarProgress)) {
-                seekbarProgress = 0f;
-            }
-            if (seekbarProgress < 0f || seekbarProgress > 180f) {
-                if (!warnedInvalidDuration) {
-                    warnedInvalidDuration = true;
+            if (!isOpenEndedExtra && (focusService == null || !focusService.isOpenEnded())) {
+                long totalDuration = focusService.getCurrentDuration();
+                float progress = elapsedMillis / (float) (totalDuration > 0 ? totalDuration : 1);
+                float seekbarProgress = progress * 180f;
+                if (Float.isNaN(seekbarProgress) || Float.isInfinite(seekbarProgress)) {
+                    seekbarProgress = 0f;
+                }
+                if (seekbarProgress < 0f || seekbarProgress > 180f) {
+                    if (!warnedInvalidDuration) {
+                        warnedInvalidDuration = true;
+                    }
+                }
+                seekbarProgress = Math.max(0f, Math.min(seekbarProgress, 180f));
+                circularSeekBar.setProgress(seekbarProgress);
+
+                updateCrystalVisualsForProgress(progress);
+
+                // Store reveal fraction for pause recovery
+                if (crystalColor != null) {
+                    focusService.setCrystalRevealFraction(crystalColor.getRevealFraction());
                 }
             }
-            seekbarProgress = Math.max(0f, Math.min(seekbarProgress, 180f));
-            circularSeekBar.setProgress(seekbarProgress);
-
-            updateCrystalVisualsForProgress(progress);
-
-            // Store reveal fraction for pause recovery
-            if (crystalColor != null) {
-                focusService.setCrystalRevealFraction(crystalColor.getRevealFraction());
-            }
         } else if (focusService != null && !focusService.isTimerRunning()) {
-            timerText.setText(String.format(Locale.US, "%d min", selectedMinutes));
+            // BUG-3 fix: don't overwrite timer text with "X min" in task-linked/open-ended mode
+            boolean isLinkedUI = linkedTaskIdExtra != null && !linkedTaskIdExtra.isEmpty();
+            boolean isOEUI = isOpenEndedExtra || focusService.isOpenEnded();
+            if (!isLinkedUI && !isOEUI) {
+                timerText.setText(String.format(Locale.US, "%d min", selectedMinutes));
+            }
         }
     }
 
     /**
      * Checks if the timer has exceeded its duration (Doze may have delayed the stop).
      * If overdue, stops the timer and handles UI + completion dialog.
+     *
      * @return true if the timer was stopped; caller should skip normal running-state logic.
      */
     private boolean checkAndStopOverdueTimer() {
@@ -872,10 +1169,20 @@ public class FocusMode extends AppCompatActivity {
                 && focusService.getElapsedMillis() >= dur) {
             focusService.stopTimer();
             updateButtonStates(false);
-            showCrystalForSelection();
-            if (focusService.consumeCompletedNaturally()) {
-                showFocusCompleteDialog(focusService.getLastCompletedDurationMinutes());
+            // BUG-4 fix: only reveal crystal for standalone (non task-linked, non open-ended) sessions
+            boolean isLinked = linkedTaskIdExtra != null && !linkedTaskIdExtra.isEmpty();
+            boolean isOE = isOpenEndedExtra || focusService.isOpenEnded();
+            if (!isLinked && !isOE) {
+                showCrystalForSelection();
                 mintCrystalsTxt.setText(String.valueOf(mintCrystals.getCoins()));
+            }
+            if (focusService.consumeCompletedNaturally()) {
+                if (linkedTaskIdExtra != null) {
+                    showTaskFinishedDialog(focusService.getLastCompletedDurationMinutes());
+                } else {
+                    showFocusCompleteDialog(focusService.getLastCompletedDurationMinutes());
+                    mintCrystalsTxt.setText(String.valueOf(mintCrystals.getCoins()));
+                }
             }
             return true;
         }
@@ -883,13 +1190,60 @@ public class FocusMode extends AppCompatActivity {
     }
 
     private void updateButtonStates(boolean timerIsRunning) {
+        boolean isTaskLinked = (linkedTaskIdExtra != null && !linkedTaskIdExtra.isEmpty())
+                || (focusService != null && focusService.getLinkedTaskId() != null && !focusService.getLinkedTaskId().isEmpty());
+        boolean isOpenEnded = isOpenEndedExtra || (focusService != null && focusService.isOpenEnded());
+        boolean isLockedInSession = (focusService != null && focusService.isLockedIn())
+                || PreferenceManager.getDefaultSharedPreferences(this).getBoolean(FocusService.PREF_IS_LOCKED_IN, false);
+
         if (timerIsRunning && focusService != null) {
             if (revealAnimator != null && revealAnimator.isRunning()) {
                 revealAnimator.cancel();
             }
             showTimerRunningState();
-            updateThemeForDuration(selectedMinutes);
-            mintCrystalsTxt.setText(String.valueOf(mintCrystals.getCoins()));
+
+            androidx.constraintlayout.widget.ConstraintLayout mainLayout = findViewById(R.id.main);
+            androidx.constraintlayout.widget.ConstraintSet set = new androidx.constraintlayout.widget.ConstraintSet();
+            set.clone(mainLayout);
+
+            if (isOpenEnded) {
+                // OpenEnded overrides: hide crystals, coins, seekbar; center timer
+                circularSeekBar.setVisibility(View.GONE);
+                lottieAnimation.setVisibility(View.GONE);
+                crystalBase.setVisibility(View.GONE);
+                crystalColor.setVisibility(View.GONE);
+                View progressContainer = findViewById(R.id.progressContainer);
+                if (progressContainer != null) progressContainer.setVisibility(View.GONE);
+                // Coins always hidden for open-ended (always task-linked)
+                findViewById(R.id.coinImg).setVisibility(View.GONE);
+                mintCrystalsTxt.setVisibility(View.GONE);
+
+                // Center timer text
+                set.connect(R.id.timerText, androidx.constraintlayout.widget.ConstraintSet.TOP,
+                        androidx.constraintlayout.widget.ConstraintSet.PARENT_ID,
+                        androidx.constraintlayout.widget.ConstraintSet.TOP);
+                set.connect(R.id.timerText, androidx.constraintlayout.widget.ConstraintSet.BOTTOM,
+                        androidx.constraintlayout.widget.ConstraintSet.PARENT_ID,
+                        androidx.constraintlayout.widget.ConstraintSet.BOTTOM);
+                timerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 65f);
+            } else {
+                updateThemeForDuration(selectedMinutes);
+
+                // Restore timer text below progressContainer
+                set.clear(R.id.timerText, androidx.constraintlayout.widget.ConstraintSet.BOTTOM);
+                set.connect(R.id.timerText, androidx.constraintlayout.widget.ConstraintSet.TOP,
+                        R.id.progressContainer, androidx.constraintlayout.widget.ConstraintSet.BOTTOM);
+                timerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 50f);
+
+                // Hide coins for task-linked timed sessions or locked-in state
+                if (isTaskLinked || isLockedInSession) {
+                    findViewById(R.id.coinImg).setVisibility(View.GONE);
+                    mintCrystalsTxt.setVisibility(View.GONE);
+                } else {
+                    mintCrystalsTxt.setText(String.valueOf(mintCrystals.getCoins()));
+                }
+            }
+            set.applyTo(mainLayout);
 
             // Update button text based on pause state
             if (focusService.isPaused() && !focusService.isBreak()) {
@@ -904,14 +1258,48 @@ public class FocusMode extends AppCompatActivity {
                 btnDivider.setVisibility(View.GONE);
             }
         } else {
-            updateThemeForDuration(selectedMinutes);
+            // Timer stopped state
             showTimerStoppedState();
+
+            androidx.constraintlayout.widget.ConstraintLayout mainLayout = findViewById(R.id.main);
+            androidx.constraintlayout.widget.ConstraintSet set = new androidx.constraintlayout.widget.ConstraintSet();
+            set.clone(mainLayout);
+
+            if (isOpenEnded) {
+                // For open-ended sessions that have stopped, keep timer centered and crystals gone
+                set.connect(R.id.timerText, androidx.constraintlayout.widget.ConstraintSet.TOP,
+                        androidx.constraintlayout.widget.ConstraintSet.PARENT_ID,
+                        androidx.constraintlayout.widget.ConstraintSet.TOP);
+                set.connect(R.id.timerText, androidx.constraintlayout.widget.ConstraintSet.BOTTOM,
+                        androidx.constraintlayout.widget.ConstraintSet.PARENT_ID,
+                        androidx.constraintlayout.widget.ConstraintSet.BOTTOM);
+                timerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 65f);
+            } else {
+                set.clear(R.id.timerText, androidx.constraintlayout.widget.ConstraintSet.BOTTOM);
+                set.connect(R.id.timerText, androidx.constraintlayout.widget.ConstraintSet.TOP,
+                        R.id.progressContainer, androidx.constraintlayout.widget.ConstraintSet.BOTTOM);
+                timerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 50f);
+
+                // Only update seekbar/timer text for timed non-task mode
+                if (!isTaskLinked) {
+                    updateThemeForDuration(selectedMinutes);
+                    circularSeekBar.setProgress(selectedMinutes);
+                    timerText.setText(String.format(Locale.US, "%d min", selectedMinutes));
+                }
+            }
+            set.applyTo(mainLayout);
+
             startButton.setText(getString(R.string.start));
             focusStop.setVisibility(View.GONE);
             btnDivider.setVisibility(View.GONE);
-            mintCrystalsTxt.setText(String.valueOf(mintCrystals.getCoins()));
-            circularSeekBar.setProgress(selectedMinutes);
-            timerText.setText(String.format(Locale.US, "%d min", selectedMinutes));
+
+            // Restore coin display only for non-task-linked, non-locked-in sessions
+            if (!isTaskLinked && !isLockedInSession) {
+                mintCrystalsTxt.setVisibility(View.VISIBLE);
+                mintCrystalsTxt.setText(String.valueOf(mintCrystals.getCoins()));
+                findViewById(R.id.coinImg).setVisibility(View.VISIBLE);
+            }
+
             handler.removeCallbacks(updateUITask);
         }
     }
@@ -928,13 +1316,20 @@ public class FocusMode extends AppCompatActivity {
                     handler.postDelayed(this, 900);
                 } else {
                     updateButtonStates(false);
-                    // Timer stopped - animate crystal to full reveal for selection
-                    showCrystalForSelection();
-                    // If completed naturally, show completion dialog while user is on UI
+                    // Timer stopped - animate crystal to full reveal for selection (only if not linked task)
+                    if (linkedTaskIdExtra == null) {
+                        showCrystalForSelection();
+                    }
+                    // If completed naturally, show appropriate dialog
                     if (focusService.consumeCompletedNaturally()) {
                         int minutes = focusService.getLastCompletedDurationMinutes();
-                        showFocusCompleteDialog(minutes);
-                        mintCrystalsTxt.setText(String.valueOf(mintCrystals.getCoins()));
+                        if (linkedTaskIdExtra != null) {
+                            // Task-linked: ask if complete or extend
+                            showTaskFinishedDialog(minutes);
+                        } else {
+                            showFocusCompleteDialog(minutes);
+                            mintCrystalsTxt.setText(String.valueOf(mintCrystals.getCoins()));
+                        }
                     }
                 }
             }
@@ -995,6 +1390,73 @@ public class FocusMode extends AppCompatActivity {
         viewDot.setScaleX(1.3f);
         viewDot.setScaleY(1.3f);
 
+    }
+
+    private void showTaskFinishedDialog(int minutes) {
+        com.gxdevs.mindmint.Utils.CustomDialogUtils.showCustomDialog(this,
+                "Time's Up!",
+                "Is the task complete, or do you want to extend the time?",
+                "Task Complete",
+                "Extend Time",
+                "Keep Pending",
+                () -> {
+                    completeLinkedTask();
+                    // Show brief completion celebration then close
+                    showFocusCompleteDialog(minutes);
+                    // finish() is called via completeLinkedTask broadcast flow;
+                    // we finish here too so onTaskClick re-entry works cleanly
+                    handler.postDelayed(this::finish, 200);
+                },
+                () -> showExtendTimeDialog(),
+                () -> {
+                    // Time ran out — save time but keep task incomplete
+                    if (isBound && focusService != null) {
+                        focusService.stopService();
+                    }
+                    sendBroadcast(new Intent(FocusService.ACTION_TASK_FOCUS_UPDATE));
+                    finish();
+                });
+    }
+
+    private void showExtendTimeDialog() {
+        CharSequence[] options = {"5 minutes", "10 minutes", "15 minutes", "30 minutes"};
+        final int[] durations = {5, 10, 15, 30};
+
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this, R.style.AlertDialogTheme)
+                .setTitle("Extend Time")
+                .setItems(options, (dialog, which) -> {
+                    int extendMins = durations[which];
+                    // Start a new timer for the extended duration
+                    Intent serviceIntent = new Intent(this, FocusService.class);
+                    serviceIntent.setAction(FocusService.ACTION_START_FOREGROUND_SERVICE);
+                    serviceIntent.putExtra("durationInMillis", extendMins * 60000L);
+
+                    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+                    boolean isPomodoro = prefs.getBoolean(PREF_POMODORO_ENABLED, false);
+                    long focusInterval = isTestMode ? 30000L : prefs.getInt(PREF_FOCUS_DURATION, 25) * 60 * 1000L;
+                    long breakInterval = isTestMode ? 15000L : prefs.getInt(PREF_BREAK_DURATION, 5) * 60 * 1000L;
+
+                    serviceIntent.putExtra("isPomodoroEnabled", isPomodoro || isTestMode);
+                    serviceIntent.putExtra("pomodoroFocusInterval", focusInterval);
+                    serviceIntent.putExtra("pomodoroBreakInterval", breakInterval);
+                    serviceIntent.putExtra("topicName", linkedTopicNameExtra != null ? linkedTopicNameExtra : "Extended Task");
+                    serviceIntent.putExtra(FocusService.EXTRA_TASK_ID, linkedTaskIdExtra);
+                    serviceIntent.putExtra(FocusService.EXTRA_IS_OPEN_ENDED, false);
+
+                    ContextCompat.startForegroundService(this, serviceIntent);
+                    updateButtonStates(true);
+                    // Restart the UI tick loop so the extended countdown is displayed
+                    handler.removeCallbacks(updateUITask);
+                    handler.postDelayed(updateUITask, 500);
+                    Toast.makeText(this, "Extended by " + extendMins + " min", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancel", (dialog, which) -> {
+                    // BUG-9 fix: if user cancels extend, timer is already stopped; exit FocusMode
+                    // so they don't get stuck on a stale screen
+                    sendBroadcast(new Intent(FocusService.ACTION_TASK_FOCUS_UPDATE));
+                    finish();
+                })
+                .show();
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -1145,7 +1607,7 @@ public class FocusMode extends AppCompatActivity {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 VibratorManager vm = (VibratorManager) getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
                 if (vm != null) {
-                    long[] pattern = new long[] { 0, 220, 120, 220 };
+                    long[] pattern = new long[]{0, 220, 120, 220};
                     VibrationEffect effect = VibrationEffect.createWaveform(pattern, -1);
                     vm.getDefaultVibrator().vibrate(effect);
                 }
@@ -1250,19 +1712,20 @@ public class FocusMode extends AppCompatActivity {
     }
 
     private void showDeleteTopicDialog(FocusTopicEntity topic) {
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("Delete Topic")
-                .setMessage("Are you sure you want to delete '" + topic.name + "'?")
-                .setPositiveButton("Delete", (dialog, which) -> {
+        com.gxdevs.mindmint.Utils.CustomDialogUtils.showCustomDialog(this,
+                "Delete Topic",
+                "Are you sure you want to delete '" + topic.name + "'?",
+                "Delete",
+                "Cancel",
+                () -> {
                     Executors.newSingleThreadExecutor().execute(() -> {
                         db.focusTopicDao().delete(topic);
                         if (selectedTopicId == topic.id) {
                             selectedTopicId = -1;
                         }
                     });
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
+                },
+                null);
     }
 
     private void showSettingsBottomSheet() {
@@ -1343,20 +1806,20 @@ public class FocusMode extends AppCompatActivity {
             int savedDuration = prefs.getInt(PREF_FOCUS_DURATION, 30);
             focusSeekBar.setProgress(savedDuration - 20);
             focusLabel.setText("Focus Interval: " + savedDuration + " min");
-            focusSeekBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
+            focusSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
                 @Override
-                public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
+                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                     int val = progress + 20;
                     focusLabel.setText("Focus Interval: " + val + " min");
                     prefs.edit().putInt(PREF_FOCUS_DURATION, val).apply();
                 }
 
                 @Override
-                public void onStartTrackingTouch(android.widget.SeekBar seekBar) {
+                public void onStartTrackingTouch(SeekBar seekBar) {
                 }
 
                 @Override
-                public void onStopTrackingTouch(android.widget.SeekBar seekBar) {
+                public void onStopTrackingTouch(SeekBar seekBar) {
                 }
             });
         }
@@ -1379,27 +1842,54 @@ public class FocusMode extends AppCompatActivity {
             });
         }
 
+        MaterialSwitch alwaysLockInSwitch = sheet.findViewById(R.id.alwaysLockInSwitch);
+        View alwaysLockInCard = sheet.findViewById(R.id.alwaysLockInCard);
+        if (alwaysLockInSwitch != null && alwaysLockInCard != null) {
+            if (!Utils.isAccessibilityPermissionGranted(this)) {
+                alwaysLockInCard.setVisibility(View.GONE);
+            } else {
+                boolean isAlwaysLockIn = prefs.getBoolean("pref_always_lock_in", false);
+                alwaysLockInSwitch.setChecked(isAlwaysLockIn);
+                alwaysLockInSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    if (isChecked && !Utils.isAccessibilityPermissionGranted(this)) {
+                        alwaysLockInSwitch.setChecked(false);
+                        prefs.edit().putBoolean("pref_always_lock_in", false).apply();
+                        Toast.makeText(this, "Accessibility Permission Required", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    prefs.edit().putBoolean("pref_always_lock_in", isChecked).apply();
+                });
+            }
+        }
+
+        View customAppBlockCard = sheet.findViewById(R.id.customAppBlockCard);
+        if (customAppBlockCard != null) {
+            customAppBlockCard.setOnClickListener(v -> {
+                startActivity(new Intent(this, CustomAppSelectionActivity.class));
+            });
+        }
+
         SeekBar breakSeekBar = sheet.findViewById(R.id.breakSeekBar);
         TextView breakLabel = sheet.findViewById(R.id.breakDurationLabel);
         if (breakSeekBar != null && breakLabel != null) {
             int savedDuration = prefs.getInt(PREF_BREAK_DURATION, 5);
             breakSeekBar.setProgress(savedDuration - 3);
             breakLabel.setText("Break Duration: " + savedDuration + " min");
-            breakSeekBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
+            breakSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 
                 @Override
-                public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
+                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                     int val = progress + 3;
                     breakLabel.setText("Break Duration: " + val + " min");
                     prefs.edit().putInt(PREF_BREAK_DURATION, val).apply();
                 }
 
                 @Override
-                public void onStartTrackingTouch(android.widget.SeekBar seekBar) {
+                public void onStartTrackingTouch(SeekBar seekBar) {
                 }
 
                 @Override
-                public void onStopTrackingTouch(android.widget.SeekBar seekBar) {
+                public void onStopTrackingTouch(SeekBar seekBar) {
                 }
             });
         }
@@ -1407,6 +1897,19 @@ public class FocusMode extends AppCompatActivity {
         View crossBtn = sheet.findViewById(R.id.crossBtn);
         if (crossBtn != null) {
             crossBtn.setOnClickListener(v -> sheet.dismiss());
+        }
+
+        // --- Scheduled Focus UI ---
+        RecyclerView scheduleRv = sheet.findViewById(R.id.scheduleRecyclerView);
+        View addScheduleBtn = sheet.findViewById(R.id.addScheduleBtn);
+        View schedulesContainer = sheet.findViewById(R.id.schedulesContainer);
+
+        if (scheduleRv != null && addScheduleBtn != null) {
+            scheduleRv.setLayoutManager(new LinearLayoutManager(this));
+            Runnable reloadSchedules = getRunnable(scheduleRv, schedulesContainer);
+
+            addScheduleBtn.setOnClickListener(v -> showAddScheduleDialog(null, reloadSchedules));
+            reloadSchedules.run();
         }
 
         sheet.setOnDismissListener(dialog -> {
@@ -1426,6 +1929,82 @@ public class FocusMode extends AppCompatActivity {
         });
 
         sheet.show();
+    }
+
+    private Runnable getRunnable(RecyclerView scheduleRv, View schedulesContainer) {
+        Runnable reloadSchedules = () -> {
+            try (java.util.concurrent.ExecutorService executorService = Executors.newSingleThreadExecutor()) {
+                executorService.execute(() -> {
+                    List<FocusScheduleEntity> schedules = db.focusScheduleDao().getAll();
+                    runOnUiThread(() -> {
+                        if (schedulesContainer != null) {
+                            schedulesContainer.setVisibility(schedules.isEmpty() ? View.GONE : View.VISIBLE);
+                        }
+                        FocusScheduleAdapter scheduleAdapter = new FocusScheduleAdapter(
+                                this, schedules,
+                                new FocusScheduleAdapter.OnScheduleActionListener() {
+                                    @Override
+                                    public void onToggle(FocusScheduleEntity schedule, boolean isChecked) {
+                                        try (java.util.concurrent.ExecutorService executorServiceInner = Executors.newSingleThreadExecutor()) {
+                                            executorServiceInner.execute(() -> {
+                                                schedule.isEnabled = isChecked ? 1 : 0;
+                                                db.focusScheduleDao().update(schedule);
+                                                FocusScheduleManager mgr = new FocusScheduleManager(FocusMode.this);
+                                                if (isChecked) {
+                                                    mgr.setSchedule(schedule);
+                                                } else {
+                                                    mgr.cancelSchedule(schedule.id);
+                                                }
+                                            });
+                                        }
+                                    }
+
+                                    @Override
+                                    public void onDelete(FocusScheduleEntity schedule) {
+                                        com.gxdevs.mindmint.Utils.CustomDialogUtils.showCustomDialog(FocusMode.this,
+                                                "Delete Schedule",
+                                                "Are you sure you want to delete this schedule?",
+                                                "Delete",
+                                                "Cancel",
+                                                () -> {
+                                                    try (java.util.concurrent.ExecutorService executorServiceInner = Executors.newSingleThreadExecutor()) {
+                                                        executorServiceInner.execute(() -> {
+                                                            db.focusScheduleDao().delete(schedule);
+                                                            new FocusScheduleManager(FocusMode.this).cancelSchedule(schedule.id);
+                                                            // Reload UI
+                                                            List<FocusScheduleEntity> fresh = db.focusScheduleDao().getAll();
+                                                            runOnUiThread(() -> {
+                                                                scheduleRv.setAdapter(new FocusScheduleAdapter(FocusMode.this, fresh, this));
+                                                            });
+                                                        });
+                                                    }
+                                                },
+                                                null);
+                                    }
+
+                                    @Override
+                                    public void onClick(FocusScheduleEntity schedule) {
+                                        showAddScheduleDialog(schedule, () -> {
+                                            // On saving, just invoke a reload
+                                            try (java.util.concurrent.ExecutorService executorServiceInner = Executors.newSingleThreadExecutor()) {
+                                                executorServiceInner.execute(() -> {
+                                                    List<FocusScheduleEntity> fresh = db.focusScheduleDao().getAll();
+                                                    runOnUiThread(() -> {
+                                                        scheduleRv.setAdapter(new FocusScheduleAdapter(FocusMode.this, fresh, this));
+                                                    });
+                                                });
+                                            }
+                                        });
+                                    }
+                                });
+                        scheduleRv.setAdapter(scheduleAdapter);
+                    });
+                });
+            }
+        };
+
+        // Initial load is already triggered inside the lambda above; return the runnable for caller use
+        return reloadSchedules;
     }
 
     private void updatePomodoroIndicator() {
@@ -1482,12 +2061,251 @@ public class FocusMode extends AppCompatActivity {
     }
 
     private void showAutoKillWarning() {
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("Important Info")
-                .setMessage("If you don't resume the timer within 20 minutes after a break, " +
+        com.gxdevs.mindmint.Utils.CustomDialogUtils.showCustomDialog(this,
+                "Important Info",
+                "If you don't resume the timer within 20 minutes after a break, " +
                         "the session will automatically end.\n\n" +
-                        "This won't deduct any coins.")
-                .setPositiveButton("Got it", null)
-                .show();
+                        "This won't deduct any coins.",
+                "Got it",
+                "",
+                null,
+                null);
+    }
+
+    private void showTimerPickerSheet() {
+        BottomSheetDialog sheet = new BottomSheetDialog(this, R.style.CustomBottomSheetTheme);
+        View view = getLayoutInflater().inflate(R.layout.bottom_sheet_timer_picker, null);
+        sheet.setContentView(view);
+
+        SeekBar timerSeekBar = view.findViewById(R.id.timerPickerSeekBar);
+        TextView timerPickerLabel = view.findViewById(R.id.timerPickerLabel);
+        com.google.android.material.button.MaterialButton confirmBtn = view.findViewById(R.id.timerPickerConfirmBtn);
+        View closeBtn = view.findViewById(R.id.timerPickerCloseBtn);
+
+        // Range 10–180 min; seekbar goes 0–170, add 10 as base
+        int initialProgress = Math.max(0, Math.min(selectedMinutes - 10, 170));
+        if (timerSeekBar != null) {
+            timerSeekBar.setMax(170);
+            timerSeekBar.setProgress(initialProgress);
+        }
+        if (timerPickerLabel != null) {
+            timerPickerLabel.setText(selectedMinutes + " min");
+        }
+
+        final int[] pickedMinutes = {selectedMinutes};
+
+        if (timerSeekBar != null) {
+            timerSeekBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
+                    pickedMinutes[0] = progress + 10;
+                    if (timerPickerLabel != null) {
+                        timerPickerLabel.setText(pickedMinutes[0] + " min");
+                    }
+                }
+                @Override public void onStartTrackingTouch(android.widget.SeekBar seekBar) {}
+                @Override public void onStopTrackingTouch(android.widget.SeekBar seekBar) {}
+            });
+        }
+
+        if (confirmBtn != null) {
+            confirmBtn.setOnClickListener(v -> {
+                selectedMinutes = pickedMinutes[0];
+                circularSeekBar.setProgress(selectedMinutes);
+                timerText.setText(String.format(Locale.US, "%d min", selectedMinutes));
+                updateThemeForDuration(selectedMinutes);
+                sheet.dismiss();
+            });
+        }
+        if (closeBtn != null) {
+            closeBtn.setOnClickListener(v -> sheet.dismiss());
+        }
+
+        sheet.show();
+    }
+
+    private void showAddScheduleDialog(FocusScheduleEntity scheduleToEdit, Runnable onSaved) {
+        BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.CustomBottomSheetTheme);
+        dialog.setContentView(R.layout.bottom_sheet_add_schedule);
+
+        MaterialButton btnTime = dialog.findViewById(R.id.btnSelectTime);
+        LinearLayout daysChipGroup = dialog.findViewById(R.id.daysChipGroup);
+        SeekBar durBar = dialog.findViewById(R.id.durationSeekBar);
+        TextView durLabel = dialog.findViewById(R.id.durationLabel);
+        MaterialSwitch lockSwitch = dialog.findViewById(R.id.lockInSwitch);
+        MaterialButton btnSave = dialog.findViewById(R.id.btnSaveSchedule);
+
+        View.OnClickListener dayClickListener = getClickListener();
+
+        for (int i = 0; i < daysChipGroup.getChildCount(); i++) {
+            daysChipGroup.getChildAt(i).setOnClickListener(dayClickListener);
+        }
+
+        if (!Utils.isAccessibilityPermissionGranted(this)) {
+            assert lockSwitch != null;
+            lockSwitch.setVisibility(View.GONE);
+        }
+
+        final int[] hour = {12};
+        final int[] min = {0};
+
+        if (scheduleToEdit != null) {
+            hour[0] = scheduleToEdit.startHour;
+            min[0] = scheduleToEdit.startMinute;
+            durBar.setProgress(scheduleToEdit.durationMinutes);
+            lockSwitch.setChecked(scheduleToEdit.isLockedIn == 1);
+            if (scheduleToEdit.daysOfWeek != null) {
+                String[] d = scheduleToEdit.daysOfWeek.split(",");
+                for (String day : d) {
+                    for (int i = 0; i < daysChipGroup.getChildCount(); i++) {
+                        TextView c = (TextView) daysChipGroup.getChildAt(i);
+                        if (c.getText().toString().equalsIgnoreCase(day.trim())) {
+                            c.setTag(false); // Force toggle
+                            c.callOnClick();
+                        }
+                    }
+                }
+            }
+        }
+        btnTime.setText(String.format(java.util.Locale.US, "Start Time %02d:%02d", hour[0], min[0]));
+        durLabel.setText("Duration (Minutes): " + durBar.getProgress());
+
+        btnTime.setOnClickListener(v -> {
+            MaterialTimePicker timePicker = new MaterialTimePicker.Builder()
+                    .setTimeFormat(TimeFormat.CLOCK_24H)
+                    .setHour(hour[0])
+                    .setMinute(min[0])
+                    .setTitleText("Select Schedule Time")
+                    .build();
+
+            timePicker.addOnPositiveButtonClickListener(v1 -> {
+                hour[0] = timePicker.getHour();
+                min[0] = timePicker.getMinute();
+                btnTime.setText(String.format(java.util.Locale.US, "Start Time %02d:%02d", hour[0], min[0]));
+            });
+            timePicker.show(getSupportFragmentManager(), "schedule_time");
+        });
+
+        durBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            public void onProgressChanged(SeekBar sb, int p, boolean b) {
+                durLabel.setText("Duration (Minutes): " + p);
+            }
+
+            public void onStartTrackingTouch(SeekBar sb) {
+            }
+
+            public void onStopTrackingTouch(SeekBar sb) {
+            }
+        });
+
+        btnSave.setOnClickListener(v -> {
+            java.util.List<String> days = new java.util.ArrayList<>();
+            for (int i = 0; i < daysChipGroup.getChildCount(); i++) {
+                TextView c = (TextView) daysChipGroup.getChildAt(i);
+                boolean isSelected = c.getTag() != null && (boolean) c.getTag();
+                if (isSelected) days.add(c.getText().toString());
+            }
+
+            if (days.isEmpty()) {
+                Toast.makeText(this, "Select at least one day", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(this, "Please enable Notification permission in App Settings", Toast.LENGTH_LONG).show();
+                    Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                            .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
+                    startActivity(intent);
+                    return;
+                }
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+                if (!am.canScheduleExactAlarms()) {
+                    Toast.makeText(this, "Please enable Exact Alarms permission in App Settings", Toast.LENGTH_LONG).show();
+                    Intent pIntent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+                    pIntent.setData(Uri.parse("package:" + getPackageName()));
+                    startActivity(pIntent);
+                    return;
+                }
+            }
+
+            Executors.newSingleThreadExecutor().execute(() -> {
+                FocusScheduleEntity entity = scheduleToEdit != null ? scheduleToEdit : new FocusScheduleEntity();
+                entity.startHour = hour[0];
+                entity.startMinute = min[0];
+                entity.daysOfWeek = android.text.TextUtils.join(", ", days);
+                entity.durationMinutes = durBar.getProgress();
+                entity.isLockedIn = lockSwitch.isChecked() ? 1 : 0;
+                entity.isEnabled = 1;
+
+                if (scheduleToEdit == null) {
+                    long id = db.focusScheduleDao().insert(entity);
+                    entity.id = (int) id;
+                } else {
+                    db.focusScheduleDao().update(entity);
+                }
+
+                FocusScheduleManager mgr = new FocusScheduleManager(this);
+                mgr.setSchedule(entity);
+
+                runOnUiThread(() -> {
+                    dialog.dismiss();
+                    if (onSaved != null) onSaved.run();
+                });
+            });
+        });
+
+        dialog.show();
+    }
+
+    private View.OnClickListener getClickListener() {
+        TypedValue tvPrimary = new TypedValue();
+        getTheme().resolveAttribute(R.attr.text_primary, tvPrimary, true);
+        final int colorPrimary = tvPrimary.data;
+
+        TypedValue tvTertiary = new TypedValue();
+        getTheme().resolveAttribute(R.attr.text_tertiary, tvTertiary, true);
+        final int colorTertiary = tvTertiary.data;
+
+        View.OnClickListener dayClickListener = v -> {
+            boolean isSelected = v.getTag() != null && (boolean) v.getTag();
+            isSelected = !isSelected;
+            v.setTag(isSelected);
+            if (isSelected) {
+                v.setBackgroundResource(R.drawable.bg_segment_selected);
+                ((TextView) v).setTextColor(colorPrimary);
+            } else {
+                v.setBackground(null);
+                ((TextView) v).setTextColor(colorTertiary);
+            }
+        };
+        return dayClickListener;
+    }
+
+    private View.OnClickListener getOnClickListener() {
+        TypedValue tvPrimary = new TypedValue();
+        getTheme().resolveAttribute(R.attr.text_primary, tvPrimary, true);
+        final int colorPrimary = tvPrimary.data;
+
+        TypedValue tvTertiary = new TypedValue();
+        getTheme().resolveAttribute(R.attr.text_tertiary, tvTertiary, true);
+        final int colorTertiary = tvTertiary.data;
+
+
+        return v -> {
+            boolean isSelected = v.getTag() != null && (boolean) v.getTag();
+            isSelected = !isSelected;
+            v.setTag(isSelected);
+            if (isSelected) {
+                v.setBackgroundResource(R.drawable.bg_segment_selected);
+                ((TextView) v).setTextColor(colorPrimary);
+            } else {
+                v.setBackground(null);
+                ((TextView) v).setTextColor(colorTertiary);
+            }
+        };
     }
 }

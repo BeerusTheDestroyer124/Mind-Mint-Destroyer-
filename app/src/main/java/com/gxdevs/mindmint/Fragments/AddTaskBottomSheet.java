@@ -1,6 +1,5 @@
 package com.gxdevs.mindmint.Fragments;
 
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
@@ -17,11 +16,13 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.AppCompatButton;
 import androidx.core.content.ContextCompat;
 
@@ -51,6 +52,11 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
     private RadioButton rbLow, rbMedium, rbHigh;
     private TextView dateText, timeText;
     private MaterialSwitch reminderSwitch;
+    private MaterialSwitch focusModeSwitch;
+    private SeekBar focusDurationSeekbar;
+    private TextView focusDurationLabel;
+    private LinearLayout focusDurationContainer;
+    private LinearLayout focusLockedBanner;
     private AppCompatButton cancelButton, saveButton;
     private TextView sheetTitle;
     private ImageView taskIconView;
@@ -59,6 +65,7 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
     private Task editingTask;
     private Calendar selectedDateTime;
     private boolean isEditMode = false;
+    private int focusDurationMinutes = 0; // 0 = open-ended
     private RepeatOptionsBottomSheet.RepeatOptions currentRepeatOptions;
 
     public static AddTaskBottomSheet newInstance() {
@@ -120,6 +127,11 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
         dateText = view.findViewById(R.id.dateText);
         timeText = view.findViewById(R.id.timeText);
         reminderSwitch = view.findViewById(R.id.reminderSwitch);
+        focusModeSwitch = view.findViewById(R.id.focusModeSwitch);
+        focusDurationSeekbar = view.findViewById(R.id.focusDurationSeekbar);
+        focusDurationLabel = view.findViewById(R.id.focusDurationLabel);
+        focusDurationContainer = view.findViewById(R.id.focusDurationContainer);
+        focusLockedBanner = view.findViewById(R.id.focusLockedBanner);
         cancelButton = view.findViewById(R.id.cancelButton);
         saveButton = view.findViewById(R.id.saveButton);
         sheetTitle = view.findViewById(R.id.greetings);
@@ -135,12 +147,11 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
 
         // Setup icon picker
         setupIconPicker();
+        setupFocusModeSection();
     }
 
     private void setupSpinners() {
-        priorityRadioGroup.setOnCheckedChangeListener((group, checkedId) -> {
-            updatePriorityTextColors();
-        });
+        priorityRadioGroup.setOnCheckedChangeListener((group, checkedId) -> updatePriorityTextColors());
         // Initial update for default selection
         updatePriorityTextColors();
     }
@@ -191,6 +202,46 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
         });
     }
 
+    private void setupFocusModeSection() {
+        updateFocusDurationLabel(focusDurationMinutes);
+
+        focusModeSwitch.setOnCheckedChangeListener((btn, isChecked) -> {
+            if (isChecked) {
+                focusDurationContainer.setVisibility(View.VISIBLE);
+                focusDurationContainer.setAlpha(0f);
+                focusDurationContainer.animate().alpha(1f).setDuration(200).start();
+            } else {
+                focusDurationContainer.animate().alpha(0f).setDuration(150).withEndAction(() ->
+                        focusDurationContainer.setVisibility(View.GONE)).start();
+            }
+        });
+
+        focusDurationSeekbar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                focusDurationMinutes = progress;
+                updateFocusDurationLabel(progress);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+            }
+        });
+    }
+
+    private void updateFocusDurationLabel(int minutes) {
+        if (focusDurationLabel == null) return;
+        if (minutes == 0) {
+            focusDurationLabel.setText("Open Ended");
+        } else {
+            focusDurationLabel.setText(minutes + " min");
+        }
+    }
+
     private void setupDateTimePicker() {
         LinearLayout dateClickable = requireView().findViewById(R.id.dateClickable);
         LinearLayout timeClickable = requireView().findViewById(R.id.timeClickable);
@@ -199,7 +250,7 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
     }
 
     private void showCustomDatePicker() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext(), R.style.AlertDialogTheme);
+        com.google.android.material.dialog.MaterialAlertDialogBuilder builder = new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialogTheme);
         View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_date_picker, null);
         CalendarView calendarView = dialogView.findViewById(R.id.calendarView);
         LinearLayout repeatButton = dialogView.findViewById(R.id.repeatButton);
@@ -230,7 +281,7 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
     }
 
     private void showCustomTimePicker() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext(), R.style.AlertDialogTheme);
+        com.google.android.material.dialog.MaterialAlertDialogBuilder builder = new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialogTheme);
         View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_time_picker, null);
         TextView hourDisplay = dialogView.findViewById(R.id.hourDisplay);
         TextView minuteDisplay = dialogView.findViewById(R.id.minuteDisplay);
@@ -383,6 +434,9 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
         newTask.setScheduledDate(selectedDateTime.getTime());
         newTask.setHasReminder(reminderSwitch.isChecked());
         newTask.setIcon(selectedIcon);
+        newTask.setFocusModeEnabled(focusModeSwitch.isChecked());
+        newTask.setFocusDurationMinutes(focusDurationMinutes);
+        newTask.setFocusStatus("IDLE");
 
         // Save advanced repeat options if available
         if (currentRepeatOptions != null) {
@@ -405,6 +459,10 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
         editingTask.setRecurringType(recurringType);
         editingTask.setScheduledDate(selectedDateTime.getTime());
         editingTask.setHasReminder(reminderSwitch.isChecked());
+
+        editingTask.setFocusModeEnabled(focusModeSwitch.isChecked());
+        editingTask.setFocusDurationMinutes(focusDurationMinutes);
+        // Never reset focusStatus here — preserve IN_PROGRESS state
 
         // Update icon if changed
         int[] iconOptions = {
@@ -436,18 +494,12 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
             return Task.RecurringType.NONE;
         }
 
-        switch (currentRepeatOptions.frequencyType) {
-            case DAILY:
-                return Task.RecurringType.DAILY;
-            case WEEKLY:
-                return Task.RecurringType.WEEKLY;
-            case MONTHLY:
-                return Task.RecurringType.MONTHLY;
-            case YEARLY:
-                return Task.RecurringType.MONTHLY; // Use monthly as closest approximation
-            default:
-                return Task.RecurringType.NONE;
-        }
+        return switch (currentRepeatOptions.frequencyType) {
+            case DAILY -> Task.RecurringType.DAILY;
+            case WEEKLY -> Task.RecurringType.WEEKLY;
+            case MONTHLY -> Task.RecurringType.MONTHLY;
+            case YEARLY -> Task.RecurringType.MONTHLY; // Use monthly as closest approximation
+        };
     }
 
     private void populateFieldsForEdit() {
@@ -487,6 +539,23 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
 
         // Set reminder switch
         reminderSwitch.setChecked(editingTask.hasReminder());
+
+        // Focus mode fields
+        boolean focusEnabled = editingTask.isFocusModeEnabled();
+        focusModeSwitch.setChecked(focusEnabled);
+        focusDurationMinutes = editingTask.getFocusDurationMinutes();
+        if (focusEnabled) {
+            focusDurationContainer.setVisibility(View.VISIBLE);
+        }
+        focusDurationSeekbar.setProgress(focusDurationMinutes);
+        updateFocusDurationLabel(focusDurationMinutes);
+
+        // If task is IN_PROGRESS, show lock banner and disable save
+        if (editingTask.isFocusInProgress()) {
+            focusLockedBanner.setVisibility(View.VISIBLE);
+            saveButton.setEnabled(false);
+            saveButton.setAlpha(0.5f);
+        }
 
         // Load existing repeat options
         if (editingTask.getRepeatOptionsJson() != null && !editingTask.getRepeatOptionsJson().isEmpty()) {

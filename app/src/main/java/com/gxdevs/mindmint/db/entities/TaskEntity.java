@@ -35,4 +35,10 @@ public class TaskEntity {
     // Exact string representation of completion time as requested
     public String completed_date_str; // e.g., "2023-10-27"
     public String completed_time_str; // e.g., "14:30:00"
+
+    // --- Focus Mode fields ---
+    public int focus_mode_enabled;       // 0 = false, 1 = true
+    public int focus_duration_minutes;   // 0 = open-ended, 1-180 = timed
+    public long focus_time_spent_ms;     // cumulative ms spent in focus on this task
+    public String focus_status;          // "IDLE", "IN_PROGRESS", "PAUSED"
 }

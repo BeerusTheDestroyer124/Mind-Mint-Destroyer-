@@ -15,26 +15,23 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
-import android.text.Editable;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.SpannableStringBuilder;
-import android.text.TextWatcher;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.ImageSpan;
 import android.text.style.StyleSpan;
 import android.text.style.UnderlineSpan;
 import android.util.TypedValue;
-import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.NumberPicker;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -51,7 +48,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.gxdevs.mindmint.Activities.CustomAppSelectionActivity;
 import com.gxdevs.mindmint.Activities.HomeActivity;
 import com.gxdevs.mindmint.Activities.SiteBlockerActivity;
@@ -89,6 +85,7 @@ public class SettingsFragment extends Fragment {
     private static final int ID_SCROLL_TAB = 11;
     private static final int ID_SETTINGS_LOCK = 12;
     private static final int ID_LOCK_TYPE_TAB = 13;
+    private static final int ID_ALWAYS_LOCK_IN = 14;
     private static final int ID_PERM_ACCESSIBILITY = 100;
     private static final int ID_PERM_NOTIFICATION = 101;
     private static final int ID_PERM_ALARM = 102;
@@ -207,6 +204,11 @@ public class SettingsFragment extends Fragment {
                 authenticateToChangeSetting("Change lock type", () -> {
                     SettingsLockManager lockMgr = new SettingsLockManager(requireContext());
                     if (SettingsLockManager.LOCK_TYPE_DEVICE.equals(newLockType)) {
+                        if (!lockMgr.isDeviceLockAvailable()) {
+                            Toast.makeText(requireContext(), "Device lock not found. Please set a custom PIN.", Toast.LENGTH_LONG).show();
+                            refreshList();
+                            return;
+                        }
                         lockMgr.clearCustomPin();
                     }
                     onSuccess.run();
@@ -360,15 +362,6 @@ public class SettingsFragment extends Fragment {
         // BLOCKING RULES
         settingsItems.add(new SettingsItem(SettingsItem.TYPE_HEADER, "BLOCKING RULES"));
 
-        // Custom App Blocking
-        settingsItems
-                .add(new SettingsItem(ID_CUSTOM_APP, SettingsItem.TYPE_SWITCH, getString(R.string.custom_app_blocking),
-                        getString(R.string.select_apps_to_block_during_focus_mode), R.drawable.smartphone, blueIcon)
-                        .setIconValues(R.drawable.shape_circle, mobileBg)
-                        .setSwitch(false, false, null)
-                        .setArrow(true)
-                        .setOnClickListener(v -> authenticateToChangeSetting("Edit Blocked Apps", () -> startActivity(new Intent(requireContext(), CustomAppSelectionActivity.class)))));
-
         // Browser Blocking
         boolean isBrowserBlockEnabled = defaultSharedPreferences.getBoolean(PREF_BLOCK_BROWSERS_DOOMSCROLLING_ENABLED, false);
         SettingsItem browserItem = new SettingsItem(ID_BROWSER_BLOCKER, SettingsItem.TYPE_SWITCH, "Blocker on browsers",
@@ -437,7 +430,7 @@ public class SettingsFragment extends Fragment {
                 .setIconValues(R.drawable.shape_circle, popupBg)
                 .setSeekbar(12, savedDuration - 3, savedDuration + "s"));
 
-        
+
         SettingsLockManager lockMgr = new SettingsLockManager(requireContext());
         boolean isLockEnabled = lockMgr.isLockEnabled();
         String subtitleText;
@@ -456,10 +449,17 @@ public class SettingsFragment extends Fragment {
                 .setSwitch(true, isLockEnabled, (buttonView, isChecked) -> {
                     SettingsLockManager lm = new SettingsLockManager(requireContext());
                     if (isChecked) {
+                        if (lm.isDeviceLock() && !lm.isDeviceLockAvailable()) {
+                            lm.setLockType(SettingsLockManager.LOCK_TYPE_CUSTOM);
+                            Toast.makeText(requireContext(), "Device lock not found. Please set a custom PIN.", Toast.LENGTH_LONG).show();
+                        }
+                        
                         // Enabling: if Custom PIN mode but no PIN set yet, prompt to create one
                         lm.setLockEnabled(true);
                         if (lm.isCustomPin() && !lm.hasCustomPin()) {
-                            lm.showSetCustomPinDialog(requireContext(), false, null);
+                            lm.showSetCustomPinDialog(requireContext(), false, this::refreshList);
+                        } else {
+                            refreshList();
                         }
                     } else {
                         // Disabling: gate behind current auth
@@ -471,17 +471,17 @@ public class SettingsFragment extends Fragment {
                         });
                         return;
                     }
-                    refreshList();
                 })
                 .setOnLongClickListener(v -> {
                     SettingsLockManager lm = new SettingsLockManager(requireContext());
                     if (lm.isLockEnabled() && lm.isCustomPin()) {
                         if (lm.hasCustomPin()) {
                             lm.showVerifyPinDialog(requireContext(), "Enter current PIN to continue", verified -> {
-                                if (verified) lm.showSetCustomPinDialog(requireContext(), true, () -> refreshList());
+                                if (verified)
+                                    lm.showSetCustomPinDialog(requireContext(), true, this::refreshList);
                             });
                         } else {
-                            lm.showSetCustomPinDialog(requireContext(), false, () -> refreshList());
+                            lm.showSetCustomPinDialog(requireContext(), false, this::refreshList);
                         }
                         return true;
                     }
@@ -964,7 +964,7 @@ public class SettingsFragment extends Fragment {
     }
 
     private void showAdultListDownloadDialogAndEnsure() {
-        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(requireContext());
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
         // Inflate custom layout
         View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_adult_list_progress, null);
         builder.setView(dialogView);
@@ -973,7 +973,7 @@ public class SettingsFragment extends Fragment {
         AlertDialog progressDialog = builder.create();
         // Set background transparent for the CardView radius to work
         if (progressDialog.getWindow() != null) {
-            progressDialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0));
+            progressDialog.getWindow().setBackgroundDrawable(new ColorDrawable(0));
         }
         progressDialog.show();
 
@@ -1037,8 +1037,13 @@ public class SettingsFragment extends Fragment {
     private void authenticateToChangeSetting(String reason, Runnable onAuthenticated, Runnable onCancelled) {
         SettingsLockManager lm = new SettingsLockManager(requireContext());
         lm.authenticate((AppCompatActivity) requireActivity(), reason, new SettingsLockManager.AuthCallback() {
-            @Override public void onSuccess() { onAuthenticated.run(); }
-            @Override public void onFailure(String reason2) {
+            @Override
+            public void onSuccess() {
+                onAuthenticated.run();
+            }
+
+            @Override
+            public void onFailure(String reason2) {
                 if (onCancelled != null) onCancelled.run();
                 if (!"Cancelled".equals(reason2)) {
                     Toast.makeText(requireContext(), reason2, Toast.LENGTH_SHORT).show();
@@ -1072,6 +1077,7 @@ public class SettingsFragment extends Fragment {
         }, this::refreshList); // If cancelled or failed, refresh list to rebind the switch!
 
         // Temporarily assign a no-op listener until refreshList triggers
-        buttonView.setOnCheckedChangeListener((v, c) -> {});
+        buttonView.setOnCheckedChangeListener((v, c) -> {
+        });
     }
 }

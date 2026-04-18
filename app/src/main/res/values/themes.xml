@@ -163,12 +163,14 @@
 
     <style name="CustomBottomSheetTheme" parent="Theme.Material3.DayNight.BottomSheetDialog"/>
 
-    <style name="AlertDialogTheme" parent="Theme.Material3.DayNight.Dialog.Alert">
-        <item name="android:background">?attr/secondaryColor</item>
-        <item name="android:textColorPrimary">?attr/tintGlobalColor</item>
-        <item name="android:textColorSecondary">?attr/tintGlobalColor</item>
+    <style name="AlertDialogTheme" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="colorSurface">?attr/surface_card</item>
+        <item name="colorOnSurface">?attr/text_primary</item>
+        <item name="colorOnSurfaceVariant">?attr/text_secondary</item>
         <item name="colorPrimary">@color/brainColor</item>
-        <item name="colorOnSurface">@color/white</item>
+        <item name="shapeAppearanceOverlay">@style/CustomDialogShape</item>
+        <item name="buttonBarPositiveButtonStyle">@style/CustomDialogButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/CustomDialogButton</item>
     </style>
 
     <style name="CustomMaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">

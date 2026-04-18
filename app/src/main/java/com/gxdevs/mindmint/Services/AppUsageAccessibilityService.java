@@ -124,6 +124,34 @@ public class AppUsageAccessibilityService extends AccessibilityService {
     // --- Variables for Custom Blocking (Focus Mode) ---
     private Set<String> customBlockedApps = new HashSet<>();
 
+    // Hardcoded essential apps that are NEVER blocked in Locked In mode
+    private static final Set<String> LOCKED_IN_ESSENTIAL_WHITELIST = new HashSet<>(java.util.Arrays.asList(
+            "com.gxdevs.mindmint",                     // Mind Mint itself
+            "com.android.dialer",                      // Stock dialer
+            "com.google.android.dialer",               // Google dialer (Pixel)
+            "com.samsung.android.incallui",            // Samsung call UI
+            "com.android.mms",                         // Stock SMS
+            "com.google.android.apps.messaging",       // Google Messages
+            "com.android.messaging",                   // AOSP Messages
+            "com.android.settings",                   // Settings
+            "com.android.camera",                      // AOSP camera
+            "com.android.camera2",
+            "com.google.android.GoogleCamera",
+            "com.sec.android.app.camera",             // Samsung Camera
+            "android",                                 // System UI
+            "com.android.systemui",
+            "com.android.phone",
+            "com.google.android.packageinstaller",     // Installer
+            "com.android.packageinstaller",            // Installer
+            "com.google.android.permissioncontroller", // Permissions
+            "com.android.permissioncontroller",        // Permissions
+            "com.google.android.inputmethod.latin",    // Gboard
+            "com.touchtype.swiftkey",                  // SwiftKey
+            "com.samsung.android.honeyboard"           // Samsung Keyboard
+    ));
+    public static final String PREF_LOCKED_IN_EXTRA_WHITELIST = "pref_locked_in_extra_whitelist";
+    private final Set<String> dynamicLauncherPackages = new HashSet<>();
+
     // --- Variables for Reminders ---
     private boolean remindDoomScrollingEnabled;
     private int remindDoomScrollingMinutes;
@@ -226,6 +254,7 @@ public class AppUsageAccessibilityService extends AccessibilityService {
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
 
         BlockedSitesManager.ensureSetsExist(getApplicationContext());
+        loadLauncherPackages();
 
         notificationRestoreReceiver = new BroadcastReceiver() {
             @Override
@@ -361,6 +390,19 @@ public class AppUsageAccessibilityService extends AccessibilityService {
         ContextCompat.registerReceiver(this, midnightStateRefreshReceiver, midnightRefreshFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         scheduleMidnightReset();
+    }
+
+    private void loadLauncherPackages() {
+        Intent intent = new Intent(Intent.ACTION_MAIN);
+        intent.addCategory(Intent.CATEGORY_HOME);
+        List<ResolveInfo> resolveInfos = getPackageManager().queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
+        if (resolveInfos != null) {
+            for (ResolveInfo info : resolveInfos) {
+                if (info.activityInfo != null && info.activityInfo.packageName != null) {
+                    dynamicLauncherPackages.add(info.activityInfo.packageName);
+                }
+            }
+        }
     }
 
     @Override
@@ -583,15 +625,27 @@ public class AppUsageAccessibilityService extends AccessibilityService {
             // Single root node fetch for performance - reduces IPC calls
             rootNode = getRootInActiveWindow();
 
-            if (FocusService.isPublicFocusRun && customBlockedApps != null
-                    && customBlockedApps.contains(eventPackageName)) {
-                Intent intent = new Intent(this, BlockingOverlayDisplayActivity.class);
-                intent.putExtra(EXTRA_IS_FOCUS, true);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                startActivity(intent);
-                resetUsageAndTimersForPackage(eventPackageName); // Resets general usage and specific timers for the
-                // package
-                return;
+            if (FocusService.isPublicFocusRun) {
+                boolean isLockedIn = sharedPreferences.getBoolean(FocusService.PREF_IS_LOCKED_IN, false);
+                if (isLockedIn) {
+                    // Locked In mode: block everything NOT in the whitelist
+                    if (!isPackageAllowedInLockedIn(eventPackageName)) {
+                        Intent intent = new Intent(this, BlockingOverlayDisplayActivity.class);
+                        intent.putExtra(EXTRA_IS_FOCUS, true);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                        startActivity(intent);
+                        resetUsageAndTimersForPackage(eventPackageName);
+                        return;
+                    }
+                } else if (customBlockedApps != null && customBlockedApps.contains(eventPackageName)) {
+                    // Normal focus mode: only block user-selected apps
+                    Intent intent = new Intent(this, BlockingOverlayDisplayActivity.class);
+                    intent.putExtra(EXTRA_IS_FOCUS, true);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    startActivity(intent);
+                    resetUsageAndTimersForPackage(eventPackageName);
+                    return;
+                }
             }
             if (eventType != AccessibilityEvent.TYPE_VIEW_SCROLLED) {
                 if (remindDoomScrollingEnabled || scrollCounterEnabled) {
@@ -842,6 +896,20 @@ public class AppUsageAccessibilityService extends AccessibilityService {
         Intent intent = new Intent(IntentActions.getActionTimeUpdated(this));
         intent.setPackage(getPackageName());
         sendBroadcast(intent);
+    }
+
+    /**
+     * Returns true if the given package should be allowed through in Locked In mode.
+     * Checks the hardcoded essentials whitelist AND any user-added extra packages.
+     */
+    private boolean isPackageAllowedInLockedIn(String packageName) {
+        if (packageName == null) return true;
+        if (LOCKED_IN_ESSENTIAL_WHITELIST.contains(packageName)) return true;
+        if (dynamicLauncherPackages.contains(packageName)) return true; // Dynamically whitelisted launchers
+        // Check user-added packages
+        Set<String> extraWhitelist = sharedPreferences.getStringSet(
+                PREF_LOCKED_IN_EXTRA_WHITELIST, new HashSet<>());
+        return extraWhitelist.contains(packageName);
     }
 
     private void handleBackPress(String currentEventPackageName, AccessibilityNodeInfo rootNode,

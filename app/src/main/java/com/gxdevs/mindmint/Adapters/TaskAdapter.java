@@ -101,6 +101,16 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.checkBox.setChecked(task.isCompleted());
             holder.checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isChecked != task.isCompleted()) {
+                    if (isChecked && task.isFocusModeEnabled()) {
+                        // User checked it, but it's focus mode enabled, so open focus mode instead!
+                        buttonView.setChecked(false); // Revert checkbox visually
+                        if (onTaskClickListener != null) {
+                            int actualPosition = findTaskPosition(task);
+                            onTaskClickListener.onTaskClick(task, actualPosition);
+                        }
+                        return; // do not complete it
+                    }
+
                     task.setCompleted(isChecked);
                     applyCompletedStyling(holder, isChecked);
 
@@ -132,6 +142,13 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
                 onTaskClickListener.onTaskDelete(task, actualPosition);
             }
             holder.swipeLayout.close(true);
+        });
+
+        holder.taskCardView.setOnClickListener(v -> {
+            if (onTaskClickListener != null) {
+                int actualPosition = findTaskPosition(task);
+                onTaskClickListener.onTaskClick(task, actualPosition);
+            }
         });
     }
 
@@ -204,22 +221,19 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     }
 
     private void sortTasksByDeadlineAndPriority() {
-        filteredTaskList.sort(new Comparator<Task>() {
-            @Override
-            public int compare(Task t1, Task t2) {
-                int p1 = t1.getPriority() != null ? t1.getPriority().getValue() : 0;
-                int p2 = t2.getPriority() != null ? t2.getPriority().getValue() : 0;
-                int priorityCompare = Integer.compare(p2, p1); // Descending order (high to low)
-                if (priorityCompare != 0) return priorityCompare;
+        filteredTaskList.sort((t1, t2) -> {
+            int p1 = t1.getPriority() != null ? t1.getPriority().getValue() : 0;
+            int p2 = t2.getPriority() != null ? t2.getPriority().getValue() : 0;
+            int priorityCompare = Integer.compare(p2, p1); // Descending order (high to low)
+            if (priorityCompare != 0) return priorityCompare;
 
-                Date d1 = t1.getScheduledDate();
-                Date d2 = t2.getScheduledDate();
-                if (d1 != null && d2 != null) {
-                    return d1.compareTo(d2); // Ascending order (earliest first)
-                } else if (d1 != null) return -1; // t1 has date, t2 doesn't - t1 comes first
-                else if (d2 != null) return 1; // t2 has date, t1 doesn't - t2 comes first
-                else return 0; // Both null, keep order
-            }
+            Date d1 = t1.getScheduledDate();
+            Date d2 = t2.getScheduledDate();
+            if (d1 != null && d2 != null) {
+                return d1.compareTo(d2); // Ascending order (earliest first)
+            } else if (d1 != null) return -1; // t1 has date, t2 doesn't - t1 comes first
+            else if (d2 != null) return 1; // t2 has date, t1 doesn't - t2 comes first
+            else return 0; // Both null, keep order
         });
     }
 

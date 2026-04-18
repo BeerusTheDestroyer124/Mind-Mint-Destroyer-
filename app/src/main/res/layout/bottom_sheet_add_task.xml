@@ -314,6 +314,129 @@
 
     </LinearLayout>
 
+    <!-- Focus Mode Section -->
+    <LinearLayout
+        android:id="@+id/focusModeRow"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_input_field"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toBottomOf="@+id/reminderSection">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginStart="15dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_target"
+            app:tint="@color/brand_pink" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:fontFamily="@font/inter18regular"
+            android:text="Focus Mode"
+            android:textColor="?attr/tintGlobalColor"
+            android:textSize="16sp" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/focusModeSwitch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="15dp"
+            app:thumbTint="?attr/switchThumb"
+            app:trackTint="?attr/switchTrack" />
+
+    </LinearLayout>
+
+    <!-- Focus Duration Expand Container (shown when Focus Mode ON) -->
+    <LinearLayout
+        android:id="@+id/focusDurationContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:background="@drawable/bg_input_field"
+        android:orientation="vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="14dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@+id/focusModeRow">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="@font/inter18regular"
+                android:text="Focus Duration"
+                android:textColor="?attr/text_secondary"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/focusDurationLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/poppins_semibold"
+                android:text="Open Ended"
+                android:textColor="@color/brand_pink"
+                android:textSize="14sp" />
+
+        </LinearLayout>
+
+        <SeekBar
+            android:id="@+id/focusDurationSeekbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:max="180"
+            android:min="0"
+            android:progress="0"
+            android:progressTint="@color/brand_pink"
+            android:thumbTint="@color/brand_pink" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:alpha="0.5"
+            android:fontFamily="@font/inter18regular"
+            android:text="0 = Open Ended  ·  max 180 min"
+            android:textColor="?attr/text_tertiary"
+            android:textSize="11sp" />
+
+        <!-- Lock while in progress banner (shown only when editing a running task) -->
+        <LinearLayout
+            android:id="@+id/focusLockedBanner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_brand_gradient"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="10dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/inter18regular"
+                android:gravity="center"
+                android:text="Task is in Focus Mode. Stop session to edit."
+                android:textColor="@color/white"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+    </LinearLayout>
+
     <!-- Action Buttons -->
     <LinearLayout
         android:id="@+id/actionButtons"
@@ -324,7 +447,7 @@
         android:layout_marginBottom="20dp"
         android:orientation="horizontal"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/reminderSection">
+        app:layout_constraintTop_toBottomOf="@+id/focusDurationContainer">
 
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/cancelButton"
