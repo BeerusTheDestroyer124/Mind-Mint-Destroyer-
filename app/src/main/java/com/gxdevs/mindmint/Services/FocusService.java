@@ -157,6 +157,7 @@ public class FocusService extends Service {
             this.idleTimeoutStart = existing.idle_timeout_start;
             this.crystalRevealFraction = existing.crystal_reveal_fraction;
             this.isRunning = true;
+            isPublicFocusRun = true; // Restore public flag so AccessibilityService knows focus is active
 
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
             this.linkedTaskId = prefs.getString(PREF_LINKED_TASK_ID, null);
@@ -482,17 +483,29 @@ public class FocusService extends Service {
         sessionStartRealtime = 0L;
         wallStartTimeMillis = 0L;
 
-        // Clear persisted state
+        // Clear persisted state (Room)
         FocusStateEntity state = new FocusStateEntity();
         state.id = 1;
         state.active = false;
         focusDao.insertOrReplaceState(state);
+
+        // Clear ALL session prefs — prevents stale Lock In / task-link state
+        PreferenceManager.getDefaultSharedPreferences(this).edit()
+                .putBoolean(PREF_IS_LOCKED_IN, false)
+                .putBoolean(PREF_IS_OPEN_ENDED, false)
+                .remove(PREF_LINKED_TASK_ID)
+                .apply();
 
         durationHandler.removeCallbacksAndMessages(null);
         notificationHandler.removeCallbacks(updateNotificationTask);
         cancelStopAlarm();
 
         Toast.makeText(this, "Session saved due to inactivity.", Toast.LENGTH_SHORT).show();
+
+        // Notify UI that focus session has ended
+        Intent ended = new Intent(com.gxdevs.mindmint.Common.IntentActions.getActionFocusSessionEnded(this));
+        ended.setPackage(getPackageName());
+        sendBroadcast(ended);
 
         stopForeground(true);
         stopSelf();
@@ -695,6 +708,11 @@ public class FocusService extends Service {
 
             stopForeground(true);
             stopSelf();
+
+            // Notify UI that focus session ended (alarm-triggered stop won't call onResume)
+            Intent ended = new Intent(com.gxdevs.mindmint.Common.IntentActions.getActionFocusSessionEnded(this));
+            ended.setPackage(getPackageName());
+            sendBroadcast(ended);
         }
 
     }

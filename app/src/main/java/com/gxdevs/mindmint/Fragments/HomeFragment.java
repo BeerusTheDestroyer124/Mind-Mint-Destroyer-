@@ -217,6 +217,14 @@ public class HomeFragment extends Fragment {
         });
 
         playPause.setOnClickListener(v -> {
+            // Block pause if a focus/lock-in session is active
+            SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(requireContext());
+            boolean isFocusActive = com.gxdevs.mindmint.Services.FocusService.isPublicFocusRun
+                    || sp.getBoolean(com.gxdevs.mindmint.Services.FocusService.PREF_IS_LOCKED_IN, false);
+            if (isFocusActive) {
+                Toast.makeText(requireContext(), "You are in focus mode right now.", Toast.LENGTH_SHORT).show();
+                return;
+            }
             if (isServicePaused) {
                 resumeService();
             } else {
@@ -589,6 +597,14 @@ public class HomeFragment extends Fragment {
         } else {
             playPause.setIcon(ContextCompat.getDrawable(requireContext(), R.drawable.ic_pause));
         }
+    }
+
+    /** Bug 7 fix: re-read isServicePaused from prefs and refresh icon. Called externally on session end. */
+    public void refreshPauseButtonState() {
+        if (!isAdded() || playPause == null) return;
+        isServicePaused = PreferenceManager.getDefaultSharedPreferences(requireContext())
+                .getBoolean("isServicePaused", false);
+        updatePlayPauseButton();
     }
 
     private void checkAndShowPermissionCard() {
@@ -1632,7 +1648,10 @@ public class HomeFragment extends Fragment {
             setupTaskList();
         }
         // Always refresh service state from prefs on resume
-        isServicePaused = sharedPreferences.getBoolean("isServicePaused", false);
+        if (sharedPreferences != null) {
+            isServicePaused = sharedPreferences.getBoolean("isServicePaused", false);
+            if (playPause != null) updatePlayPauseButton();
+        }
         updatePlayPauseButton();
         updateAllData();
         // Reset habit order on resume to show any new habits

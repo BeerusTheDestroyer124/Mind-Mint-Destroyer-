@@ -434,6 +434,11 @@ public class FocusMode extends AppCompatActivity {
                         serviceIntent.putExtra("topicName", topicName);
 
                         ContextCompat.startForegroundService(this, serviceIntent);
+                        // Clear any stale service pause — blocking must be active during focus
+                        PreferenceManager.getDefaultSharedPreferences(this).edit()
+                                .putBoolean("isServicePaused", false)
+                                .putLong("resumeTime", 0)
+                                .apply();
                         circularSeekBar.setProgress(0f);
                         if (!isBound) {
                             bindService();

@@ -289,6 +289,12 @@ public class AppUsageAccessibilityService extends AccessibilityService {
             public void onReceive(Context context, Intent intent) {
                 long pauseDuration = intent.getLongExtra("pause_duration", 0);
                 if (pauseDuration > 0) {
+                    // Bug 3 fix: refuse pause if Lock In session is active at the receiver level
+                    boolean lockedIn = sharedPreferences.getBoolean(FocusService.PREF_IS_LOCKED_IN, false);
+                    if (FocusService.isPublicFocusRun && lockedIn) {
+                        Toast.makeText(context, "You are in focus mode right now.", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
                     long resumeTime = System.currentTimeMillis() + pauseDuration;
                     sharedPreferences.edit()
                             .putBoolean("isServicePaused", true)
@@ -611,7 +617,11 @@ public class AppUsageAccessibilityService extends AccessibilityService {
     public void onAccessibilityEvent(AccessibilityEvent event) {
         AccessibilityNodeInfo rootNode = null;
         try {
-            if (sharedPreferences.getBoolean("isServicePaused", false)) {
+            // Bug 1/6 fix: respect isServicePaused ONLY when NOT in Lock In mode.
+            // Lock In blocking must always fire, even if user previously paused the service.
+            boolean isLockedInActive = FocusService.isPublicFocusRun
+                    && sharedPreferences.getBoolean(FocusService.PREF_IS_LOCKED_IN, false);
+            if (!isLockedInActive && sharedPreferences.getBoolean("isServicePaused", false)) {
                 return;
             }
             PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
@@ -620,7 +630,10 @@ public class AppUsageAccessibilityService extends AccessibilityService {
             String eventPackageName = event.getPackageName() != null ? event.getPackageName().toString() : null;
             int eventType = event.getEventType();
 
-            handleScrollCounting(event);
+            // Bug 5 fix: skip scroll counting if Lock In will block this package anyway
+            if (!isLockedInActive || isPackageAllowedInLockedIn(eventPackageName)) {
+                handleScrollCounting(event);
+            }
 
             // Single root node fetch for performance - reduces IPC calls
             rootNode = getRootInActiveWindow();
@@ -850,9 +863,13 @@ public class AppUsageAccessibilityService extends AccessibilityService {
             return;
         }
         AccessibilityNodeInfo rootNode = getRootInActiveWindow();
-        if (isReminderViewVisible(rootNode, packageName, viewId)) {
+        // If rootNode is null, we can't verify the view - but we still know the correct
+        // event type fired for the correct package, so count it anyway as a fallback.
+        boolean viewVisible = rootNode == null || isReminderViewVisible(rootNode, packageName, viewId);
+        if (rootNode != null) {
             rootNode.recycle();
-
+        }
+        if (viewVisible) {
             long currentTime = System.currentTimeMillis();
             Long lastTimeValue = lastScrollEventTimestamp.get(appTag);
             long lastTime = lastTimeValue != null ? lastTimeValue : 0L;
@@ -860,9 +877,6 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                 lastScrollEventTimestamp.put(appTag, currentTime);
                 incrementScrollCount(packageName);
             }
-        } else {
-            if (rootNode != null)
-                rootNode.recycle();
         }
     }
 

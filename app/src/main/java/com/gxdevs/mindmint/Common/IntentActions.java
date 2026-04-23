@@ -18,4 +18,8 @@ public class IntentActions {
     public static String getActionPauseService(Context context) {
         return context.getPackageName() + ".MINDMINT_PAUSE_SERVICE_ACTION";
     }
-} 
+
+    public static String getActionFocusSessionEnded(Context context) {
+        return context.getPackageName() + ".MINDMINT_FOCUS_SESSION_ENDED";
+    }
+}

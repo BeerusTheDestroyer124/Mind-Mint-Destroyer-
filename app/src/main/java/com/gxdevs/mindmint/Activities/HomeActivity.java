@@ -58,6 +58,7 @@ public class HomeActivity extends AppCompatActivity {
     private HomePagerAdapter pagerAdapter;
     private ImageButton btnHome;
     private MaterialButton lockInPill;
+    private android.content.BroadcastReceiver focusSessionEndedReceiver;
 
     private final List<FrameLayout> navItems = new ArrayList<>();
     private final List<ImageView>   navIcons = new ArrayList<>();
@@ -118,6 +119,33 @@ public class HomeActivity extends AppCompatActivity {
         updateLockInPillLabel();
         
         lockInPill.postDelayed(this::checkAndShowLockInTutorial, 500);
+
+        // Bug 4 fix: listen for alarm-triggered session ends while activity is visible
+        focusSessionEndedReceiver = new android.content.BroadcastReceiver() {
+            @Override
+            public void onReceive(android.content.Context context, Intent intent) {
+                updateLockInPillLabel();
+                // Also refresh the home fragment's play/pause button state
+                androidx.fragment.app.Fragment f = getSupportFragmentManager()
+                        .findFragmentByTag("f" + HomePagerAdapter.PAGE_HOME);
+                if (f instanceof com.gxdevs.mindmint.Fragments.HomeFragment) {
+                    ((com.gxdevs.mindmint.Fragments.HomeFragment) f).refreshPauseButtonState();
+                }
+            }
+        };
+        androidx.core.content.ContextCompat.registerReceiver(this, focusSessionEndedReceiver,
+                new android.content.IntentFilter(
+                        com.gxdevs.mindmint.Common.IntentActions.getActionFocusSessionEnded(this)),
+                androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (focusSessionEndedReceiver != null) {
+            try { unregisterReceiver(focusSessionEndedReceiver); } catch (Exception ignored) {}
+            focusSessionEndedReceiver = null;
+        }
     }
 
     @Override
@@ -181,7 +209,14 @@ public class HomeActivity extends AppCompatActivity {
         });
 
         lockInPill.setOnClickListener(v -> {
+            // If focus/lock-in session is already active, open FocusMode to show timer
             SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+            boolean isAlreadyActive = FocusService.isPublicFocusRun
+                    || sharedPreferences.getBoolean(FocusService.PREF_IS_LOCKED_IN, false);
+            if (isAlreadyActive) {
+                startActivity(new Intent(this, FocusMode.class));
+                return;
+            }
             long savedMs = sharedPreferences.getLong(PREF_LOCK_IN_SAVED_MS, 0);
             if (savedMs > 0) {
                 // One-tap lock: start immediately with saved time
@@ -193,6 +228,14 @@ public class HomeActivity extends AppCompatActivity {
 
         lockInPill.setOnLongClickListener(v -> {
             // Long press always shows the picker so user can change the saved time
+            // But not if session is already active
+            SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+            boolean isAlreadyActive = FocusService.isPublicFocusRun
+                    || sharedPreferences.getBoolean(FocusService.PREF_IS_LOCKED_IN, false);
+            if (isAlreadyActive) {
+                startActivity(new Intent(this, FocusMode.class));
+                return true;
+            }
             showLockInSheet();
             return true;
         });
@@ -263,12 +306,19 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void startLockInMode(long durationMs) {
+        // Bug 6 fix: clear any stale pause — old pauses must not survive into Lock In
+        PreferenceManager.getDefaultSharedPreferences(this).edit()
+                .putBoolean("isServicePaused", false)
+                .putLong("resumeTime", 0)
+                .apply();
+
         Intent serviceIntent = new Intent(this, FocusService.class);
         serviceIntent.setAction(FocusService.ACTION_START_FOREGROUND_SERVICE);
         serviceIntent.putExtra("durationInMillis", durationMs);
         serviceIntent.putExtra(FocusService.EXTRA_IS_LOCKED_IN, true);
         serviceIntent.putExtra("topicName", "Locked In");
-        startService(serviceIntent);
+        // Use foreground service start — required on Android 8+ for background starts
+        androidx.core.content.ContextCompat.startForegroundService(this, serviceIntent);
         // Open FocusMode activity for visual feedback
         Intent focusIntent = new Intent(this, FocusMode.class);
         startActivity(focusIntent);
@@ -277,17 +327,21 @@ public class HomeActivity extends AppCompatActivity {
 
     public void updateLockInPillLabel() {
         if (lockInPill == null) return;
-        
-        boolean isHome = viewPager != null && viewPager.getCurrentItem() == HomePagerAdapter.PAGE_HOME;
 
-        if (!Utils.isAccessibilityPermissionGranted(this) || !isHome) {
+        boolean isHome = viewPager != null && viewPager.getCurrentItem() == HomePagerAdapter.PAGE_HOME;
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+
+        // Hide pill when not on home, no accessibility, OR a focus/lock-in session is active
+        boolean isFocusActive = FocusService.isPublicFocusRun
+                || sharedPreferences.getBoolean(FocusService.PREF_IS_LOCKED_IN, false);
+
+        if (!Utils.isAccessibilityPermissionGranted(this) || !isHome || isFocusActive) {
             lockInPill.setVisibility(View.GONE);
             return;
         } else {
             lockInPill.setVisibility(View.VISIBLE);
         }
-        
-        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+
         long savedMs = sharedPreferences.getLong(PREF_LOCK_IN_SAVED_MS, 0);
         if (savedMs > 0) {
             int totalMin = (int) (savedMs / 60000);
