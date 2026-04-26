@@ -52,10 +52,10 @@ import android.widget.Toast;
 import androidx.activity.EdgeToEdge;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -74,6 +74,7 @@ import com.google.android.material.timepicker.MaterialTimePicker;
 import com.google.android.material.timepicker.TimeFormat;
 import com.gxdevs.mindmint.Adapters.FocusScheduleAdapter;
 import com.gxdevs.mindmint.Models.Habit;
+import com.gxdevs.mindmint.Utils.CustomDialogUtils;
 import com.gxdevs.mindmint.Utils.FocusScheduleManager;
 import com.gxdevs.mindmint.Utils.HabitManager;
 import com.gxdevs.mindmint.Utils.StreakManager;
@@ -93,6 +94,7 @@ import com.gxdevs.mindmint.Utils.TaskManager;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import me.tankery.lib.circularseekbar.CircularSeekBar;
@@ -125,7 +127,11 @@ public class FocusMode extends AppCompatActivity {
     private ImageView settingsBtn;
     private TextView pomodoroIndicator;
     private View topicsContainer;
-    private boolean isTestMode = false;
+    private final boolean isTestMode = false;
+    /**
+     * Single background thread for all DB writes — shut down in onDestroy.
+     */
+    private final ExecutorService dbExecutor = Executors.newSingleThreadExecutor();
 
     // Task-Linked Mode Views
     private View taskCardOverlay;
@@ -193,7 +199,8 @@ public class FocusMode extends AppCompatActivity {
                 try {
                     Task t = new TaskManager(this).getTaskById(linkedTaskIdExtra);
                     if (t != null) linkedTopicNameExtra = t.getName();
-                } catch (Throwable ignored) {}
+                } catch (Throwable ignored) {
+                }
             }
         }
         // Re-run setup so the task card and open-ended UI show correctly
@@ -223,15 +230,11 @@ public class FocusMode extends AppCompatActivity {
                 instructionText.setText("Open Ended Focus");
 
                 // Center the timer text by disconnecting it from progressContainer
-                androidx.constraintlayout.widget.ConstraintLayout mainLayout = findViewById(R.id.main);
-                androidx.constraintlayout.widget.ConstraintSet set = new androidx.constraintlayout.widget.ConstraintSet();
+                ConstraintLayout mainLayout = findViewById(R.id.main);
+                ConstraintSet set = new ConstraintSet();
                 set.clone(mainLayout);
-                set.connect(R.id.timerText, androidx.constraintlayout.widget.ConstraintSet.TOP,
-                        androidx.constraintlayout.widget.ConstraintSet.PARENT_ID,
-                        androidx.constraintlayout.widget.ConstraintSet.TOP);
-                set.connect(R.id.timerText, androidx.constraintlayout.widget.ConstraintSet.BOTTOM,
-                        androidx.constraintlayout.widget.ConstraintSet.PARENT_ID,
-                        androidx.constraintlayout.widget.ConstraintSet.BOTTOM);
+                set.connect(R.id.timerText, ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP);
+                set.connect(R.id.timerText, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM);
                 set.applyTo(mainLayout);
                 timerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 65f);
             }
@@ -251,37 +254,31 @@ public class FocusMode extends AppCompatActivity {
         }
     }
 
-    /**
-     * Shows "Did you complete the task?" dialog.
-     * @param finishAfter  if true, finish() is called after the dialog choice.
-     * @param alreadyCompleting  if true, the positive path invokes completeLinkedTask().
-     *                           if false, both paths stop the service and finish.
-     */
-    private void showStopTaskDialog(boolean finishAfter, boolean alreadyCompleting) {
+    private void showStopTaskDialog() {
         String activeTaskId = (linkedTaskIdExtra != null && !linkedTaskIdExtra.isEmpty())
                 ? linkedTaskIdExtra
                 : (focusService != null ? focusService.getLinkedTaskId() : null);
         if (activeTaskId == null || activeTaskId.isEmpty()) {
             // No task linked — just stop normally
             if (isBound && focusService != null) focusService.stopService();
-            if (finishAfter) finish();
+            finish();
             return;
         }
-        com.gxdevs.mindmint.Utils.CustomDialogUtils.showCustomDialog(this,
+        CustomDialogUtils.showCustomDialog(this,
                 "Stop Focus",
                 "Did you complete the task?",
                 "Yes, mark complete",
                 "No, keep it pending",
                 () -> {
                     completeLinkedTask();
-                    if (finishAfter) finish();
+                    finish();
                 },
                 () -> {
                     if (isBound && focusService != null) {
                         focusService.stopService();
                     }
                     sendBroadcast(new Intent(FocusService.ACTION_TASK_FOCUS_UPDATE));
-                    if (finishAfter) finish();
+                    finish();
                 });
     }
 
@@ -290,6 +287,8 @@ public class FocusMode extends AppCompatActivity {
             focusService.stopService(); // This saves time and stops timer
         }
 
+        if (linkedTaskIdExtra == null || linkedTaskIdExtra.isEmpty()) return;
+
         TaskManager tm = new TaskManager(this);
         List<Task> tasks = tm.loadTasks();
         boolean updated = false;
@@ -297,14 +296,14 @@ public class FocusMode extends AppCompatActivity {
         for (Task t : tasks) {
             if (t.getId().equals(linkedTaskIdExtra)) {
                 t.setCompleted(true);
-                t.setCompletedDate(new java.util.Date()); // Make sure date is set
+                t.setCompletedDate(new java.util.Date());
                 t.setFocusStatus("IDLE");
                 updated = true;
                 completedTask = t;
                 break;
             }
         }
-        if (updated) {
+        if (updated && completedTask != null) {
             tm.saveTasks(tasks);
 
             if (!completedTask.isHabit()) {
@@ -334,11 +333,10 @@ public class FocusMode extends AppCompatActivity {
                 }
             }
 
-            Toast.makeText(this, completedTask.isRecurring() ? "Task completed for today!" : "Task completed: " + completedTask.getName(), Toast.LENGTH_SHORT).show();
-            // NOTE: FocusService.stopTimer() already sends ACTION_TASK_FOCUS_UPDATE broadcast
-            // for the linked task. We only send an extra broadcast here to cover the case
-            // where the service stopped before marking the task complete (race condition safety).
-            // TasksFragment handles duplicate broadcasts gracefully (just reloads list).
+            String msg = completedTask.isRecurring()
+                    ? "Task completed for today!"
+                    : "Task completed: " + completedTask.getName();
+            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
             sendBroadcast(new Intent(FocusService.ACTION_TASK_FOCUS_UPDATE));
         }
     }
@@ -354,10 +352,11 @@ public class FocusMode extends AppCompatActivity {
                         ? linkedTaskIdExtra : focusService.getLinkedTaskId();
                 if (activeTaskId != null && !activeTaskId.isEmpty()) {
                     // Task-linked session: ask complete or pending
-                    showStopTaskDialog(/*finishAfter=*/ true, /*alreadyCompleting=*/ false);
+                    showStopTaskDialog();
                 } else {
                     // Normal standalone session: just stop
                     focusService.stopService();
+                    finish();
                 }
             }
         });
@@ -394,12 +393,13 @@ public class FocusMode extends AppCompatActivity {
                             // Running or in break — need to stop
                             String activeTaskId = (linkedTaskIdExtra != null && !linkedTaskIdExtra.isEmpty())
                                     ? linkedTaskIdExtra
-                                    : (focusService != null ? focusService.getLinkedTaskId() : null);
+                                    : focusService.getLinkedTaskId();
                             if (activeTaskId != null && !activeTaskId.isEmpty()) {
                                 // Task-linked: ask complete or pending before stopping
-                                showStopTaskDialog(/*finishAfter=*/ true, /*alreadyCompleting=*/ false);
+                                showStopTaskDialog();
                             } else {
                                 focusService.stopService();
+                                finish();
                             }
                         }
                     } else {
@@ -565,7 +565,6 @@ public class FocusMode extends AppCompatActivity {
                         int minDuration = prefs.getInt(PREF_FOCUS_DURATION, 25);
                         if (val < minDuration) {
                             val = minDuration;
-                            // Update seekbar to reflect the forced minimum
                             circularSeekBar.setProgress((float) val);
                         }
                     }
@@ -983,6 +982,7 @@ public class FocusMode extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         handler.removeCallbacks(updateUITask);
+        dbExecutor.shutdownNow();
         if (isBound) {
             try {
                 unbindService(connection);
@@ -1129,7 +1129,7 @@ public class FocusMode extends AppCompatActivity {
 
             updatePomodoroIndicator();
 
-            if (!isOpenEndedExtra && (focusService == null || !focusService.isOpenEnded())) {
+            if (!isOpenEndedExtra && focusService != null && !focusService.isOpenEnded()) {
                 long totalDuration = focusService.getCurrentDuration();
                 float progress = elapsedMillis / (float) (totalDuration > 0 ? totalDuration : 1);
                 float seekbarProgress = progress * 180f;
@@ -1207,8 +1207,8 @@ public class FocusMode extends AppCompatActivity {
             }
             showTimerRunningState();
 
-            androidx.constraintlayout.widget.ConstraintLayout mainLayout = findViewById(R.id.main);
-            androidx.constraintlayout.widget.ConstraintSet set = new androidx.constraintlayout.widget.ConstraintSet();
+            ConstraintLayout mainLayout = findViewById(R.id.main);
+            ConstraintSet set = new ConstraintSet();
             set.clone(mainLayout);
 
             if (isOpenEnded) {
@@ -1224,20 +1224,19 @@ public class FocusMode extends AppCompatActivity {
                 mintCrystalsTxt.setVisibility(View.GONE);
 
                 // Center timer text
-                set.connect(R.id.timerText, androidx.constraintlayout.widget.ConstraintSet.TOP,
-                        androidx.constraintlayout.widget.ConstraintSet.PARENT_ID,
-                        androidx.constraintlayout.widget.ConstraintSet.TOP);
-                set.connect(R.id.timerText, androidx.constraintlayout.widget.ConstraintSet.BOTTOM,
-                        androidx.constraintlayout.widget.ConstraintSet.PARENT_ID,
-                        androidx.constraintlayout.widget.ConstraintSet.BOTTOM);
+                set.connect(R.id.timerText, ConstraintSet.TOP,
+                        ConstraintSet.PARENT_ID,
+                        ConstraintSet.TOP);
+                set.connect(R.id.timerText, ConstraintSet.BOTTOM,
+                        ConstraintSet.PARENT_ID,
+                        ConstraintSet.BOTTOM);
                 timerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 65f);
             } else {
                 updateThemeForDuration(selectedMinutes);
 
                 // Restore timer text below progressContainer
-                set.clear(R.id.timerText, androidx.constraintlayout.widget.ConstraintSet.BOTTOM);
-                set.connect(R.id.timerText, androidx.constraintlayout.widget.ConstraintSet.TOP,
-                        R.id.progressContainer, androidx.constraintlayout.widget.ConstraintSet.BOTTOM);
+                set.clear(R.id.timerText, ConstraintSet.BOTTOM);
+                set.connect(R.id.timerText, ConstraintSet.TOP, R.id.progressContainer, ConstraintSet.BOTTOM);
                 timerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 50f);
 
                 // Hide coins for task-linked timed sessions or locked-in state
@@ -1266,23 +1265,22 @@ public class FocusMode extends AppCompatActivity {
             // Timer stopped state
             showTimerStoppedState();
 
-            androidx.constraintlayout.widget.ConstraintLayout mainLayout = findViewById(R.id.main);
-            androidx.constraintlayout.widget.ConstraintSet set = new androidx.constraintlayout.widget.ConstraintSet();
+            ConstraintLayout mainLayout = findViewById(R.id.main);
+            ConstraintSet set = new ConstraintSet();
             set.clone(mainLayout);
 
             if (isOpenEnded) {
                 // For open-ended sessions that have stopped, keep timer centered and crystals gone
-                set.connect(R.id.timerText, androidx.constraintlayout.widget.ConstraintSet.TOP,
-                        androidx.constraintlayout.widget.ConstraintSet.PARENT_ID,
-                        androidx.constraintlayout.widget.ConstraintSet.TOP);
-                set.connect(R.id.timerText, androidx.constraintlayout.widget.ConstraintSet.BOTTOM,
-                        androidx.constraintlayout.widget.ConstraintSet.PARENT_ID,
-                        androidx.constraintlayout.widget.ConstraintSet.BOTTOM);
+                set.connect(R.id.timerText, ConstraintSet.TOP,
+                        ConstraintSet.PARENT_ID,
+                        ConstraintSet.TOP);
+                set.connect(R.id.timerText, ConstraintSet.BOTTOM,
+                        ConstraintSet.PARENT_ID,
+                        ConstraintSet.BOTTOM);
                 timerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 65f);
             } else {
-                set.clear(R.id.timerText, androidx.constraintlayout.widget.ConstraintSet.BOTTOM);
-                set.connect(R.id.timerText, androidx.constraintlayout.widget.ConstraintSet.TOP,
-                        R.id.progressContainer, androidx.constraintlayout.widget.ConstraintSet.BOTTOM);
+                set.clear(R.id.timerText, ConstraintSet.BOTTOM);
+                set.connect(R.id.timerText, ConstraintSet.TOP, R.id.progressContainer, ConstraintSet.BOTTOM);
                 timerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 50f);
 
                 // Only update seekbar/timer text for timed non-task mode
@@ -1412,7 +1410,7 @@ public class FocusMode extends AppCompatActivity {
                     // we finish here too so onTaskClick re-entry works cleanly
                     handler.postDelayed(this::finish, 200);
                 },
-                () -> showExtendTimeDialog(),
+                this::showExtendTimeDialog,
                 () -> {
                     // Time ran out — save time but keep task incomplete
                     if (isBound && focusService != null) {
@@ -1456,8 +1454,6 @@ public class FocusMode extends AppCompatActivity {
                     Toast.makeText(this, "Extended by " + extendMins + " min", Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton("Cancel", (dialog, which) -> {
-                    // BUG-9 fix: if user cancels extend, timer is already stopped; exit FocusMode
-                    // so they don't get stuck on a stale screen
                     sendBroadcast(new Intent(FocusService.ACTION_TASK_FOCUS_UPDATE));
                     finish();
                 })
@@ -1706,9 +1702,7 @@ public class FocusMode extends AppCompatActivity {
         builder.setPositiveButton("Add", (dialog, which) -> {
             String name = input.getText() != null ? input.getText().toString().trim() : "";
             if (!name.isEmpty()) {
-                Executors.newSingleThreadExecutor().execute(() -> {
-                    db.focusTopicDao().insert(new FocusTopicEntity(name));
-                });
+                dbExecutor.execute(() -> db.focusTopicDao().insert(new FocusTopicEntity(name)));
             }
         });
         builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
@@ -1722,19 +1716,19 @@ public class FocusMode extends AppCompatActivity {
                 "Are you sure you want to delete '" + topic.name + "'?",
                 "Delete",
                 "Cancel",
-                () -> {
-                    Executors.newSingleThreadExecutor().execute(() -> {
-                        db.focusTopicDao().delete(topic);
-                        if (selectedTopicId == topic.id) {
-                            selectedTopicId = -1;
-                        }
-                    });
-                },
+                () -> dbExecutor.execute(() -> {
+                    db.focusTopicDao().delete(topic);
+                    if (selectedTopicId == topic.id) {
+                        runOnUiThread(() -> selectedTopicId = -1);
+                    }
+                }),
                 null);
     }
 
     private void showSettingsBottomSheet() {
         BottomSheetDialog sheet = new BottomSheetDialog(this, R.style.CustomBottomSheetTheme);
+        MaterialSwitch bSwitch = sheet.findViewById(R.id.breakSwitch);
+        View bSettings = sheet.findViewById(R.id.breakSettings);
         sheet.setContentView(R.layout.bottom_sheet_focus);
         sheet.setOnDismissListener(dialog -> updatePomodoroIndicator());
 
@@ -1792,8 +1786,7 @@ public class FocusMode extends AppCompatActivity {
 
                 // Auto-enable Auto Resume when Pomodoro is turned ON
                 if (isChecked) {
-                    MaterialSwitch bSwitch = sheet.findViewById(R.id.breakSwitch);
-                    View bSettings = sheet.findViewById(R.id.breakSettings);
+
                     if (bSwitch != null) {
                         bSwitch.setChecked(true);
                         prefs.edit().putBoolean("pref_auto_start_break", true).apply();
@@ -1829,17 +1822,16 @@ public class FocusMode extends AppCompatActivity {
             });
         }
 
-        MaterialSwitch breakSwitch = sheet.findViewById(R.id.breakSwitch);
-        View breakSettings = sheet.findViewById(R.id.breakSettings);
-        if (breakSwitch != null && breakSettings != null) {
+
+        if (bSwitch != null && bSettings != null) {
             // Auto Resume toggle - controls whether focus auto-resumes after break
             boolean autoResumeEnabled = prefs.getBoolean("pref_auto_start_break", true);
-            breakSwitch.setChecked(autoResumeEnabled);
-            breakSettings.setVisibility(autoResumeEnabled ? VISIBLE : GONE); // Hide duration if Auto Resume is OFF
+            bSwitch.setChecked(autoResumeEnabled);
+            bSettings.setVisibility(autoResumeEnabled ? VISIBLE : GONE); // Hide duration if Auto Resume is OFF
 
-            breakSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            bSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 prefs.edit().putBoolean("pref_auto_start_break", isChecked).apply();
-                breakSettings.setVisibility(isChecked ? VISIBLE : GONE);
+                bSettings.setVisibility(isChecked ? VISIBLE : GONE);
 
                 if (!isChecked) {
                     showAutoKillWarning();
@@ -1937,79 +1929,58 @@ public class FocusMode extends AppCompatActivity {
     }
 
     private Runnable getRunnable(RecyclerView scheduleRv, View schedulesContainer) {
-        Runnable reloadSchedules = () -> {
-            try (java.util.concurrent.ExecutorService executorService = Executors.newSingleThreadExecutor()) {
-                executorService.execute(() -> {
-                    List<FocusScheduleEntity> schedules = db.focusScheduleDao().getAll();
-                    runOnUiThread(() -> {
-                        if (schedulesContainer != null) {
-                            schedulesContainer.setVisibility(schedules.isEmpty() ? View.GONE : View.VISIBLE);
-                        }
-                        FocusScheduleAdapter scheduleAdapter = new FocusScheduleAdapter(
-                                this, schedules,
-                                new FocusScheduleAdapter.OnScheduleActionListener() {
-                                    @Override
-                                    public void onToggle(FocusScheduleEntity schedule, boolean isChecked) {
-                                        try (java.util.concurrent.ExecutorService executorServiceInner = Executors.newSingleThreadExecutor()) {
-                                            executorServiceInner.execute(() -> {
-                                                schedule.isEnabled = isChecked ? 1 : 0;
-                                                db.focusScheduleDao().update(schedule);
-                                                FocusScheduleManager mgr = new FocusScheduleManager(FocusMode.this);
-                                                if (isChecked) {
-                                                    mgr.setSchedule(schedule);
-                                                } else {
-                                                    mgr.cancelSchedule(schedule.id);
-                                                }
-                                            });
-                                        }
-                                    }
-
-                                    @Override
-                                    public void onDelete(FocusScheduleEntity schedule) {
-                                        com.gxdevs.mindmint.Utils.CustomDialogUtils.showCustomDialog(FocusMode.this,
-                                                "Delete Schedule",
-                                                "Are you sure you want to delete this schedule?",
-                                                "Delete",
-                                                "Cancel",
-                                                () -> {
-                                                    try (java.util.concurrent.ExecutorService executorServiceInner = Executors.newSingleThreadExecutor()) {
-                                                        executorServiceInner.execute(() -> {
-                                                            db.focusScheduleDao().delete(schedule);
-                                                            new FocusScheduleManager(FocusMode.this).cancelSchedule(schedule.id);
-                                                            // Reload UI
-                                                            List<FocusScheduleEntity> fresh = db.focusScheduleDao().getAll();
-                                                            runOnUiThread(() -> {
-                                                                scheduleRv.setAdapter(new FocusScheduleAdapter(FocusMode.this, fresh, this));
-                                                            });
-                                                        });
-                                                    }
-                                                },
-                                                null);
-                                    }
-
-                                    @Override
-                                    public void onClick(FocusScheduleEntity schedule) {
-                                        showAddScheduleDialog(schedule, () -> {
-                                            // On saving, just invoke a reload
-                                            try (java.util.concurrent.ExecutorService executorServiceInner = Executors.newSingleThreadExecutor()) {
-                                                executorServiceInner.execute(() -> {
-                                                    List<FocusScheduleEntity> fresh = db.focusScheduleDao().getAll();
-                                                    runOnUiThread(() -> {
-                                                        scheduleRv.setAdapter(new FocusScheduleAdapter(FocusMode.this, fresh, this));
-                                                    });
-                                                });
-                                            }
-                                        });
+        return () -> dbExecutor.execute(() -> {
+            List<FocusScheduleEntity> schedules = db.focusScheduleDao().getAll();
+            runOnUiThread(() -> {
+                if (schedulesContainer != null) {
+                    schedulesContainer.setVisibility(schedules.isEmpty() ? View.GONE : View.VISIBLE);
+                }
+                FocusScheduleAdapter scheduleAdapter = new FocusScheduleAdapter(
+                        this, schedules,
+                        new FocusScheduleAdapter.OnScheduleActionListener() {
+                            @Override
+                            public void onToggle(FocusScheduleEntity schedule, boolean isChecked) {
+                                dbExecutor.execute(() -> {
+                                    schedule.isEnabled = isChecked ? 1 : 0;
+                                    db.focusScheduleDao().update(schedule);
+                                    FocusScheduleManager mgr = new FocusScheduleManager(FocusMode.this);
+                                    if (isChecked) {
+                                        mgr.setSchedule(schedule);
+                                    } else {
+                                        mgr.cancelSchedule(schedule.id);
                                     }
                                 });
-                        scheduleRv.setAdapter(scheduleAdapter);
-                    });
-                });
-            }
-        };
+                            }
 
-        // Initial load is already triggered inside the lambda above; return the runnable for caller use
-        return reloadSchedules;
+                            @Override
+                            public void onDelete(FocusScheduleEntity schedule) {
+                                CustomDialogUtils.showCustomDialog(FocusMode.this,
+                                        "Delete Schedule",
+                                        "Are you sure you want to delete this schedule?",
+                                        "Delete",
+                                        "Cancel",
+                                        () -> dbExecutor.execute(() -> {
+                                            db.focusScheduleDao().delete(schedule);
+                                            new FocusScheduleManager(FocusMode.this).cancelSchedule(schedule.id);
+                                            List<FocusScheduleEntity> fresh = db.focusScheduleDao().getAll();
+                                            runOnUiThread(() -> scheduleRv.setAdapter(
+                                                    new FocusScheduleAdapter(FocusMode.this, fresh, this)));
+                                        }),
+                                        null);
+                            }
+
+                            @Override
+                            public void onClick(FocusScheduleEntity schedule) {
+                                showAddScheduleDialog(schedule, () -> dbExecutor.execute(() -> {
+                                    List<FocusScheduleEntity> fresh = db.focusScheduleDao().getAll();
+                                    runOnUiThread(() -> scheduleRv.setAdapter(
+                                            new FocusScheduleAdapter(FocusMode.this, fresh, this)));
+                                }));
+                            }
+                        });
+                scheduleRv.setAdapter(scheduleAdapter);
+            });
+        });
     }
 
     private void updatePomodoroIndicator() {
@@ -2068,9 +2039,11 @@ public class FocusMode extends AppCompatActivity {
     private void showAutoKillWarning() {
         com.gxdevs.mindmint.Utils.CustomDialogUtils.showCustomDialog(this,
                 "Important Info",
-                "If you don't resume the timer within 20 minutes after a break, " +
-                        "the session will automatically end.\n\n" +
-                        "This won't deduct any coins.",
+                """
+                        If you don't resume the timer within 20 minutes after a break, \
+                        the session will automatically end.
+                        
+                        This won't deduct any coins.""",
                 "Got it",
                 "",
                 null,
@@ -2108,8 +2081,14 @@ public class FocusMode extends AppCompatActivity {
                         timerPickerLabel.setText(pickedMinutes[0] + " min");
                     }
                 }
-                @Override public void onStartTrackingTouch(android.widget.SeekBar seekBar) {}
-                @Override public void onStopTrackingTouch(android.widget.SeekBar seekBar) {}
+
+                @Override
+                public void onStartTrackingTouch(android.widget.SeekBar seekBar) {
+                }
+
+                @Override
+                public void onStopTrackingTouch(android.widget.SeekBar seekBar) {
+                }
             });
         }
 
@@ -2142,13 +2121,17 @@ public class FocusMode extends AppCompatActivity {
 
         View.OnClickListener dayClickListener = getClickListener();
 
+        if (daysChipGroup == null) {
+            Log.e(TAG, "showAddScheduleDialog: daysChipGroup not found, aborting");
+            dialog.dismiss();
+            return;
+        }
         for (int i = 0; i < daysChipGroup.getChildCount(); i++) {
             daysChipGroup.getChildAt(i).setOnClickListener(dayClickListener);
         }
 
         if (!Utils.isAccessibilityPermissionGranted(this)) {
-            assert lockSwitch != null;
-            lockSwitch.setVisibility(View.GONE);
+            if (lockSwitch != null) lockSwitch.setVisibility(View.GONE);
         }
 
         final int[] hour = {12};
@@ -2157,8 +2140,8 @@ public class FocusMode extends AppCompatActivity {
         if (scheduleToEdit != null) {
             hour[0] = scheduleToEdit.startHour;
             min[0] = scheduleToEdit.startMinute;
-            durBar.setProgress(scheduleToEdit.durationMinutes);
-            lockSwitch.setChecked(scheduleToEdit.isLockedIn == 1);
+            if (durBar != null) durBar.setProgress(scheduleToEdit.durationMinutes);
+            if (lockSwitch != null) lockSwitch.setChecked(scheduleToEdit.isLockedIn == 1);
             if (scheduleToEdit.daysOfWeek != null) {
                 String[] d = scheduleToEdit.daysOfWeek.split(",");
                 for (String day : d) {
@@ -2203,6 +2186,7 @@ public class FocusMode extends AppCompatActivity {
             }
         });
 
+        assert btnSave != null;
         btnSave.setOnClickListener(v -> {
             java.util.List<String> days = new java.util.ArrayList<>();
             for (int i = 0; i < daysChipGroup.getChildCount(); i++) {
@@ -2237,13 +2221,13 @@ public class FocusMode extends AppCompatActivity {
                 }
             }
 
-            Executors.newSingleThreadExecutor().execute(() -> {
+            dbExecutor.execute(() -> {
                 FocusScheduleEntity entity = scheduleToEdit != null ? scheduleToEdit : new FocusScheduleEntity();
                 entity.startHour = hour[0];
                 entity.startMinute = min[0];
                 entity.daysOfWeek = android.text.TextUtils.join(", ", days);
                 entity.durationMinutes = durBar.getProgress();
-                entity.isLockedIn = lockSwitch.isChecked() ? 1 : 0;
+                entity.isLockedIn = lockSwitch != null && lockSwitch.isChecked() ? 1 : 0;
                 entity.isEnabled = 1;
 
                 if (scheduleToEdit == null) {
@@ -2275,31 +2259,6 @@ public class FocusMode extends AppCompatActivity {
         getTheme().resolveAttribute(R.attr.text_tertiary, tvTertiary, true);
         final int colorTertiary = tvTertiary.data;
 
-        View.OnClickListener dayClickListener = v -> {
-            boolean isSelected = v.getTag() != null && (boolean) v.getTag();
-            isSelected = !isSelected;
-            v.setTag(isSelected);
-            if (isSelected) {
-                v.setBackgroundResource(R.drawable.bg_segment_selected);
-                ((TextView) v).setTextColor(colorPrimary);
-            } else {
-                v.setBackground(null);
-                ((TextView) v).setTextColor(colorTertiary);
-            }
-        };
-        return dayClickListener;
-    }
-
-    private View.OnClickListener getOnClickListener() {
-        TypedValue tvPrimary = new TypedValue();
-        getTheme().resolveAttribute(R.attr.text_primary, tvPrimary, true);
-        final int colorPrimary = tvPrimary.data;
-
-        TypedValue tvTertiary = new TypedValue();
-        getTheme().resolveAttribute(R.attr.text_tertiary, tvTertiary, true);
-        final int colorTertiary = tvTertiary.data;
-
-
         return v -> {
             boolean isSelected = v.getTag() != null && (boolean) v.getTag();
             isSelected = !isSelected;
@@ -2313,4 +2272,6 @@ public class FocusMode extends AppCompatActivity {
             }
         };
     }
+
 }
+

@@ -50,6 +50,8 @@ public class FocusService extends Service {
     private static final int COMPLETION_NOTIFICATION_ID = 2;
     public static final String PREFS_NAME = "AppData";
     public static final String TOTAL_FOCUSED_TIME_KEY = "TotalFocusedTime";
+    /** Separate accumulator for total time spent in Lock In sessions (milliseconds). */
+    public static final String PREF_LOCK_IN_TOTAL_MS = "pref_lock_in_total_ms";
     public static final String ACTION_START_FOREGROUND_SERVICE = "com.gxdevs.mindmint.Services.action.START_FOREGROUND";
     public static final String ACTION_STOP_TIMER = "com.gxdevs.mindmint.Services.action.STOP_TIMER";
 
@@ -463,6 +465,13 @@ public class FocusService extends Service {
         long elapsedFocusMillis = accumulatedFocusTime;
         saveDailyFocusStat(elapsedFocusMillis / 1000);
 
+        // If this was a Lock In session, also credit its separate accumulator
+        if (isLockedIn && elapsedFocusMillis > 0) {
+            SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
+            long prev = sp.getLong(PREF_LOCK_IN_TOTAL_MS, 0L);
+            sp.edit().putLong(PREF_LOCK_IN_TOTAL_MS, prev + elapsedFocusMillis).apply();
+        }
+
         try {
             FocusSessionEntity session = new FocusSessionEntity();
             session.start_time_ms = wallStartTimeMillis;
@@ -600,6 +609,7 @@ public class FocusService extends Service {
         if (isRunning) {
             // Capture session type BEFORE any state is cleared
             final boolean wasTaskSession = (linkedTaskId != null) || isLockedIn;
+            final boolean wasLockedIn = isLockedIn;
 
             // Calculate FOCUS time only (not break time)
             long elapsedFocusMillis = accumulatedFocusTime;
@@ -647,6 +657,13 @@ public class FocusService extends Service {
             // Save daily focus stats (FOCUS TIME ONLY - no break time)
             long elapsedSeconds = elapsedFocusMillis / 1000;
             saveDailyFocusStat(elapsedSeconds);
+
+            // If this was a Lock In session, also credit its dedicated accumulator
+            if (wasLockedIn && elapsedFocusMillis > 0) {
+                SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
+                long prev = sp.getLong(PREF_LOCK_IN_TOTAL_MS, 0L);
+                sp.edit().putLong(PREF_LOCK_IN_TOTAL_MS, prev + elapsedFocusMillis).apply();
+            }
 
             // --- Save elapsed time to linked task ---
             if (linkedTaskId != null) {

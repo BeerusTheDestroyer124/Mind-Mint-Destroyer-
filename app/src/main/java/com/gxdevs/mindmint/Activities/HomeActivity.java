@@ -53,6 +53,10 @@ public class HomeActivity extends AppCompatActivity {
     private static final String KEY_REVIEW_DONE = "review_done";
 
     private static final String PREF_LOCK_IN_SAVED_MS = "pref_lock_in_saved_ms";
+    /** Cumulative milliseconds spent in Lock In mode across all sessions. */
+    public static final String PREF_LOCK_IN_TOTAL_MS = "pref_lock_in_total_ms";
+    /** Whether the user has already seen the first-time Lock In warning. */
+    private static final String PREF_LOCK_IN_WARNING_SHOWN = "pref_lock_in_warning_shown";
 
     private ViewPager2 viewPager;
     private HomePagerAdapter pagerAdapter;
@@ -306,8 +310,39 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void startLockInMode(long durationMs) {
-        // Bug 6 fix: clear any stale pause — old pauses must not survive into Lock In
-        PreferenceManager.getDefaultSharedPreferences(this).edit()
+        // Guard: do not start a second focus session if one is already live
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
+        if (FocusService.isPublicFocusRun || sp.getBoolean(FocusService.PREF_IS_LOCKED_IN, false)) {
+            startActivity(new Intent(this, FocusMode.class));
+            return;
+        }
+
+        // First-time warning: user must explicitly accept that they cannot stop early
+        if (!sp.getBoolean(PREF_LOCK_IN_WARNING_SHOWN, false)) {
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                    .setTitle("🔒 Lock In Mode")
+                    .setMessage(
+                            "Once you start Lock In, all non-essential apps will be blocked "
+                            + "for the entire duration you set.\n\n"
+                            + "You will NOT be able to stop the session early. "
+                            + "Make sure you are ready before confirming.\n\n"
+                            + "Essential apps (calls, camera, settings) remain accessible.")
+                    .setPositiveButton("I'm Ready, Lock In", (d, w) -> {
+                        sp.edit().putBoolean(PREF_LOCK_IN_WARNING_SHOWN, true).apply();
+                        doStartLockIn(durationMs);
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .setCancelable(true)
+                    .show();
+        } else {
+            doStartLockIn(durationMs);
+        }
+    }
+
+    private void doStartLockIn(long durationMs) {
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
+        // Clear any stale pause state that could interfere with the new session
+        sp.edit()
                 .putBoolean("isServicePaused", false)
                 .putLong("resumeTime", 0)
                 .apply();
@@ -317,11 +352,11 @@ public class HomeActivity extends AppCompatActivity {
         serviceIntent.putExtra("durationInMillis", durationMs);
         serviceIntent.putExtra(FocusService.EXTRA_IS_LOCKED_IN, true);
         serviceIntent.putExtra("topicName", "Locked In");
-        // Use foreground service start — required on Android 8+ for background starts
+        // startForegroundService ensures the service starts reliably on Android 8+
         androidx.core.content.ContextCompat.startForegroundService(this, serviceIntent);
+
         // Open FocusMode activity for visual feedback
-        Intent focusIntent = new Intent(this, FocusMode.class);
-        startActivity(focusIntent);
+        startActivity(new Intent(this, FocusMode.class));
         Toast.makeText(this, "Locked In!", Toast.LENGTH_SHORT).show();
     }
 
