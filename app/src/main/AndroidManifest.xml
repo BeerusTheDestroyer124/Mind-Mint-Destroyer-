@@ -29,6 +29,7 @@
 
     <application
         android:allowBackup="true"
+        android:name=".MindMintApp"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -42,6 +43,7 @@
             android:exported="false" />
         <activity
             android:name=".Activities.HomeActivity"
+            android:launchMode="singleTask"
             android:exported="false" />
         <activity
             android:name=".Activities.OnBoarding"
@@ -188,10 +190,13 @@
             android:name="com.gxdevs.mindmint.Receivers.AccessibilityCheckReceiver"
             android:exported="false" />
 
+        <!-- FCM: receives push notifications from Firebase Console -->
         <service
             android:name=".Receivers.FirebaseNotificationReceiver"
             android:exported="false">
-
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
         </service>
 
         <receiver

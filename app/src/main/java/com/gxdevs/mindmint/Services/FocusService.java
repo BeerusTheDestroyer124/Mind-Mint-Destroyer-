@@ -25,6 +25,7 @@ import androidx.core.app.NotificationCompat;
 import androidx.preference.PreferenceManager;
 
 import com.gxdevs.mindmint.Activities.FocusMode;
+import com.gxdevs.mindmint.MindMintApp;
 import com.gxdevs.mindmint.Models.Task;
 import com.gxdevs.mindmint.R;
 import com.gxdevs.mindmint.Utils.MintCrystals;
@@ -301,6 +302,8 @@ public class FocusService extends Service {
             isPublicFocusRun = true;
             completedNaturally = false;
 
+            MindMintApp.subscribeToFocusTopic();
+
             Log.d(TAG, "Timer logic started. Duration: "
                     + (currentDurationInMillis == Long.MAX_VALUE ? "Infinite" : currentDurationInMillis + "ms"));
 
@@ -318,6 +321,7 @@ public class FocusService extends Service {
         }
     }
 
+
     private void scheduleNextEvent() {
         if (!isRunning)
             return;
@@ -329,12 +333,6 @@ public class FocusService extends Service {
         // 1. Check Total Goal
         if (currentDurationInMillis != Long.MAX_VALUE) {
             long remainingTotal = currentDurationInMillis - accumulatedFocusTime;
-            // If we are in break, total timer "pauses", so we don't schedule a total stop
-            // based on wall clock?
-            // User requested: "pause the timer... for the selected time".
-            // So, while isBreak is true, we simply wait for break to end. We DO NOT count
-            // down total.
-            // If isBreak is false, we count down.
 
             if (!isBreak) {
                 long finishTime = currentSegmentStartMillis + remainingTotal;

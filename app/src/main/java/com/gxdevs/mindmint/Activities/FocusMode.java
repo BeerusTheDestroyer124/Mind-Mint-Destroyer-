@@ -128,6 +128,8 @@ public class FocusMode extends AppCompatActivity {
     private final boolean isTestMode = false;
     // Activity-level cache of the locked-in state so it survives stopTimer() clearing the pref
     private boolean wasLockedInSession = false;
+    // Tracks whether the crystal reveal-complete event has already been fired this session
+    private boolean revealCompleteNotified = false;
     // Break seekbar on main screen
     private android.widget.SeekBar breakDurationSeekBar;
     private TextView breakSeekbarLabel;

@@ -113,6 +113,87 @@ public class HomeActivity extends AppCompatActivity {
                 });
             }
         }
+
+        handleFcmIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleFcmIntent(intent);
+    }
+
+    private void handleFcmIntent(Intent intent) {
+        if (intent != null && intent.hasExtra("intent")) {
+            String fcmIntent = intent.getStringExtra("intent");
+            if (fcmIntent != null) {
+                switch (fcmIntent) {
+                    case "open_focus":
+                        startActivity(new Intent(this, FocusMode.class));
+                        break;
+                    case "open_tasks":
+                        viewPager.setCurrentItem(HomePagerAdapter.PAGE_TASKS, false);
+                        break;
+                    case "open_tasks_add":
+                        viewPager.setCurrentItem(HomePagerAdapter.PAGE_TASKS, false);
+                        viewPager.post(() -> {
+                            Fragment f = getSupportFragmentManager()
+                                    .findFragmentByTag("f" + HomePagerAdapter.PAGE_TASKS);
+                            if (f instanceof TasksFragment) {
+                                ((TasksFragment) f).showAddTaskBottomSheet();
+                            }
+                        });
+                        break;
+                    case "open_habits":
+                        viewPager.setCurrentItem(HomePagerAdapter.PAGE_HABITS, false);
+                        break;
+                    case "open_stats":
+                        startActivity(new Intent(this, com.gxdevs.mindmint.Activities.StatsActivity.class));
+                        break;
+                    case "open_stats_focus":
+                        Intent sf = new Intent(this, com.gxdevs.mindmint.Activities.StatsActivity.class);
+                        sf.putExtra("stats_tab", "focus");
+                        startActivity(sf);
+                        break;
+                    case "open_stats_habits":
+                        Intent sh = new Intent(this, com.gxdevs.mindmint.Activities.StatsActivity.class);
+                        sh.putExtra("stats_tab", "habits");
+                        startActivity(sh);
+                        break;
+                    case "open_stats_tasks":
+                        Intent st = new Intent(this, com.gxdevs.mindmint.Activities.StatsActivity.class);
+                        st.putExtra("stats_tab", "tasks");
+                        startActivity(st);
+                        break;
+                    case "open_settings":
+                        viewPager.setCurrentItem(HomePagerAdapter.PAGE_SETTINGS, false);
+                        break;
+                    case "open_site_blocker":
+                        startActivity(new Intent(this, com.gxdevs.mindmint.Activities.SiteBlockerActivity.class));
+                        break;
+                    case "open_onboarding":
+                        startActivity(new Intent(this, com.gxdevs.mindmint.Activities.OnBoarding.class));
+                        break;
+                    case "open_url":
+                        String url = intent.getStringExtra("intent_value");
+                        if (url != null && !url.isEmpty()) {
+                            startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)));
+                        }
+                        break;
+                    case "open_play_store":
+                        String pkg = getPackageName();
+                        try {
+                            startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=" + pkg)));
+                        } catch (android.content.ActivityNotFoundException e) {
+                            startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/apps/details?id=" + pkg)));
+                        }
+                        break;
+                }
+                // Clear the extra so it doesn't trigger again on rotation
+                intent.removeExtra("intent");
+            }
+        }
     }
 
     @Override

@@ -141,7 +141,7 @@ public class FirebaseNotificationReceiver extends FirebaseMessagingService {
         PendingIntent pendingIntent = buildPendingIntent(intentKey, intentValue);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
-                .setSmallIcon(R.drawable.ic_notification)
+                .setSmallIcon(R.drawable.bell)
                 .setContentTitle(title)
                 .setContentText(body)
                 .setStyle(bigPicture != null
@@ -169,34 +169,105 @@ public class FirebaseNotificationReceiver extends FirebaseMessagingService {
     // ─────────────────────────────────────────────────────────────────────────
     //  Intent routing — maps "intent" key → actual Android Intent
     // ─────────────────────────────────────────────────────────────────────────
+    //
+    //  COMPLETE INTENT REFERENCE
+    //  ──────────────────────────────────────────────────────────────────────
+    //  open_home           → Home screen (focus timer, stats overview)
+    //  open_focus          → Focus Mode screen (start / resume session)
+    //  open_tasks          → Tasks tab
+    //  open_tasks_add      → Tasks tab + auto-opens "Add task" sheet
+    //  open_habits         → Habits tab
+    //  open_stats          → Stats screen (overall analytics)
+    //  open_stats_focus    → Stats screen, Focus tab
+    //  open_stats_habits   → Stats screen, Habits tab
+    //  open_stats_tasks    → Stats screen, Tasks tab
+    //  open_settings       → Settings tab
+    //  open_site_blocker   → Site Blocker configuration screen
+    //  open_onboarding     → Onboarding / what's new screen
+    //  open_url            → External URL in browser (pass URL in intent_value)
+    //  open_play_store     → App page on Google Play (for update nudges)
+    //  check_service_status → (silent) Revives accessibility guard service
+    // ─────────────────────────────────────────────────────────────────────────
 
     private PendingIntent buildPendingIntent(String intentKey, String intentValue) {
         Intent intent;
 
         switch (intentKey == null ? "open_home" : intentKey) {
+
+            // ── Focus ──────────────────────────────────────────────────────
             case "open_focus":
                 intent = new Intent(this, FocusMode.class);
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 break;
 
+            // ── Tasks ──────────────────────────────────────────────────────
             case "open_tasks":
                 intent = new Intent(this, HomeActivity.class);
                 intent.putExtra(HomeActivity.EXTRA_START_FRAGMENT, HomeActivity.START_FRAGMENT_TASKS);
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 break;
 
+            case "open_tasks_add":
+                // Opens Tasks tab and immediately shows the "Add task" bottom sheet
+                intent = new Intent(this, HomeActivity.class);
+                intent.putExtra(HomeActivity.EXTRA_START_FRAGMENT, HomeActivity.START_FRAGMENT_TASKS);
+                intent.putExtra("open_add_task", true);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                break;
+
+            // ── Habits ─────────────────────────────────────────────────────
             case "open_habits":
                 intent = new Intent(this, HomeActivity.class);
                 intent.putExtra(HomeActivity.EXTRA_START_FRAGMENT, HomeActivity.START_FRAGMENT_HABITS);
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 break;
 
+            // ── Stats ──────────────────────────────────────────────────────
+            case "open_stats":
+                // Opens the main stats screen (defaults to first tab)
+                intent = new Intent(this, com.gxdevs.mindmint.Activities.StatsActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                break;
+
+            case "open_stats_focus":
+                intent = new Intent(this, com.gxdevs.mindmint.Activities.StatsActivity.class);
+                intent.putExtra("stats_tab", "focus");
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                break;
+
+            case "open_stats_habits":
+                intent = new Intent(this, com.gxdevs.mindmint.Activities.StatsActivity.class);
+                intent.putExtra("stats_tab", "habits");
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                break;
+
+            case "open_stats_tasks":
+                intent = new Intent(this, com.gxdevs.mindmint.Activities.StatsActivity.class);
+                intent.putExtra("stats_tab", "tasks");
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                break;
+
+            // ── Settings ───────────────────────────────────────────────────
             case "open_settings":
                 intent = new Intent(this, HomeActivity.class);
                 intent.putExtra(HomeActivity.EXTRA_START_FRAGMENT, HomeActivity.START_FRAGMENT_SETTINGS);
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 break;
 
+            // ── Site Blocker ───────────────────────────────────────────────
+            case "open_site_blocker":
+                intent = new Intent(this, com.gxdevs.mindmint.Activities.SiteBlockerActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                break;
+
+            // ── Onboarding / What's New ────────────────────────────────────
+            case "open_onboarding":
+                // Perfect for "new update" notifications — shows the changelog / onboarding
+                intent = new Intent(this, com.gxdevs.mindmint.Activities.OnBoarding.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                break;
+
+            // ── External URL ───────────────────────────────────────────────
             case "open_url":
                 if (intentValue != null && !intentValue.isEmpty()) {
                     intent = new Intent(Intent.ACTION_VIEW, Uri.parse(intentValue));
@@ -206,6 +277,21 @@ public class FirebaseNotificationReceiver extends FirebaseMessagingService {
                 }
                 break;
 
+            // ── Play Store (for "update available" nudges) ─────────────────
+            case "open_play_store":
+                String pkg = getPackageName();
+                try {
+                    // Try the Play Store app first; falls back to browser
+                    intent = new Intent(Intent.ACTION_VIEW,
+                            Uri.parse("market://details?id=" + pkg));
+                } catch (android.content.ActivityNotFoundException e) {
+                    intent = new Intent(Intent.ACTION_VIEW,
+                            Uri.parse("https://play.google.com/store/apps/details?id=" + pkg));
+                }
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                break;
+
+            // ── Home (default) ─────────────────────────────────────────────
             case "open_home":
             default:
                 intent = defaultHomeIntent();
@@ -226,6 +312,7 @@ public class FirebaseNotificationReceiver extends FirebaseMessagingService {
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         return i;
     }
+
 
     // ─────────────────────────────────────────────────────────────────────────
     //  Helpers

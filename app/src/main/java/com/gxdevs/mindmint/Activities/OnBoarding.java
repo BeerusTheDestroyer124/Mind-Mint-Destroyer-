@@ -102,7 +102,11 @@ public class OnBoarding extends AppCompatActivity {
 
         } else {
             // If it's not the first run, go directly to MainActivity
-            startActivity(new Intent(OnBoarding.this, HomeActivity.class));
+            Intent homeIntent = new Intent(OnBoarding.this, HomeActivity.class);
+            if (getIntent().getExtras() != null) {
+                homeIntent.putExtras(getIntent().getExtras());
+            }
+            startActivity(homeIntent);
             finish();
         }
     }
@@ -199,7 +203,11 @@ public class OnBoarding extends AppCompatActivity {
 
     private void moveToNextActivity() {
         getSharedPreferences("PREFERENCE", MODE_PRIVATE).edit().putBoolean("isFirstRun", false).apply();
-        startActivity(new Intent(OnBoarding.this, HomeActivity.class));
+        Intent homeIntent = new Intent(OnBoarding.this, HomeActivity.class);
+        if (getIntent().getExtras() != null) {
+            homeIntent.putExtras(getIntent().getExtras());
+        }
+        startActivity(homeIntent);
         finish();
     }
 }
