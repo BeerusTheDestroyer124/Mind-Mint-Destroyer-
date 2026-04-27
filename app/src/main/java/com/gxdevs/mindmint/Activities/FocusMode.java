@@ -2336,12 +2336,13 @@ public class FocusMode extends AppCompatActivity {
                 }
             }
         }
-        btnTime.setText(String.format(java.util.Locale.US, "Start Time %02d:%02d", hour[0], min[0]));
+        btnTime.setText(String.format(java.util.Locale.US, "Start Time %02d:%02d %s",
+                hour[0] % 12 == 0 ? 12 : hour[0] % 12, min[0], hour[0] >= 12 ? "PM" : "AM"));
         durLabel.setText("Duration (Minutes): " + durBar.getProgress());
 
         btnTime.setOnClickListener(v -> {
             MaterialTimePicker timePicker = new MaterialTimePicker.Builder()
-                    .setTimeFormat(TimeFormat.CLOCK_24H)
+                    .setTimeFormat(TimeFormat.CLOCK_12H)
                     .setHour(hour[0])
                     .setMinute(min[0])
                     .setTitleText("Select Schedule Time")
@@ -2350,7 +2351,8 @@ public class FocusMode extends AppCompatActivity {
             timePicker.addOnPositiveButtonClickListener(v1 -> {
                 hour[0] = timePicker.getHour();
                 min[0] = timePicker.getMinute();
-                btnTime.setText(String.format(java.util.Locale.US, "Start Time %02d:%02d", hour[0], min[0]));
+                btnTime.setText(String.format(java.util.Locale.US, "Start Time %02d:%02d %s",
+                        hour[0] % 12 == 0 ? 12 : hour[0] % 12, min[0], hour[0] >= 12 ? "PM" : "AM"));
             });
             timePicker.show(getSupportFragmentManager(), "schedule_time");
         });
