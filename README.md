@@ -22,6 +22,9 @@
      <a href="#">
       <img src="https://img.shields.io/badge/Platform-Android-3DDC84?logo=android&logoColor=white&style=for-the-badge" alt="Platform" />
     </a>
+    <a href="https://play.google.com/store/apps/details?id=com.gxdevs.mindmint">
+      <img src="https://img.shields.io/badge/Google_Play-414141?style=for-the-badge&logo=google-play&logoColor=white" alt="Get it on Google Play" />
+    </a>
   </p>
 
   <h3>
@@ -59,6 +62,9 @@ Transform your productivity sessions into a visual journey.
 - **Pomodoro Support**: Built-in support for the Pomodoro technique with customizable work/break intervals.
 - **Nebula Ambience**: A calming, animated starfield background helps you enter a flow state.
 - **Tagging**: Categorize your sessions (Study, Work, Reading) to track where your time goes.
+- **Task-Linked Focus**: Link your focus sessions directly to specific tasks.
+- **Scheduled Focus**: Pre-plan and schedule your focus sessions with 12-hour time format support.
+- **Lock In Mode**: A stricter mode that optimizes session management and prevents you from bypassing the blocker.
 
 ### 🚫 **Intelligent App Blocker**
 
@@ -67,6 +73,7 @@ Stop doomscrolling before it starts.
 - **Strict Blocking**: Instantly block distracting apps like Instagram, YouTube Shorts, and TikTok.
 - **Overlay Shield**: A non-intrusive but firm overlay prevents you from accessing blocked apps during focus hours.
 - **Usage Limits**: Set daily time allowances for specific apps. Once the time is up, the app is locked for the day.
+- **Live Scroll Counter**: A real-time overlay that counts and displays how much you are scrolling to increase awareness.
 
 ### 💰 **Gamification & Rewards**
 
@@ -89,6 +96,15 @@ Understand your habits with data.
 - **Quick Add**: Rapidly add tasks directly from the home screen.
 - **Date & Priority**: Organize your to-dos with due dates and priority levels.
 - **Widget Support**: View and check off tasks directly from your home screen widget.
+
+### 🔒 **Privacy & Security**
+
+- **Settings Lock**: Secure your app settings with Biometric Authentication or a PIN to prevent unauthorized changes.
+
+### 📱 **App Experience**
+
+- **Swipe-to-Navigate**: Intuitive swipe gestures for smoother navigation.
+- **Push Notifications**: Stay updated with Firebase Cloud Messaging (FCM) and deep-link routing.
 
 <br />
 

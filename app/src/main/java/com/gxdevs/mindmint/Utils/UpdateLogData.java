@@ -9,7 +9,14 @@ public class UpdateLogData {
     public static List<UpdateLogItem> getLogs() {
         List<UpdateLogItem> list = new ArrayList<>();
 
-        addVersion(list, "Pumpkin 10 (Current)",
+        addVersion(list, "Pumpkin 11 (Current)",
+                "Added Task-Linked Focus Mode",
+                "Added Scheduled Focus sessions",
+                "Enhanced Lock In mode",
+                "Added swipe gestures for smoother navigation",
+                "Bug fixes and optimizations");
+
+        addVersion(list, "Pumpkin 10",
                 "Implemented lock protection on settings",
                 "Implemented live scroll counter",
                 "Improved blocking mechanism",
