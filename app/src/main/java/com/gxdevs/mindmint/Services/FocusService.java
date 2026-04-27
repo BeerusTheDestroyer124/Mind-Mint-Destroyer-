@@ -896,15 +896,19 @@ public class FocusService extends Service {
             }
         }
 
-        return new NotificationCompat.Builder(this, CHANNEL_ID)
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle(title)
                 .setContentText(timeString)
                 .setSmallIcon(R.drawable.focus_yoga)
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
-                .setOnlyAlertOnce(true)
-                .addAction(R.drawable.ic_pause, "Stop Focus", stopPendingIntent)
-                .build();
+                .setOnlyAlertOnce(true);
+
+        if (!isLockedIn) {
+            builder.addAction(R.drawable.ic_pause, "Stop Focus", stopPendingIntent);
+        }
+
+        return builder.build();
     }
 
     private void showCompletionNotification(int minutes, int coins) {

@@ -164,6 +164,69 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/timerText" />
 
+    <!-- Break Duration seekbar (shown inline when Pomodoro is enabled) -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/breakSeekbarCard"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="30dp"
+        android:layout_marginEnd="30dp"
+        android:layout_marginTop="10dp"
+        android:visibility="gone"
+        app:cardBackgroundColor="?attr/glass_surface"
+        app:cardCornerRadius="20dp"
+        app:strokeColor="?attr/glass_stroke"
+        app:strokeWidth="1dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/pomodoroIndicator">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/hourglass"
+                    android:alpha="0.7"
+                    app:tint="?attr/tintGlobalColor" />
+
+                <TextView
+                    android:id="@+id/breakSeekbarLabel"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="Break: 5 min"
+                    android:textColor="?attr/tintGlobalColor"
+                    android:textSize="13sp" />
+
+            </LinearLayout>
+
+            <SeekBar
+                android:id="@+id/breakDurationSeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:max="27"
+                android:progress="2"
+                android:progressTint="?attr/tintGlobalColor"
+                android:thumbTint="?attr/tintGlobalColor" />
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
     <TextView
         android:id="@+id/instructionText"
         android:layout_width="wrap_content"
@@ -176,23 +239,30 @@
         android:textSize="14sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/pomodoroIndicator" />
+        app:layout_constraintTop_toBottomOf="@+id/breakSeekbarCard" />
+
+    <LinearLayout
+        android:id="@+id/permissionsContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginTop="16dp"
+        android:orientation="vertical"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/instructionText">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/permissionCard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
-        android:layout_marginTop="24dp"
-        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="8dp"
         android:background="@drawable/bg_surface_glass"
         android:clickable="true"
         android:focusable="true"
         android:foreground="?attr/selectableItemBackground"
-        android:padding="10dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/instructionText"> <!-- Ripple Effect -->
+        android:padding="10dp"> <!-- Ripple Effect -->
 
         <ImageView
             android:id="@+id/frameAlertIcon"
@@ -246,6 +316,69 @@
             app:tint="?attr/text_tertiary" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Notification permission card -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/notificationPermCard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_surface_glass"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        android:padding="10dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/notifPermIcon"
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:background="@drawable/glass_circle"
+            android:padding="8dp"
+            android:src="@drawable/bell"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="?attr/status_info_icon" />
+
+        <TextView
+            android:id="@+id/tvNotifPermTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="8dp"
+            android:text="Notification Required"
+            android:textColor="?attr/text_primary"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toStartOf="@id/ivNotifArrow"
+            app:layout_constraintStart_toEndOf="@id/notifPermIcon"
+            app:layout_constraintTop_toTopOf="@id/notifPermIcon" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:lineSpacingExtra="2dp"
+            android:text="Notification permission is required to show focus mode alerts"
+            android:textColor="?attr/text_tertiary"
+            android:textSize="11sp"
+            app:layout_constraintEnd_toEndOf="@id/tvNotifPermTitle"
+            app:layout_constraintStart_toStartOf="@id/tvNotifPermTitle"
+            app:layout_constraintTop_toBottomOf="@id/tvNotifPermTitle" />
+
+        <ImageView
+            android:id="@+id/ivNotifArrow"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@drawable/ic_right_arrow"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="?attr/text_tertiary" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/topicsContainer"

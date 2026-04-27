@@ -110,13 +110,11 @@ public class FocusMode extends AppCompatActivity {
     private FocusService focusService;
     private boolean isBound = false;
     private final Handler handler = new Handler();
-    private int selectedMinutes = 10;
+    private int selectedMinutes = 25;
     private CircularSeekBar circularSeekBar;
     private ImageView crystalBase;
     private RevealMaskImageView crystalColor;
     private LottieAnimationView lottieAnimation;
-    private boolean warnedInvalidDuration = false;
-    private boolean revealCompleteNotified = false;
     private ValueAnimator revealAnimator;
     private MaterialTextView mintCrystalsTxt;
     private MintCrystals mintCrystals;
@@ -128,6 +126,14 @@ public class FocusMode extends AppCompatActivity {
     private TextView pomodoroIndicator;
     private View topicsContainer;
     private final boolean isTestMode = false;
+    // Activity-level cache of the locked-in state so it survives stopTimer() clearing the pref
+    private boolean wasLockedInSession = false;
+    // Break seekbar on main screen
+    private android.widget.SeekBar breakDurationSeekBar;
+    private TextView breakSeekbarLabel;
+    private View breakSeekbarCard;
+    // Notification permission card on main screen
+    private View notificationPermCard;
     /**
      * Single background thread for all DB writes — shut down in onDestroy.
      */
@@ -303,7 +309,7 @@ public class FocusMode extends AppCompatActivity {
                 break;
             }
         }
-        if (updated && completedTask != null) {
+        if (updated) {
             tm.saveTasks(tasks);
 
             if (!completedTask.isHabit()) {
@@ -358,6 +364,9 @@ public class FocusMode extends AppCompatActivity {
                     focusService.stopService();
                     finish();
                 }
+            } else {
+                // Service unbound (e.g. died unexpectedly) — just close the screen
+                finish();
             }
         });
 
@@ -434,6 +443,7 @@ public class FocusMode extends AppCompatActivity {
                         serviceIntent.putExtra("topicName", topicName);
 
                         ContextCompat.startForegroundService(this, serviceIntent);
+                        wasLockedInSession = false; // Reset for fresh standalone session
                         // Clear any stale service pause — blocking must be active during focus
                         PreferenceManager.getDefaultSharedPreferences(this).edit()
                                 .putBoolean("isServicePaused", false)
@@ -474,6 +484,7 @@ public class FocusMode extends AppCompatActivity {
                     serviceIntent.putExtra("topicName", topicName);
 
                     ContextCompat.startForegroundService(this, serviceIntent);
+                    wasLockedInSession = false; // Reset for fresh standalone session
                     bindService();
                 }
             }
@@ -514,7 +525,6 @@ public class FocusMode extends AppCompatActivity {
 
         timerText = findViewById(R.id.timerText);
         pomodoroIndicator = findViewById(R.id.pomodoroIndicator);
-        pomodoroIndicator = findViewById(R.id.pomodoroIndicator);
         instructionText = findViewById(R.id.instructionText);
         focusStop = findViewById(R.id.focusStop);
         btnDivider = findViewById(R.id.btnDivider);
@@ -530,9 +540,16 @@ public class FocusMode extends AppCompatActivity {
         lottieAnimation = findViewById(R.id.lottie);
         mintCrystalsTxt = findViewById(R.id.mintCrystals);
         mintCrystals = new MintCrystals(this);
-        // themeSwitch = findViewById(R.id.themeSwitch);
         topicsChipGroup = findViewById(R.id.topicsChipGroup);
         settingsBtn = findViewById(R.id.settingsBtn);
+
+        // Break seekbar on main screen
+        breakDurationSeekBar = findViewById(R.id.breakDurationSeekBar);
+        breakSeekbarLabel = findViewById(R.id.breakSeekbarLabel);
+        breakSeekbarCard = findViewById(R.id.breakSeekbarCard);
+
+        // Notification permission card
+        notificationPermCard = findViewById(R.id.notificationPermCard);
     }
 
     private void setupReveal() {
@@ -546,18 +563,20 @@ public class FocusMode extends AppCompatActivity {
     }
 
     private void setupCircularSeekBar() {
-        circularSeekBar.setProgress(0f);
         try {
             circularSeekBar.setMax(180f);
         } catch (Throwable t) {
             Log.e(TAG, String.valueOf(t));
         }
+        // Sync seekbar thumb to the current selectedMinutes
+        circularSeekBar.setProgress((float) selectedMinutes);
 
         circularSeekBar.setOnSeekBarChangeListener(new CircularSeekBar.OnCircularSeekBarChangeListener() {
             @Override
             public void onProgressChanged(CircularSeekBar circularSeekBar, float progress, boolean fromUser) {
                 if (fromUser) {
-                    int val = (int) progress;
+                    int val = (int) Math.round(progress);
+                    if (val < 1) val = 1;
                     // Enforce Pomodoro minimum
                     SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(FocusMode.this);
                     boolean isPomodoro = prefs.getBoolean(PREF_POMODORO_ENABLED, false);
@@ -586,6 +605,55 @@ public class FocusMode extends AppCompatActivity {
 
         updateThemeForDuration(selectedMinutes);
         timerText.setText(String.format(Locale.US, "%d min", selectedMinutes));
+        setupBreakDurationSeekBar();
+    }
+
+    /** Wires up the inline break-duration seekbar (3-30 min, range 0-27 offset by +3). */
+    private void setupBreakDurationSeekBar() {
+        if (breakDurationSeekBar == null || breakSeekbarLabel == null) return;
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        int savedBreak = prefs.getInt(PREF_BREAK_DURATION, 5);
+        // clamp to 3–30
+        savedBreak = Math.max(3, Math.min(30, savedBreak));
+        breakDurationSeekBar.setMax(27); // 0..27 → 3..30 min
+        breakDurationSeekBar.setProgress(savedBreak - 3);
+        breakSeekbarLabel.setText("Break: " + savedBreak + " min");
+
+        breakDurationSeekBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
+                int minutes = progress + 3;
+                breakSeekbarLabel.setText("Break: " + minutes + " min");
+                if (fromUser) {
+                    PreferenceManager.getDefaultSharedPreferences(FocusMode.this)
+                            .edit().putInt(PREF_BREAK_DURATION, minutes).apply();
+                    updatePomodoroIndicator();
+                }
+            }
+
+            @Override public void onStartTrackingTouch(android.widget.SeekBar seekBar) {}
+            @Override public void onStopTrackingTouch(android.widget.SeekBar seekBar) {}
+        });
+
+        // Show only when Pomodoro is enabled
+        boolean isPomo = prefs.getBoolean(PREF_POMODORO_ENABLED, false);
+        if (breakSeekbarCard != null) {
+            breakSeekbarCard.setVisibility(isPomo ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    /** Refreshes break seekbar visibility based on current Pomodoro preference. */
+    private void refreshBreakSeekbarVisibility() {
+        if (breakSeekbarCard == null) return;
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean isPomo = prefs.getBoolean(PREF_POMODORO_ENABLED, false);
+        boolean isRunning = isBound && focusService != null && focusService.isTimerRunning();
+        boolean isOE = isOpenEndedExtra || (focusService != null && focusService.isOpenEnded());
+        // Only show when: pomodoro enabled, not running, not open-ended, not task-linked
+        boolean shouldShow = isPomo && !isRunning && !isOE
+                && (linkedTaskIdExtra == null || linkedTaskIdExtra.isEmpty());
+        breakSeekbarCard.setVisibility(shouldShow ? View.VISIBLE : View.GONE);
     }
 
     private void updateThemeForDuration(int minutes) {
@@ -798,7 +866,10 @@ public class FocusMode extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this,
                     "android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
-                showNotificationPermissionBottomSheet();
+                // Show notification card and shake it
+                checkPermissionAndMoveOn();
+                shakePermCard(notificationPermCard);
+                Toast.makeText(this, "Notification permission is required for Focus Mode.", Toast.LENGTH_SHORT).show();
                 return false;
             }
         }
@@ -877,6 +948,59 @@ public class FocusMode extends AppCompatActivity {
             permissionCard.setVisibility(GONE);
             permissionCard.setOnClickListener(null);
         }
+
+        // Also update notification permission card
+        if (notificationPermCard != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !isNotificationPermissionGranted()) {
+                notificationPermCard.setVisibility(VISIBLE);
+                notificationPermCard.setOnClickListener(v -> showNotificationPermissionBottomSheet());
+            } else {
+                notificationPermCard.setVisibility(GONE);
+                notificationPermCard.setOnClickListener(null);
+            }
+        }
+    }
+
+    /**
+     * Shake + scale animation on a permission card to draw attention.
+     * Mirrors SettingsFragment.shakeCard() behaviour.
+     */
+    private void shakePermCard(View card) {
+        if (card == null || card.getVisibility() != View.VISIBLE) return;
+
+        card.setScaleX(1f);
+        card.setScaleY(1f);
+        card.setTranslationX(0f);
+
+        android.animation.ObjectAnimator scaleUpX = android.animation.ObjectAnimator.ofFloat(card, "scaleX", 1f, 1.05f);
+        android.animation.ObjectAnimator scaleUpY = android.animation.ObjectAnimator.ofFloat(card, "scaleY", 1f, 1.05f);
+        scaleUpX.setDuration(200);
+        scaleUpY.setDuration(200);
+
+        android.animation.ObjectAnimator shake = android.animation.ObjectAnimator.ofFloat(
+                card, "translationX",
+                0, 22, -22, 16, -16, 10, -10, 5, -5, 0);
+        shake.setDuration(650);
+
+        android.animation.ObjectAnimator scaleDownX = android.animation.ObjectAnimator.ofFloat(card, "scaleX", 1.05f, 1f);
+        android.animation.ObjectAnimator scaleDownY = android.animation.ObjectAnimator.ofFloat(card, "scaleY", 1.05f, 1f);
+        scaleDownX.setDuration(200);
+        scaleDownY.setDuration(200);
+
+        android.animation.AnimatorSet set = new android.animation.AnimatorSet();
+        set.play(scaleUpX).with(scaleUpY);
+        set.play(shake).after(scaleUpX);
+        set.play(scaleDownX).with(scaleDownY).after(shake);
+        set.start();
+
+        // Haptic feedback
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+                if (v != null)
+                    v.vibrate(VibrationEffect.createOneShot(40, VibrationEffect.EFFECT_HEAVY_CLICK));
+            }
+        } catch (Throwable ignored) {}
     }
 
     private boolean hasExactAlarmPermission() {
@@ -912,8 +1036,11 @@ public class FocusMode extends AppCompatActivity {
         handler.removeCallbacks(updateUITask);
         applyCrystalEffectBase();
         updatePomodoroIndicator();
-        // Re-check exact alarm permission when returning to screen
+        // Re-check exact alarm and notification permissions when returning to screen
         checkPermissionAndMoveOn();
+        // Refresh break seekbar from saved preferences (user may have changed in settings)
+        setupBreakDurationSeekBar();
+        refreshBreakSeekbarVisibility();
 
         if (isBound && focusService != null) {
             boolean isRunning = focusService.isTimerRunning();
@@ -1133,15 +1260,8 @@ public class FocusMode extends AppCompatActivity {
                 long totalDuration = focusService.getCurrentDuration();
                 float progress = elapsedMillis / (float) (totalDuration > 0 ? totalDuration : 1);
                 float seekbarProgress = progress * 180f;
-                if (Float.isNaN(seekbarProgress) || Float.isInfinite(seekbarProgress)) {
-                    seekbarProgress = 0f;
-                }
-                if (seekbarProgress < 0f || seekbarProgress > 180f) {
-                    if (!warnedInvalidDuration) {
-                        warnedInvalidDuration = true;
-                    }
-                }
-                seekbarProgress = Math.max(0f, Math.min(seekbarProgress, 180f));
+                seekbarProgress = Float.isNaN(seekbarProgress) || Float.isInfinite(seekbarProgress)
+                        ? 0f : Math.max(0f, Math.min(seekbarProgress, 180f));
                 circularSeekBar.setProgress(seekbarProgress);
 
                 updateCrystalVisualsForProgress(progress);
@@ -1198,7 +1318,14 @@ public class FocusMode extends AppCompatActivity {
         boolean isTaskLinked = (linkedTaskIdExtra != null && !linkedTaskIdExtra.isEmpty())
                 || (focusService != null && focusService.getLinkedTaskId() != null && !focusService.getLinkedTaskId().isEmpty());
         boolean isOpenEnded = isOpenEndedExtra || (focusService != null && focusService.isOpenEnded());
-        boolean isLockedInSession = (focusService != null && focusService.isLockedIn())
+        // BUG-11 FIX: use activity-cached wasLockedInSession so the coin UI stays hidden even after
+        // stopTimer() clears PREF_IS_LOCKED_IN. When running, also refresh the cache from service.
+        if (timerIsRunning && focusService != null) {
+            wasLockedInSession = focusService.isLockedIn()
+                    || PreferenceManager.getDefaultSharedPreferences(this).getBoolean(FocusService.PREF_IS_LOCKED_IN, false);
+        }
+        boolean isLockedInSession = wasLockedInSession
+                || (focusService != null && focusService.isLockedIn())
                 || PreferenceManager.getDefaultSharedPreferences(this).getBoolean(FocusService.PREF_IS_LOCKED_IN, false);
 
         if (timerIsRunning && focusService != null) {
@@ -1249,18 +1376,31 @@ public class FocusMode extends AppCompatActivity {
             }
             set.applyTo(mainLayout);
 
-            // Update button text based on pause state
-            if (focusService.isPaused() && !focusService.isBreak()) {
-                // WAITING_USER state - show Resume AND Stop button
-                startButton.setText("Resume");
-                focusStop.setVisibility(View.VISIBLE);
-                btnDivider.setVisibility(View.VISIBLE);
-            } else {
-                // Running or Break - show Stop only (on the main button)
-                startButton.setText(getString(R.string.stop));
+            boolean isPausedWaitingUser = focusService.isPaused() && !focusService.isBreak();
+            if (isLockedInSession) {
                 focusStop.setVisibility(View.GONE);
                 btnDivider.setVisibility(View.GONE);
+                if (isPausedWaitingUser) {
+                    findViewById(R.id.buttonCard).setVisibility(View.VISIBLE);
+                    startButton.setVisibility(View.VISIBLE);
+                    startButton.setText("Resume");
+                } else {
+                    findViewById(R.id.buttonCard).setVisibility(View.GONE);
+                }
+            } else {
+                findViewById(R.id.buttonCard).setVisibility(View.VISIBLE);
+                startButton.setVisibility(View.VISIBLE);
+                if (isPausedWaitingUser) {
+                    startButton.setText("Resume");
+                    focusStop.setVisibility(View.VISIBLE);
+                    btnDivider.setVisibility(View.VISIBLE);
+                } else {
+                    startButton.setText(getString(R.string.stop));
+                    focusStop.setVisibility(View.GONE);
+                    btnDivider.setVisibility(View.GONE);
+                }
             }
+            refreshBreakSeekbarVisibility();
         } else {
             // Timer stopped state
             showTimerStoppedState();
@@ -1286,7 +1426,8 @@ public class FocusMode extends AppCompatActivity {
                 // Only update seekbar/timer text for timed non-task mode
                 if (!isTaskLinked) {
                     updateThemeForDuration(selectedMinutes);
-                    circularSeekBar.setProgress(selectedMinutes);
+                    // Sync circular seekbar thumb to selectedMinutes (direct minute value)
+                    circularSeekBar.setProgress((float) selectedMinutes);
                     timerText.setText(String.format(Locale.US, "%d min", selectedMinutes));
                 }
             }
@@ -1303,6 +1444,8 @@ public class FocusMode extends AppCompatActivity {
                 findViewById(R.id.coinImg).setVisibility(View.VISIBLE);
             }
 
+            // Refresh break seekbar visibility now timer has stopped
+            refreshBreakSeekbarVisibility();
             handler.removeCallbacks(updateUITask);
         }
     }
@@ -1404,11 +1547,11 @@ public class FocusMode extends AppCompatActivity {
                 "Keep Pending",
                 () -> {
                     completeLinkedTask();
-                    // Show brief completion celebration then close
-                    showFocusCompleteDialog(minutes);
-                    // finish() is called via completeLinkedTask broadcast flow;
-                    // we finish here too so onTaskClick re-entry works cleanly
-                    handler.postDelayed(this::finish, 200);
+                    // BUG FIX: don't call finish() with a 200ms timer while the dialog is still
+                    // open — let the user dismiss the completion dialog naturally via its OK button.
+                    // The completion dialog's OK button calls dialog.dismiss(); the activity is
+                    // finished from the okBtn listener we inject here.
+                    showFocusCompleteDialogThenFinish(minutes);
                 },
                 this::showExtendTimeDialog,
                 () -> {
@@ -1447,7 +1590,12 @@ public class FocusMode extends AppCompatActivity {
                     serviceIntent.putExtra(FocusService.EXTRA_IS_OPEN_ENDED, false);
 
                     ContextCompat.startForegroundService(this, serviceIntent);
-                    updateButtonStates(true);
+                    // BUG-5 FIX: rebind to the newly-started service so focusService stays valid
+                    isBound = false;
+                    focusService = null;
+                    bindService();
+                    // NOTE: do NOT call updateButtonStates(true) here — focusService is null until
+                    // onServiceConnected fires. The binding callback will update UI correctly.
                     // Restart the UI tick loop so the extended countdown is displayed
                     handler.removeCallbacks(updateUITask);
                     handler.postDelayed(updateUITask, 500);
@@ -1460,8 +1608,22 @@ public class FocusMode extends AppCompatActivity {
                 .show();
     }
 
+    /**
+     * Wrapper: show the completion dialog and finish the activity when the user taps OK.
+     * For task-linked completions: always show exactly 2 coins (the actual award from
+     * completeLinkedTask), not the duration-based amount used for standalone sessions.
+     */
+    private void showFocusCompleteDialogThenFinish(int minutes) {
+        showFocusCompleteDialog(minutes, 2, this::finish);
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     private void showFocusCompleteDialog(int minutes) {
+        showFocusCompleteDialog(minutes, -1, null);
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void showFocusCompleteDialog(int minutes, int overrideCoins, Runnable onDismiss) {
         Dialog dialog = new Dialog(this);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setContentView(R.layout.dialog_focus_complete);
@@ -1531,9 +1693,7 @@ public class FocusMode extends AppCompatActivity {
         if (coinsText != null) {
             coinsText.setTextColor(progressColor);
         }
-        if (okBtn != null) {
-            okBtn.setOnClickListener(v -> dialog.dismiss());
-        }
+        // NOTE: okBtn click listener is set below (after touch listener) — don't set it here
 
         View root = dialog.findViewById(android.R.id.content);
         if (root != null) {
@@ -1567,9 +1727,10 @@ public class FocusMode extends AppCompatActivity {
             }
         }
 
-        // Count-up reward text
+        // Count-up reward text — use overrideCoins if provided (e.g. task-linked = always 2)
         if (coinsText != null) {
-            ValueAnimator va = ValueAnimator.ofInt(0, coins);
+            int displayCoins = (overrideCoins >= 0) ? overrideCoins : coins;
+            ValueAnimator va = ValueAnimator.ofInt(0, displayCoins);
             va.setDuration(900);
             va.addUpdateListener(a -> {
                 int val = (int) a.getAnimatedValue();
@@ -1580,7 +1741,10 @@ public class FocusMode extends AppCompatActivity {
         }
 
         if (okBtn != null) {
-            okBtn.setOnClickListener(v -> dialog.dismiss());
+            okBtn.setOnClickListener(v -> {
+                dialog.dismiss();
+                if (onDismiss != null) onDismiss.run();
+            });
 
             okBtn.setOnTouchListener((v, e) -> {
                 switch (e.getAction()) {
@@ -1727,11 +1891,10 @@ public class FocusMode extends AppCompatActivity {
 
     private void showSettingsBottomSheet() {
         BottomSheetDialog sheet = new BottomSheetDialog(this, R.style.CustomBottomSheetTheme);
+        // BUG-8 FIX: must call setContentView before any findViewById calls
+        sheet.setContentView(R.layout.bottom_sheet_focus);
         MaterialSwitch bSwitch = sheet.findViewById(R.id.breakSwitch);
         View bSettings = sheet.findViewById(R.id.breakSettings);
-        sheet.setContentView(R.layout.bottom_sheet_focus);
-        sheet.setOnDismissListener(dialog -> updatePomodoroIndicator());
-
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         MaterialSwitch themeSwitchSheet = sheet.findViewById(R.id.themeSwitch);
         NebulaStarfieldView galaxy = findViewById(R.id.starFieldView);
@@ -1801,7 +1964,9 @@ public class FocusMode extends AppCompatActivity {
         SeekBar focusSeekBar = sheet.findViewById(R.id.focusSeekBar);
         TextView focusLabel = sheet.findViewById(R.id.focusDurationLabel);
         if (focusSeekBar != null && focusLabel != null) {
-            int savedDuration = prefs.getInt(PREF_FOCUS_DURATION, 30);
+            // BUG-3 FIX: set max (20-120 min range → progress 0-100) and clamp saved value
+            focusSeekBar.setMax(100); // 0..100 → 20..120 min
+            int savedDuration = Math.max(20, Math.min(120, prefs.getInt(PREF_FOCUS_DURATION, 30)));
             focusSeekBar.setProgress(savedDuration - 20);
             focusLabel.setText("Focus Interval: " + savedDuration + " min");
             focusSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -1810,6 +1975,7 @@ public class FocusMode extends AppCompatActivity {
                     int val = progress + 20;
                     focusLabel.setText("Focus Interval: " + val + " min");
                     prefs.edit().putInt(PREF_FOCUS_DURATION, val).apply();
+                    updatePomodoroIndicator();
                 }
 
                 @Override
@@ -1869,7 +2035,9 @@ public class FocusMode extends AppCompatActivity {
         SeekBar breakSeekBar = sheet.findViewById(R.id.breakSeekBar);
         TextView breakLabel = sheet.findViewById(R.id.breakDurationLabel);
         if (breakSeekBar != null && breakLabel != null) {
-            int savedDuration = prefs.getInt(PREF_BREAK_DURATION, 5);
+            // BUG-2 FIX: set max (3-30 min range → progress 0-27) and clamp saved value
+            breakSeekBar.setMax(27); // 0..27 → 3..30 min
+            int savedDuration = Math.max(3, Math.min(30, prefs.getInt(PREF_BREAK_DURATION, 5)));
             breakSeekBar.setProgress(savedDuration - 3);
             breakLabel.setText("Break Duration: " + savedDuration + " min");
             breakSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -1879,6 +2047,7 @@ public class FocusMode extends AppCompatActivity {
                     int val = progress + 3;
                     breakLabel.setText("Break Duration: " + val + " min");
                     prefs.edit().putInt(PREF_BREAK_DURATION, val).apply();
+                    updatePomodoroIndicator();
                 }
 
                 @Override
@@ -1923,6 +2092,9 @@ public class FocusMode extends AppCompatActivity {
                 }
             }
             updatePomodoroIndicator();
+            // Sync inline break seekbar to any changes made in settings sheet
+            setupBreakDurationSeekBar();
+            refreshBreakSeekbarVisibility();
         });
 
         sheet.show();
@@ -2060,23 +2232,30 @@ public class FocusMode extends AppCompatActivity {
         com.google.android.material.button.MaterialButton confirmBtn = view.findViewById(R.id.timerPickerConfirmBtn);
         View closeBtn = view.findViewById(R.id.timerPickerCloseBtn);
 
-        // Range 10–180 min; seekbar goes 0–170, add 10 as base
-        int initialProgress = Math.max(0, Math.min(selectedMinutes - 10, 170));
+        // BUG-9 FIX: enforce Pomodoro minimum in the timer picker
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean isPomoSheet = prefs.getBoolean(PREF_POMODORO_ENABLED, false);
+        int pomodoroMin = isPomoSheet ? Math.max(10, prefs.getInt(PREF_FOCUS_DURATION, 25)) : 10;
+
+        // Range pomodoroMin–180 min; seekbar goes 0–(180-pomodoroMin)
+        int seekbarMax = 180 - pomodoroMin;
+        int initialProgress = Math.max(0, Math.min(selectedMinutes - pomodoroMin, seekbarMax));
         if (timerSeekBar != null) {
-            timerSeekBar.setMax(170);
+            timerSeekBar.setMax(seekbarMax);
             timerSeekBar.setProgress(initialProgress);
         }
+        int displayMinutes = Math.max(selectedMinutes, pomodoroMin);
         if (timerPickerLabel != null) {
-            timerPickerLabel.setText(selectedMinutes + " min");
+            timerPickerLabel.setText(displayMinutes + " min");
         }
 
-        final int[] pickedMinutes = {selectedMinutes};
+        final int[] pickedMinutes = {displayMinutes};
 
         if (timerSeekBar != null) {
             timerSeekBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
                 @Override
                 public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
-                    pickedMinutes[0] = progress + 10;
+                    pickedMinutes[0] = progress + pomodoroMin;
                     if (timerPickerLabel != null) {
                         timerPickerLabel.setText(pickedMinutes[0] + " min");
                     }
@@ -2186,7 +2365,12 @@ public class FocusMode extends AppCompatActivity {
             }
         });
 
-        assert btnSave != null;
+        // Use a proper null-guard instead of assert (asserts are disabled in release builds)
+        if (btnSave == null) {
+            Log.e(TAG, "showAddScheduleDialog: btnSaveSchedule not found in layout");
+            dialog.dismiss();
+            return;
+        }
         btnSave.setOnClickListener(v -> {
             java.util.List<String> days = new java.util.ArrayList<>();
             for (int i = 0; i < daysChipGroup.getChildCount(); i++) {
@@ -2197,6 +2381,12 @@ public class FocusMode extends AppCompatActivity {
 
             if (days.isEmpty()) {
                 Toast.makeText(this, "Select at least one day", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // BUG-1 FIX: ensure the user picked a non-zero duration
+            if (durBar.getProgress() <= 0) {
+                Toast.makeText(this, "Please set a duration of at least 1 minute", Toast.LENGTH_SHORT).show();
                 return;
             }
 

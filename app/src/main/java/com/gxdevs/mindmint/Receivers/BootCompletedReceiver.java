@@ -19,9 +19,16 @@ public class BootCompletedReceiver extends BroadcastReceiver {
         if (intent == null || intent.getAction() == null) return;
         if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
             try {
-                new FocusScheduleManager(context).rescheduleAll();
+                // BUG FIX: rescheduleAll() does a Room DB query — must not run on the main thread
+                new Thread(() -> {
+                    try {
+                        new FocusScheduleManager(context).rescheduleAll();
+                    } catch (Exception e) {
+                        Log.e("BootCompletedReceiver", "Failed to reschedule focus alarms", e);
+                    }
+                }).start();
             } catch (Exception e) {
-                Log.e("BootCompletedReceiver", "Failed to reschedule focus alarms", e);
+                Log.e("BootCompletedReceiver", "Failed to start reschedule thread", e);
             }
             try {
                 Intent refresh = new Intent(AppUsageAccessibilityService.ACTION_REFRESH_DAILY_STATE_INTERNAL);
