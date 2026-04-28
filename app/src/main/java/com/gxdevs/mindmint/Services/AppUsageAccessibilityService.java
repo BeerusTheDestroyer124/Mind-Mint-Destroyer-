@@ -126,28 +126,89 @@ public class AppUsageAccessibilityService extends AccessibilityService {
 
     // Hardcoded essential apps that are NEVER blocked in Locked In mode
     private static final Set<String> LOCKED_IN_ESSENTIAL_WHITELIST = new HashSet<>(java.util.Arrays.asList(
-            "com.gxdevs.mindmint",                     // Mind Mint itself
-            "com.android.dialer",                      // Stock dialer
-            "com.google.android.dialer",               // Google dialer (Pixel)
-            "com.samsung.android.incallui",            // Samsung call UI
-            "com.android.mms",                         // Stock SMS
-            "com.google.android.apps.messaging",       // Google Messages
-            "com.android.messaging",                   // AOSP Messages
-            "com.android.settings",                   // Settings
-            "com.android.camera",                      // AOSP camera
+            // Mind Mint
+            "com.gxdevs.mindmint",
+
+            // --- Dialers & Call UI ---
+            "com.android.dialer",
+            "com.google.android.dialer",
+            "com.android.phone",
+            "com.samsung.android.incallui",
+            "com.oneplus.dialer",
+            "com.oneplus.phone",
+            "com.miui.securitycenter",
+            "com.miui.calls",
+            "com.coloros.phonemanager",          // Oppo/Realme
+            "com.coloros.dialer",
+            "com.bbk.contacts",                  // Vivo
+            "com.vivo.incallui",
+            "com.motorola.incallui",
+            "com.lge.phone",                     // LG
+            "com.htc.sense.dialer",              // HTC
+
+            // --- SMS / Messaging ---
+            "com.android.mms",
+            "com.google.android.apps.messaging",
+            "com.android.messaging",
+            "com.samsung.android.messaging",
+            "com.oneplus.mms",
+            "com.miui.sms",
+
+            // --- System Core ---
+            "android",
+            "com.android.systemui",
+            "com.android.settings",
+            "com.android.server.telecom",
+            "com.miui.home",
+            "com.miui.systemui",
+            "com.samsung.android.app.cocktailbarservice",
+            "com.oneplus.launcher",
+            "com.sec.android.app.launcher",
+            "com.coloros.launcher",
+            "com.vivo.launcher",
+
+            // --- Package Installer & Permissions ---
+            "com.google.android.packageinstaller",
+            "com.android.packageinstaller",
+            "com.google.android.permissioncontroller",
+            "com.android.permissioncontroller",
+            "com.miui.packageinstaller",
+            "com.samsung.android.packageinstaller",
+
+            // --- Camera ---
+            "com.android.camera",
             "com.android.camera2",
             "com.google.android.GoogleCamera",
-            "com.sec.android.app.camera",             // Samsung Camera
-            "android",                                 // System UI
-            "com.android.systemui",
-            "com.android.phone",
-            "com.google.android.packageinstaller",     // Installer
-            "com.android.packageinstaller",            // Installer
-            "com.google.android.permissioncontroller", // Permissions
-            "com.android.permissioncontroller",        // Permissions
-            "com.google.android.inputmethod.latin",    // Gboard
-            "com.touchtype.swiftkey",                  // SwiftKey
-            "com.samsung.android.honeyboard"           // Samsung Keyboard
+            "com.sec.android.app.camera",
+            "com.oneplus.camera",
+            "com.miui.camera",
+            "com.coloros.camera",
+            "com.vivo.camera",
+            "com.motorola.camera2",
+
+            // --- Keyboards ---
+            "com.google.android.inputmethod.latin",
+            "com.touchtype.swiftkey",
+            "com.samsung.android.honeyboard",
+            "com.samsung.android.inputmethod",
+            "com.android.inputmethod.latin",
+            "com.miui.inputmethod",
+            "com.baidu.input_mi",
+            "com.iflytek.inputmethod.miui",
+
+            // --- Emergency / Safety ---
+            "com.android.emergency",
+            "com.google.android.apps.safetyhub",
+            "com.samsung.android.emergency",
+            "com.sec.android.emergencylauncher",
+            "com.oneplus.emergency",
+            "com.miui.emergency",
+
+            // --- Accessibility Settings ---
+            "com.android.accessibility.accessibilitymenu",
+            "com.google.android.marvin.talkback",
+            "com.samsung.accessibility",
+            "com.samsung.android.accessibility.speak"
     ));
     public static final String PREF_LOCKED_IN_EXTRA_WHITELIST = "pref_locked_in_extra_whitelist";
     private final Set<String> dynamicLauncherPackages = new HashSet<>();
@@ -241,6 +302,10 @@ public class AppUsageAccessibilityService extends AccessibilityService {
     // --- Global action throttling ---
     private long lastActionTime = 0L;
     public static boolean serviceStatus = false;
+
+    // --- Lock-In overlay debounce: tracks last overlay launch per package to avoid double-firing ---
+    private final Map<String, Long> lastLockInOverlayTimeMs = new HashMap<>();
+    private static final long LOCK_IN_OVERLAY_DEBOUNCE_MS = 1500L; // 1.5 s cooldown per package
     private BroadcastReceiver screenReceiver;
     private boolean isScreenReceiverRegistered = false;
     public static final String RESTORE_NOTIFICATION = "restore_notification";
@@ -344,6 +409,11 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                         loadConfiguration();
                         appViewFocusAccumulatedTimeTodayMap.clear(); // Part of old view focus
                         loadLastReminderTimestampsForAppTags();
+                        break;
+                    case FocusService.PREF_IS_LOCKED_IN:
+                        // Clear the overlay debounce map when a Lock-In session starts/ends so
+                        // stale cooldown entries from a previous session don't prevent blocking.
+                        lastLockInOverlayTimeMs.clear();
                         break;
                     case "pref_scroll_counter_enabled":
                     case "pref_scroll_counter_per_app":
@@ -617,10 +687,10 @@ public class AppUsageAccessibilityService extends AccessibilityService {
     public void onAccessibilityEvent(AccessibilityEvent event) {
         AccessibilityNodeInfo rootNode = null;
         try {
-            // Bug 1/6 fix: respect isServicePaused ONLY when NOT in Lock In mode.
-            // Lock In blocking must always fire, even if user previously paused the service.
-            boolean isLockedInActive = FocusService.isPublicFocusRun
-                    && sharedPreferences.getBoolean(FocusService.PREF_IS_LOCKED_IN, false);
+            boolean isLockedInPref = sharedPreferences.getBoolean(FocusService.PREF_IS_LOCKED_IN, false);
+            boolean isFocusRunning = FocusService.isPublicFocusRun || isLockedInPref;
+            boolean isLockedInActive = isFocusRunning && isLockedInPref;
+
             if (!isLockedInActive && sharedPreferences.getBoolean("isServicePaused", false)) {
                 return;
             }
@@ -630,36 +700,50 @@ public class AppUsageAccessibilityService extends AccessibilityService {
             String eventPackageName = event.getPackageName() != null ? event.getPackageName().toString() : null;
             int eventType = event.getEventType();
 
-            // Bug 5 fix: skip scroll counting if Lock In will block this package anyway
             if (!isLockedInActive || isPackageAllowedInLockedIn(eventPackageName)) {
                 handleScrollCounting(event);
             }
 
-            // Single root node fetch for performance - reduces IPC calls
-            rootNode = getRootInActiveWindow();
+            boolean isWindowEvent = (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+                    || eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED);
 
-            if (FocusService.isPublicFocusRun) {
-                boolean isLockedIn = sharedPreferences.getBoolean(FocusService.PREF_IS_LOCKED_IN, false);
-                if (isLockedIn) {
-                    // Locked In mode: block everything NOT in the whitelist
-                    if (!isPackageAllowedInLockedIn(eventPackageName)) {
-                        Intent intent = new Intent(this, BlockingOverlayDisplayActivity.class);
-                        intent.putExtra(EXTRA_IS_FOCUS, true);
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                        startActivity(intent);
-                        resetUsageAndTimersForPackage(eventPackageName);
+            if (isFocusRunning && isWindowEvent) {
+                if (eventPackageName != null && !eventPackageName.equals(getPackageName())) {
+                    if (isLockedInPref) {
+                        if (!isPackageAllowedInLockedIn(eventPackageName)) {
+                            long now = System.currentTimeMillis();
+                            Long lastTime = lastLockInOverlayTimeMs.get(eventPackageName);
+                            if (lastTime == null || (now - lastTime) > LOCK_IN_OVERLAY_DEBOUNCE_MS) {
+                                lastLockInOverlayTimeMs.put(eventPackageName, now);
+                                Intent intent = new Intent(this, BlockingOverlayDisplayActivity.class);
+                                intent.putExtra(EXTRA_IS_FOCUS, true);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                                        | Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                        | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                                startActivity(intent);
+                                resetUsageAndTimersForPackage(eventPackageName);
+                            }
+                            return;
+                        }
+                    } else if (customBlockedApps != null && customBlockedApps.contains(eventPackageName)) {
+                        long now = System.currentTimeMillis();
+                        Long lastTime = lastLockInOverlayTimeMs.get(eventPackageName);
+                        if (lastTime == null || (now - lastTime) > LOCK_IN_OVERLAY_DEBOUNCE_MS) {
+                            lastLockInOverlayTimeMs.put(eventPackageName, now);
+                            Intent intent = new Intent(this, BlockingOverlayDisplayActivity.class);
+                            intent.putExtra(EXTRA_IS_FOCUS, true);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                                    | Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                    | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                            startActivity(intent);
+                            resetUsageAndTimersForPackage(eventPackageName);
+                        }
                         return;
                     }
-                } else if (customBlockedApps != null && customBlockedApps.contains(eventPackageName)) {
-                    // Normal focus mode: only block user-selected apps
-                    Intent intent = new Intent(this, BlockingOverlayDisplayActivity.class);
-                    intent.putExtra(EXTRA_IS_FOCUS, true);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                    startActivity(intent);
-                    resetUsageAndTimersForPackage(eventPackageName);
-                    return;
                 }
             }
+
+            rootNode = getRootInActiveWindow();
             if (eventType != AccessibilityEvent.TYPE_VIEW_SCROLLED) {
                 if (remindDoomScrollingEnabled || scrollCounterEnabled) {
                     String activeAppTagNow = null;
