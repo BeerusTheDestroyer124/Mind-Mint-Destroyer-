@@ -14,6 +14,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.pm.ServiceInfo;
@@ -138,13 +139,13 @@ public class AppUsageAccessibilityService extends AccessibilityService {
             "com.oneplus.phone",
             "com.miui.securitycenter",
             "com.miui.calls",
-            "com.coloros.phonemanager",          // Oppo/Realme
+            "com.coloros.phonemanager", // Oppo/Realme
             "com.coloros.dialer",
-            "com.bbk.contacts",                  // Vivo
+            "com.bbk.contacts", // Vivo
             "com.vivo.incallui",
             "com.motorola.incallui",
-            "com.lge.phone",                     // LG
-            "com.htc.sense.dialer",              // HTC
+            "com.lge.phone", // LG
+            "com.htc.sense.dialer", // HTC
 
             // --- SMS / Messaging ---
             "com.android.mms",
@@ -208,10 +209,17 @@ public class AppUsageAccessibilityService extends AccessibilityService {
             "com.android.accessibility.accessibilitymenu",
             "com.google.android.marvin.talkback",
             "com.samsung.accessibility",
-            "com.samsung.android.accessibility.speak"
-    ));
+            "com.samsung.android.accessibility.speak"));
+
     public static final String PREF_LOCKED_IN_EXTRA_WHITELIST = "pref_locked_in_extra_whitelist";
     private final Set<String> dynamicLauncherPackages = new HashSet<>();
+
+    /**
+     * Cache for system-navigation package detection.
+     * Maps package name -> whether it is a system gesture/nav overlay.
+     * Avoids repeated PackageManager calls in the hot event path.
+     */
+    private final Map<String, Boolean> systemNavPackageCache = new HashMap<>();
 
     // --- Variables for Reminders ---
     private boolean remindDoomScrollingEnabled;
@@ -276,7 +284,8 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                 }
             } catch (Exception ignored) {
             } finally {
-                if (rootNode != null) rootNode.recycle();
+                if (rootNode != null)
+                    rootNode.recycle();
             }
 
             android.view.View pillContainer = scrollPillOverlayView.findViewById(R.id.pillContainer);
@@ -285,13 +294,17 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                     if (scrollPillOverlayView != null && windowManager != null) {
                         try {
                             windowManager.removeView(scrollPillOverlayView);
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {
+                        }
                         scrollPillOverlayView = null;
                     }
                 }).start();
             } else {
                 if (windowManager != null) {
-                    try { windowManager.removeView(scrollPillOverlayView); } catch (Exception ignored) {}
+                    try {
+                        windowManager.removeView(scrollPillOverlayView);
+                    } catch (Exception ignored) {
+                    }
                 }
                 scrollPillOverlayView = null;
             }
@@ -299,13 +312,14 @@ public class AppUsageAccessibilityService extends AccessibilityService {
         }
     };
 
-    // --- Global action throttling ---
     private long lastActionTime = 0L;
     public static boolean serviceStatus = false;
-
-    // --- Lock-In overlay debounce: tracks last overlay launch per package to avoid double-firing ---
     private final Map<String, Long> lastLockInOverlayTimeMs = new HashMap<>();
-    private static final long LOCK_IN_OVERLAY_DEBOUNCE_MS = 1500L; // 1.5 s cooldown per package
+    private static final long LOCK_IN_OVERLAY_DEBOUNCE_MS = 3000L;
+    private volatile long lastOverlayLaunchTimeMs = 0L;
+    private static final long OVERLAY_GLOBAL_COOLDOWN_MS = 2500L;
+    private volatile long lastHomeActionTimeMs = 0L;
+    private static final long POST_HOME_SUPPRESSION_MS = 3000L;
     private BroadcastReceiver screenReceiver;
     private boolean isScreenReceiverRegistered = false;
     public static final String RESTORE_NOTIFICATION = "restore_notification";
@@ -346,7 +360,8 @@ public class AppUsageAccessibilityService extends AccessibilityService {
         IntentFilter notiFilter = new IntentFilter();
         notiFilter.addAction(RESTORE_NOTIFICATION);
         notiFilter.addAction(ACTION_UPDATE_KEEP_ALIVE);
-        ContextCompat.registerReceiver(this, notificationRestoreReceiver, notiFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, notificationRestoreReceiver, notiFilter,
+                ContextCompat.RECEIVER_NOT_EXPORTED);
         restoreBlockingState();
 
         pauseServiceReceiver = new BroadcastReceiver() {
@@ -411,15 +426,18 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                         loadLastReminderTimestampsForAppTags();
                         break;
                     case FocusService.PREF_IS_LOCKED_IN:
-                        // Clear the overlay debounce map when a Lock-In session starts/ends so
-                        // stale cooldown entries from a previous session don't prevent blocking.
+                        // Clear ALL overlay timing state when a Lock-In session starts or ends so
+                        // stale cooldowns from a previous session don't prevent first-block in new one.
                         lastLockInOverlayTimeMs.clear();
+                        lastOverlayLaunchTimeMs = 0L;
+                        lastHomeActionTimeMs = 0L;
                         break;
                     case "pref_scroll_counter_enabled":
                     case "pref_scroll_counter_per_app":
                         scrollCounterEnabled = sharedPreferences.getBoolean("pref_scroll_counter_enabled", false);
                         scrollCounterPerApp = sharedPreferences.getBoolean("pref_scroll_counter_per_app", false);
-                        if (!scrollCounterEnabled) hideScrollCounterPill(true);
+                        if (!scrollCounterEnabled)
+                            hideScrollCounterPill(true);
                         break;
                     case PREF_HOME_YT_SWITCH_STATE:
                     case PREF_HOME_INSTA_SWITCH_STATE:
@@ -444,6 +462,8 @@ public class AppUsageAccessibilityService extends AccessibilityService {
             @Override
             public void onReceive(Context context, Intent intent) {
                 if (intent != null && ACTION_PERFORM_GLOBAL_HOME_FROM_OVERLAY.equals(intent.getAction())) {
+                    // Record the moment the HOME action fires so we can suppress re-triggering
+                    lastHomeActionTimeMs = System.currentTimeMillis();
                     performThrottledGlobalAction(GLOBAL_ACTION_HOME);
                 } else if (intent != null && ACTION_PERFORM_GLOBAL_BACK_FROM_OVERLAY.equals(intent.getAction())) {
                     performThrottledGlobalAction(GLOBAL_ACTION_BACK);
@@ -452,7 +472,8 @@ public class AppUsageAccessibilityService extends AccessibilityService {
         };
         IntentFilter overlayIntentFilter = new IntentFilter(ACTION_PERFORM_GLOBAL_HOME_FROM_OVERLAY);
         overlayIntentFilter.addAction(ACTION_PERFORM_GLOBAL_BACK_FROM_OVERLAY);
-        ContextCompat.registerReceiver(this, overlayCommandReceiver, overlayIntentFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, overlayCommandReceiver, overlayIntentFilter,
+                ContextCompat.RECEIVER_NOT_EXPORTED);
 
         midnightStateRefreshReceiver = new BroadcastReceiver() {
             @Override
@@ -463,7 +484,8 @@ public class AppUsageAccessibilityService extends AccessibilityService {
             }
         };
         IntentFilter midnightRefreshFilter = new IntentFilter(ACTION_REFRESH_DAILY_STATE_INTERNAL);
-        ContextCompat.registerReceiver(this, midnightStateRefreshReceiver, midnightRefreshFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        ContextCompat.registerReceiver(this, midnightStateRefreshReceiver, midnightRefreshFilter,
+                ContextCompat.RECEIVER_NOT_EXPORTED);
 
         scheduleMidnightReset();
     }
@@ -471,7 +493,8 @@ public class AppUsageAccessibilityService extends AccessibilityService {
     private void loadLauncherPackages() {
         Intent intent = new Intent(Intent.ACTION_MAIN);
         intent.addCategory(Intent.CATEGORY_HOME);
-        List<ResolveInfo> resolveInfos = getPackageManager().queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
+        List<ResolveInfo> resolveInfos = getPackageManager().queryIntentActivities(intent,
+                PackageManager.MATCH_DEFAULT_ONLY);
         if (resolveInfos != null) {
             for (ResolveInfo info : resolveInfos) {
                 if (info.activityInfo != null && info.activityInfo.packageName != null) {
@@ -615,7 +638,8 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                 .setOngoing(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setCategory(Notification.CATEGORY_SERVICE)
-                .setDeleteIntent(PendingIntent.getBroadcast(this, 0, new Intent(this, NotificationDismissBroadcastReceiver.class), PendingIntent.FLAG_IMMUTABLE))
+                .setDeleteIntent(PendingIntent.getBroadcast(this, 0,
+                        new Intent(this, NotificationDismissBroadcastReceiver.class), PendingIntent.FLAG_IMMUTABLE))
                 .build();
 
         try {
@@ -704,17 +728,67 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                 handleScrollCounting(event);
             }
 
-            boolean isWindowEvent = (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
-                    || eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED);
+            // For Lock-In blocking, ONLY react to true window-state transitions (not
+            // content changes).
+            // TYPE_WINDOW_CONTENT_CHANGED fires very frequently within the same app window
+            // and
+            // is the primary cause of double-overlay firing.
+            boolean isWindowStateEvent = (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED);
 
-            if (isFocusRunning && isWindowEvent) {
+            if (isFocusRunning && isWindowStateEvent) {
+                if (isLockedInPref) {
+                    // DEBUG: log every window-state event when Lock-In is active
+                    android.util.Log.d("LockInDebug",
+                            "=== WINDOW_STATE event | pkg=" + eventPackageName
+                            + " | ownPkg=" + getPackageName()
+                            + " | isOwnApp=" + getPackageName().equals(eventPackageName));
+                }
+
                 if (eventPackageName != null && !eventPackageName.equals(getPackageName())) {
+                    long now = System.currentTimeMillis();
+
+                    // Global guard: suppress if the overlay was launched very recently OR
+                    // if the HOME action was fired recently (post-home bounce protection).
+                    boolean globalCooldownActive = (now - lastOverlayLaunchTimeMs) < OVERLAY_GLOBAL_COOLDOWN_MS
+                            || (now - lastHomeActionTimeMs) < POST_HOME_SUPPRESSION_MS;
+
                     if (isLockedInPref) {
-                        if (!isPackageAllowedInLockedIn(eventPackageName)) {
-                            long now = System.currentTimeMillis();
+                        boolean allowed = isPackageAllowedInLockedIn(eventPackageName);
+                        android.util.Log.d("LockInDebug",
+                                "  → NOT own pkg | allowed=" + allowed
+                                + " | globalCooldown=" + globalCooldownActive
+                                + " | timeSinceOverlay=" + (now - lastOverlayLaunchTimeMs) + "ms"
+                                + " | timeSinceHome=" + (now - lastHomeActionTimeMs) + "ms");
+
+                        if (!allowed) {
+                            Long lastTime = lastLockInOverlayTimeMs.get(eventPackageName);
+                            boolean debounceOk = lastTime == null || (now - lastTime) > LOCK_IN_OVERLAY_DEBOUNCE_MS;
+                            android.util.Log.d("LockInDebug",
+                                    "  → BLOCKED pkg | debounceOk=" + debounceOk
+                                    + " | timeSinceLastBlock=" + (lastTime == null ? "never" : (now - lastTime) + "ms")
+                                    + " | willLaunchOverlay=" + (!globalCooldownActive && debounceOk));
+
+                            if (!globalCooldownActive) {
+                                if (debounceOk) {
+                                    lastLockInOverlayTimeMs.put(eventPackageName, now);
+                                    lastOverlayLaunchTimeMs = now;
+                                    Intent intent = new Intent(this, BlockingOverlayDisplayActivity.class);
+                                    intent.putExtra(EXTRA_IS_FOCUS, true);
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                                            | Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                            | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                                    startActivity(intent);
+                                    resetUsageAndTimersForPackage(eventPackageName);
+                                }
+                            }
+                            return;
+                        }
+                    } else if (customBlockedApps != null && customBlockedApps.contains(eventPackageName)) {
+                        if (!globalCooldownActive) {
                             Long lastTime = lastLockInOverlayTimeMs.get(eventPackageName);
                             if (lastTime == null || (now - lastTime) > LOCK_IN_OVERLAY_DEBOUNCE_MS) {
                                 lastLockInOverlayTimeMs.put(eventPackageName, now);
+                                lastOverlayLaunchTimeMs = now;
                                 Intent intent = new Intent(this, BlockingOverlayDisplayActivity.class);
                                 intent.putExtra(EXTRA_IS_FOCUS, true);
                                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
@@ -723,20 +797,6 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                                 startActivity(intent);
                                 resetUsageAndTimersForPackage(eventPackageName);
                             }
-                            return;
-                        }
-                    } else if (customBlockedApps != null && customBlockedApps.contains(eventPackageName)) {
-                        long now = System.currentTimeMillis();
-                        Long lastTime = lastLockInOverlayTimeMs.get(eventPackageName);
-                        if (lastTime == null || (now - lastTime) > LOCK_IN_OVERLAY_DEBOUNCE_MS) {
-                            lastLockInOverlayTimeMs.put(eventPackageName, now);
-                            Intent intent = new Intent(this, BlockingOverlayDisplayActivity.class);
-                            intent.putExtra(EXTRA_IS_FOCUS, true);
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                                    | Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                    | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                            startActivity(intent);
-                            resetUsageAndTimersForPackage(eventPackageName);
                         }
                         return;
                     }
@@ -890,8 +950,10 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                         long sessionStartTime = sessionStartTimeValue != null ? sessionStartTimeValue : 0L;
                         long sessionDuration = System.currentTimeMillis() - sessionStartTime;
                         if (sessionDuration > 0) {
-                            Long previouslyAccumulatedValue = reminderViewAccumulatedTimeCurrentCycleMs.get(appTagToEnd);
-                            long previouslyAccumulated = previouslyAccumulatedValue != null ? previouslyAccumulatedValue : 0L;
+                            Long previouslyAccumulatedValue = reminderViewAccumulatedTimeCurrentCycleMs
+                                    .get(appTagToEnd);
+                            long previouslyAccumulated = previouslyAccumulatedValue != null ? previouslyAccumulatedValue
+                                    : 0L;
                             long newAccumulatedTime = previouslyAccumulated + sessionDuration;
                             reminderViewAccumulatedTimeCurrentCycleMs.put(appTagToEnd, newAccumulatedTime);
                         }
@@ -998,20 +1060,100 @@ public class AppUsageAccessibilityService extends AccessibilityService {
 
     /**
      * Returns true if the given package should be allowed through in Locked In mode.
-     * Checks the hardcoded essentials whitelist AND any user-added extra packages.
+     * Priority order:
+     *   1. Hardcoded essential whitelist (exact match, O(1))
+     *   2. Dynamically detected launcher packages
+     *   3. System gesture / navigation overlay auto-detection (any OEM)
+     *   4. User-added extra packages
      */
     private boolean isPackageAllowedInLockedIn(String packageName) {
-        if (packageName == null) return true;
-        if (LOCKED_IN_ESSENTIAL_WHITELIST.contains(packageName)) return true;
-        if (dynamicLauncherPackages.contains(packageName)) return true; // Dynamically whitelisted launchers
+        if (packageName == null)
+            return true;
+        if (LOCKED_IN_ESSENTIAL_WHITELIST.contains(packageName))
+            return true;
+        if (dynamicLauncherPackages.contains(packageName))
+            return true;
+        // Auto-allow OEM gesture / navigation overlay packages (Samsung, Xiaomi, Oppo, etc.)
+        if (isSystemNavigationPackage(packageName))
+            return true;
         // Check user-added packages
         Set<String> extraWhitelist = sharedPreferences.getStringSet(
                 PREF_LOCKED_IN_EXTRA_WHITELIST, new HashSet<>());
         return extraWhitelist.contains(packageName);
     }
 
+    /**
+     * Returns true if {@code pkg} is a system-installed gesture/navigation overlay.
+     *
+     * Strategy:
+     *  - Must be a system app (FLAG_SYSTEM) — guards against user apps with "gesture" in name.
+     *  - Package name must match at least one known gesture/nav keyword.
+     *
+     * Results are cached so PackageManager is only queried once per unique package.
+     */
+    private boolean isSystemNavigationPackage(String pkg) {
+        if (pkg == null) return false;
+        Boolean cached = systemNavPackageCache.get(pkg);
+        if (cached != null) return cached;
+
+        // Quick keyword check first (cheap) — if no keyword matches, skip PM lookup
+        boolean nameMatches = isNameMatches(pkg);
+
+        if (!nameMatches) {
+            systemNavPackageCache.put(pkg, false);
+            return false;
+        }
+
+        // Verify it is an OEM/system-origin package, not a user-installed app.
+        // Checks:
+        //   FLAG_SYSTEM            — pre-installed in /system partition
+        //   FLAG_UPDATED_SYSTEM_APP — system app updated via OTA/sideload
+        //   No Play Store installer — OEM pre-loaded on /data but never user-installed
+        //     (e.g. Samsung sidegesturepad ships without FLAG_SYSTEM but has no Play installer)
+        try {
+            ApplicationInfo info =
+                    getPackageManager().getApplicationInfo(pkg, 0);
+            boolean hasSystemFlag = (info.flags & ApplicationInfo.FLAG_SYSTEM) != 0
+                    || (info.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0;
+            if (hasSystemFlag) {
+                systemNavPackageCache.put(pkg, true);
+                return true;
+            }
+            // Not a /system partition app — check if it was ever installed by the user via a store
+            String installer = null;
+            try {
+                installer = getPackageManager()
+                        .getInstallerPackageName(pkg);
+            } catch (Exception ignored) {}
+            // If there is no installer (null), the package was pre-loaded by the OEM, not the user
+            boolean oemPreloaded = (installer == null);
+            systemNavPackageCache.put(pkg, oemPreloaded);
+            return oemPreloaded;
+        } catch (PackageManager.NameNotFoundException e) {
+            systemNavPackageCache.put(pkg, false);
+            return false;
+        }
+    }
+
+    private static boolean isNameMatches(String pkg) {
+        String lower = pkg.toLowerCase();
+        // AOSP gesture home
+        return lower.contains("gesture")
+                || lower.contains("sidepad")
+                || lower.contains("edgepad")
+                || lower.contains("edgetouch")
+                || lower.contains("edgepanel")
+                || lower.contains("navigationbar")
+                || lower.contains("navgesture")
+                || lower.contains("sidegesturepad ")
+                || lower.contains("navbar")
+                || lower.contains("gesturepad")
+                || lower.contains("quickstep");
+    }
+
+
     private void handleBackPress(String currentEventPackageName, AccessibilityNodeInfo rootNode,
-                                 AccessibilityEvent event) {
+            AccessibilityEvent event) {
         if (rootNode == null)
             return;
 
@@ -1109,7 +1251,9 @@ public class AppUsageAccessibilityService extends AccessibilityService {
 
             long userReminderIntervalMs = (long) remindDoomScrollingMinutes * 60 * 1000;
             Long lastActualReminderShownTimeValue = lastReminderTimestampForAppTag.get(appTag);
-            long lastActualReminderShownTimeMs = lastActualReminderShownTimeValue != null ? lastActualReminderShownTimeValue : 0L;
+            long lastActualReminderShownTimeMs = lastActualReminderShownTimeValue != null
+                    ? lastActualReminderShownTimeValue
+                    : 0L;
 
             if ((System.currentTimeMillis() - lastActualReminderShownTimeMs) < userReminderIntervalMs) {
                 appTagToTimeLeftForNextSessionMs.put(appTag, userReminderIntervalMs);
@@ -1356,9 +1500,11 @@ public class AppUsageAccessibilityService extends AccessibilityService {
         int oldRemindDoomScrollingMinutes = remindDoomScrollingMinutes;
 
         remindDoomScrollingEnabled = sharedPreferences.getBoolean(PREF_REMIND_DOOM_SCROLLING_ENABLED, false);
-        remindDoomScrollingMinutes = sharedPreferences.getInt(PREF_REMIND_DOOM_SCROLLING_MINUTES, DEFAULT_REMIND_DOOM_SCROLLING_MINUTES);
+        remindDoomScrollingMinutes = sharedPreferences.getInt(PREF_REMIND_DOOM_SCROLLING_MINUTES,
+                DEFAULT_REMIND_DOOM_SCROLLING_MINUTES);
         blockAfterWastedTimeEnabled = sharedPreferences.getBoolean(PREF_BLOCK_AFTER_WASTED_TIME_ENABLED, false);
-        blockAfterWastedTimeHours = sharedPreferences.getFloat(PREF_BLOCK_AFTER_WASTED_TIME_HOURS, DEFAULT_BLOCK_AFTER_WASTED_TIME_HOURS);
+        blockAfterWastedTimeHours = sharedPreferences.getFloat(PREF_BLOCK_AFTER_WASTED_TIME_HOURS,
+                DEFAULT_BLOCK_AFTER_WASTED_TIME_HOURS);
         blockBrowsersDoomEnabled = sharedPreferences.getBoolean(PREF_BLOCK_BROWSERS_DOOMSCROLLING_ENABLED, false);
         blockAdultSitesEnabled = sharedPreferences.getBoolean(PREF_BLOCK_ADULT_SITES_ENABLED, false);
 
@@ -2120,7 +2266,9 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                     android.view.WindowManager.LayoutParams.WRAP_CONTENT,
                     android.view.WindowManager.LayoutParams.WRAP_CONTENT,
                     android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-                    android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE | android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                    android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                            | android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                            | android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                     android.graphics.PixelFormat.TRANSLUCENT);
 
             params.gravity = android.view.Gravity.TOP | android.view.Gravity.CENTER_HORIZONTAL;
@@ -2148,7 +2296,8 @@ public class AppUsageAccessibilityService extends AccessibilityService {
     }
 
     private void updateScrollCounterPillInternal(String appTag, String packageName) {
-        if (scrollPillOverlayView == null || pillScrollCountText == null) return;
+        if (scrollPillOverlayView == null || pillScrollCountText == null)
+            return;
 
         long scrollCount = 0;
         if (scrollCounterPerApp) {
@@ -2167,14 +2316,22 @@ public class AppUsageAccessibilityService extends AccessibilityService {
     }
 
     private static int getDrawableId(int totalWastedScrolls) {
-        if (totalWastedScrolls < 150) return R.drawable.brain1;
-        if (totalWastedScrolls < 300) return R.drawable.brain2;
-        if (totalWastedScrolls < 500) return R.drawable.brain3;
-        if (totalWastedScrolls < 700) return R.drawable.brain4;
-        if (totalWastedScrolls < 900) return R.drawable.brain5;
-        if (totalWastedScrolls < 1100) return R.drawable.brain6;
-        if (totalWastedScrolls < 1200) return R.drawable.brain7;
-        if (totalWastedScrolls < 1400) return R.drawable.brain8;
+        if (totalWastedScrolls < 150)
+            return R.drawable.brain1;
+        if (totalWastedScrolls < 300)
+            return R.drawable.brain2;
+        if (totalWastedScrolls < 500)
+            return R.drawable.brain3;
+        if (totalWastedScrolls < 700)
+            return R.drawable.brain4;
+        if (totalWastedScrolls < 900)
+            return R.drawable.brain5;
+        if (totalWastedScrolls < 1100)
+            return R.drawable.brain6;
+        if (totalWastedScrolls < 1200)
+            return R.drawable.brain7;
+        if (totalWastedScrolls < 1400)
+            return R.drawable.brain8;
         return R.drawable.brain9;
     }
 

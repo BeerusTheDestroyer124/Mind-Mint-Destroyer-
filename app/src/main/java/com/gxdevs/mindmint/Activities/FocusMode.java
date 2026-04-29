@@ -103,6 +103,8 @@ public class FocusMode extends AppCompatActivity {
 
     private static final String TAG = "FocusMode";
     private static final float REVEAL_COMPLETE_AT = 0.95f;
+    /** Intent extra: when true, FocusMode shakes any visible permission cards on entry. */
+    public static final String EXTRA_SHAKE_PERM_CARDS = "extra_shake_perm_cards";
     private ActivityResultLauncher<String> requestNotificationPermissionLauncher;
     private TextView timerText, instructionText;
     private Button startButton, focusStop;
@@ -1025,6 +1027,40 @@ public class FocusMode extends AppCompatActivity {
         }
     }
 
+    /**
+     * Returns true if both notification (Android 13+) and exact-alarm (Android 12+) permissions
+     * are granted — required for Focus Schedules to fire and show heads-up alerts.
+     * When a permission is missing the caller sheet is dismissed, the main screen's permission
+     * cards are made visible via {@link #checkPermissionAndMoveOn()}, and shaken for attention.
+     *
+     * @param callerSheet the BottomSheetDialog currently shown (will be dismissed on failure)
+     */
+    private boolean hasSchedulePermissions(com.google.android.material.bottomsheet.BottomSheetDialog callerSheet) {
+        boolean alarmOk = hasExactAlarmPermission();
+        boolean notifOk = isNotificationPermissionGranted();
+
+        if (alarmOk && notifOk) return true;
+
+        // Dismiss the settings sheet so the permission cards on the main screen are visible
+        if (callerSheet != null && callerSheet.isShowing()) callerSheet.dismiss();
+
+        // Re-evaluate which cards to show
+        checkPermissionAndMoveOn();
+
+        // Shake missing-permission cards after a brief delay for layout to settle
+        View alarmCard = findViewById(R.id.permissionCard);
+        handler.postDelayed(() -> {
+            if (!alarmOk) shakePermCard(alarmCard);
+            if (!notifOk) shakePermCard(notificationPermCard);
+        }, 250);
+
+        String msg = !alarmOk
+                ? "Exact Alarm permission is required to use Focus Schedules."
+                : "Notification permission is required to use Focus Schedules.";
+        Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+        return false;
+    }
+
     @Override
     protected void onStart() {
         super.onStart();
@@ -1040,6 +1076,15 @@ public class FocusMode extends AppCompatActivity {
         updatePomodoroIndicator();
         // Re-check exact alarm and notification permissions when returning to screen
         checkPermissionAndMoveOn();
+        // If redirected from HomeActivity due to missing permissions, shake the visible cards
+        if (getIntent() != null && getIntent().getBooleanExtra(EXTRA_SHAKE_PERM_CARDS, false)) {
+            getIntent().removeExtra(EXTRA_SHAKE_PERM_CARDS);
+            View alarmCard = findViewById(R.id.permissionCard);
+            handler.postDelayed(() -> {
+                shakePermCard(alarmCard);
+                shakePermCard(notificationPermCard);
+            }, 350);
+        }
         // Refresh break seekbar from saved preferences (user may have changed in settings)
         setupBreakDurationSeekBar();
         refreshBreakSeekbarVisibility();
@@ -2076,7 +2121,11 @@ public class FocusMode extends AppCompatActivity {
             scheduleRv.setLayoutManager(new LinearLayoutManager(this));
             Runnable reloadSchedules = getRunnable(scheduleRv, schedulesContainer);
 
-            addScheduleBtn.setOnClickListener(v -> showAddScheduleDialog(null, reloadSchedules));
+            addScheduleBtn.setOnClickListener(v -> {
+                // Require both permissions before creating a schedule
+                if (!hasSchedulePermissions(sheet)) return;
+                showAddScheduleDialog(null, reloadSchedules);
+            });
             reloadSchedules.run();
         }
 

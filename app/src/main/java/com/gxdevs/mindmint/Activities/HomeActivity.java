@@ -41,15 +41,15 @@ import java.util.List;
 
 public class HomeActivity extends AppCompatActivity {
 
-    public static final String EXTRA_START_FRAGMENT  = "extra_start_fragment";
-    public static final String START_FRAGMENT_HOME     = "home";
-    public static final String START_FRAGMENT_TASKS    = "tasks";
-    public static final String START_FRAGMENT_HABITS   = "habits";
+    public static final String EXTRA_START_FRAGMENT = "extra_start_fragment";
+    public static final String START_FRAGMENT_HOME = "home";
+    public static final String START_FRAGMENT_TASKS = "tasks";
+    public static final String START_FRAGMENT_HABITS = "habits";
     public static final String START_FRAGMENT_SETTINGS = "settings";
-    public static final String PREF_START_FRAGMENT     = "pref_start_fragment";
+    public static final String PREF_START_FRAGMENT = "pref_start_fragment";
 
-    private static final String PREF_REVIEW    = "in_app_review";
-    private static final String KEY_COUNT      = "launch_count";
+    private static final String PREF_REVIEW = "in_app_review";
+    private static final String KEY_COUNT = "launch_count";
     private static final String KEY_REVIEW_DONE = "review_done";
 
     private static final String PREF_LOCK_IN_SAVED_MS = "pref_lock_in_saved_ms";
@@ -65,15 +65,14 @@ public class HomeActivity extends AppCompatActivity {
     private android.content.BroadcastReceiver focusSessionEndedReceiver;
 
     private final List<FrameLayout> navItems = new ArrayList<>();
-    private final List<ImageView>   navIcons = new ArrayList<>();
+    private final List<ImageView> navIcons = new ArrayList<>();
 
-    private final ViewPager2.OnPageChangeCallback pageChangeCallback =
-            new ViewPager2.OnPageChangeCallback() {
-                @Override
-                public void onPageSelected(int position) {
-                    syncNavToPage(position);
-                }
-            };
+    private final ViewPager2.OnPageChangeCallback pageChangeCallback = new ViewPager2.OnPageChangeCallback() {
+        @Override
+        public void onPageSelected(int position) {
+            syncNavToPage(position);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,16 +89,18 @@ public class HomeActivity extends AppCompatActivity {
         if (savedInstanceState == null) {
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
             String startFromIntent = getIntent().getStringExtra(EXTRA_START_FRAGMENT);
-            String startFromPrefs  = prefs.getString(PREF_START_FRAGMENT, null);
+            String startFromPrefs = prefs.getString(PREF_START_FRAGMENT, null);
             if (startFromPrefs != null) {
                 prefs.edit().remove(PREF_START_FRAGMENT).apply();
             }
             String start = startFromIntent != null ? startFromIntent : startFromPrefs;
 
             boolean shouldOpenAddTask = getIntent().getBooleanExtra("open_add_task", false);
-            if (shouldOpenAddTask) start = START_FRAGMENT_TASKS;
+            if (shouldOpenAddTask)
+                start = START_FRAGMENT_TASKS;
 
-            if (start == null) start = START_FRAGMENT_HOME;
+            if (start == null)
+                start = START_FRAGMENT_HOME;
 
             viewPager.setCurrentItem(pageIndexFor(start), false);
 
@@ -184,9 +185,11 @@ public class HomeActivity extends AppCompatActivity {
                     case "open_play_store":
                         String pkg = getPackageName();
                         try {
-                            startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=" + pkg)));
+                            startActivity(new Intent(Intent.ACTION_VIEW,
+                                    android.net.Uri.parse("market://details?id=" + pkg)));
                         } catch (android.content.ActivityNotFoundException e) {
-                            startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/apps/details?id=" + pkg)));
+                            startActivity(new Intent(Intent.ACTION_VIEW,
+                                    android.net.Uri.parse("https://play.google.com/store/apps/details?id=" + pkg)));
                         }
                         break;
                 }
@@ -202,7 +205,7 @@ public class HomeActivity extends AppCompatActivity {
         MidnightResetManager.checkAndPerformReset(this);
         // Re-check accessibility permission so the Lock In pill shows/hides instantly
         updateLockInPillLabel();
-        
+
         lockInPill.postDelayed(this::checkAndShowLockInTutorial, 500);
 
         // Bug 4 fix: listen for alarm-triggered session ends while activity is visible
@@ -228,7 +231,10 @@ public class HomeActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         if (focusSessionEndedReceiver != null) {
-            try { unregisterReceiver(focusSessionEndedReceiver); } catch (Exception ignored) {}
+            try {
+                unregisterReceiver(focusSessionEndedReceiver);
+            } catch (Exception ignored) {
+            }
             focusSessionEndedReceiver = null;
         }
     }
@@ -241,7 +247,7 @@ public class HomeActivity extends AppCompatActivity {
 
     private void findViews() {
         viewPager = findViewById(R.id.nav_host_container);
-        btnHome   = findViewById(R.id.btn_home);
+        btnHome = findViewById(R.id.btn_home);
 
         navItems.add(findViewById(R.id.nav_unlink));
         navItems.add(findViewById(R.id.nav_task));
@@ -252,7 +258,7 @@ public class HomeActivity extends AppCompatActivity {
         navIcons.add(findViewById(R.id.taskIcon));
         navIcons.add(findViewById(R.id.habitIcon));
         navIcons.add(findViewById(R.id.settingsIcon));
-        
+
         lockInPill = findViewById(R.id.lockInPill);
         updateLockInPillLabel();
     }
@@ -269,17 +275,17 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void setupNavigation() {
-        navItems.get(0).setOnClickListener(v ->   // "Friends" — coming soon
-                Toast.makeText(this, "Your friends are coming soon!", Toast.LENGTH_SHORT).show());
+        navItems.get(0).setOnClickListener(v -> // "Friends" — coming soon
+        Toast.makeText(this, "Your friends are coming soon!", Toast.LENGTH_SHORT).show());
 
-        navItems.get(1).setOnClickListener(v ->   // Tasks
-                viewPager.setCurrentItem(HomePagerAdapter.PAGE_TASKS, true));
+        navItems.get(1).setOnClickListener(v -> // Tasks
+        viewPager.setCurrentItem(HomePagerAdapter.PAGE_TASKS, true));
 
-        navItems.get(2).setOnClickListener(v ->   // Habits
-                viewPager.setCurrentItem(HomePagerAdapter.PAGE_HABITS, true));
+        navItems.get(2).setOnClickListener(v -> // Habits
+        viewPager.setCurrentItem(HomePagerAdapter.PAGE_HABITS, true));
 
-        navItems.get(3).setOnClickListener(v ->   // Settings
-                viewPager.setCurrentItem(HomePagerAdapter.PAGE_SETTINGS, true));
+        navItems.get(3).setOnClickListener(v -> // Settings
+        viewPager.setCurrentItem(HomePagerAdapter.PAGE_SETTINGS, true));
 
         btnHome.setOnClickListener(v -> {
             btnHome.animate()
@@ -300,6 +306,14 @@ public class HomeActivity extends AppCompatActivity {
                     || sharedPreferences.getBoolean(FocusService.PREF_IS_LOCKED_IN, false);
             if (isAlreadyActive) {
                 startActivity(new Intent(this, FocusMode.class));
+                return;
+            }
+            // Require notification + exact alarm permissions before starting
+            if (!hasLockInPermissions()) {
+                // Open FocusMode and request it to shake the missing-permission cards
+                Intent permIntent = new Intent(this, FocusMode.class);
+                permIntent.putExtra(FocusMode.EXTRA_SHAKE_PERM_CARDS, true);
+                startActivity(permIntent);
                 return;
             }
             long savedMs = sharedPreferences.getLong(PREF_LOCK_IN_SAVED_MS, 0);
@@ -327,26 +341,30 @@ public class HomeActivity extends AppCompatActivity {
 
         viewPager.post(() -> syncNavToPage(viewPager.getCurrentItem()));
     }
-    
+
     private void showLockInSheet() {
         BottomSheetDialog sheet = new BottomSheetDialog(this);
         View sheetView = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_time, null);
 
         // Customize title
         TextView titleLabel = sheetView.findViewById(R.id.greetings);
-        if (titleLabel != null) titleLabel.setText("Lock In");
+        if (titleLabel != null)
+            titleLabel.setText("Lock In");
         TextView subtitle = sheetView.findViewById(R.id.dateDetails);
-        if (subtitle != null) subtitle.setText("SET DURATION");
+        if (subtitle != null)
+            subtitle.setText("SET DURATION");
 
         NumberPicker hourPicker = sheetView.findViewById(R.id.hours_selector_bottom_sheet);
         NumberPicker minutePicker = sheetView.findViewById(R.id.minutes_selector_bottom_sheet);
         Button confirmBtn = sheetView.findViewById(R.id.setLimitBtnBottomSheet);
         View rememberRow = sheetView.findViewById(R.id.rememberTimeRow);
-        com.google.android.material.materialswitch.MaterialSwitch rememberSwitch =
-                sheetView.findViewById(R.id.rememberTimeSwitch);
+        com.google.android.material.materialswitch.MaterialSwitch rememberSwitch = sheetView
+                .findViewById(R.id.rememberTimeSwitch);
 
-        if (confirmBtn != null) confirmBtn.setText("Lock In");
-        if (rememberRow != null) rememberRow.setVisibility(View.VISIBLE);
+        if (confirmBtn != null)
+            confirmBtn.setText("Lock In");
+        if (rememberRow != null)
+            rememberRow.setVisibility(View.VISIBLE);
 
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         long savedMs = sharedPreferences.getLong(PREF_LOCK_IN_SAVED_MS, 0);
@@ -389,6 +407,25 @@ public class HomeActivity extends AppCompatActivity {
         sheet.setContentView(sheetView);
         sheet.show();
     }
+    /**
+     * Returns true if both notification and exact-alarm permissions are granted.
+     * These are required for Lock-In mode to show its foreground notification and
+     * schedule the session-end alarm reliably.
+     */
+    private boolean hasLockInPermissions() {
+        // Exact alarm — required on Android 12+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            android.app.AlarmManager am = (android.app.AlarmManager) getSystemService(ALARM_SERVICE);
+            if (am == null || !am.canScheduleExactAlarms()) return false;
+        }
+        // Notification — required on Android 13+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(this,
+                    android.Manifest.permission.POST_NOTIFICATIONS)
+                    != android.content.pm.PackageManager.PERMISSION_GRANTED) return false;
+        }
+        return true;
+    }
 
     private void startLockInMode(long durationMs) {
         // Guard: do not start a second focus session if one is already live
@@ -404,10 +441,10 @@ public class HomeActivity extends AppCompatActivity {
                     .setTitle("🔒 Lock In Mode")
                     .setMessage(
                             "Once you start Lock In, all non-essential apps will be blocked "
-                            + "for the entire duration you set.\n\n"
-                            + "You will NOT be able to stop the session early. "
-                            + "Make sure you are ready before confirming.\n\n"
-                            + "Essential apps (calls, camera, settings) remain accessible.")
+                                    + "for the entire duration you set.\n\n"
+                                    + "You will NOT be able to stop the session early. "
+                                    + "Make sure you are ready before confirming.\n\n"
+                                    + "Essential apps (calls, camera, settings) remain accessible.")
                     .setPositiveButton("I'm Ready, Lock In", (d, w) -> {
                         sp.edit().putBoolean(PREF_LOCK_IN_WARNING_SHOWN, true).apply();
                         doStartLockIn(durationMs);
@@ -442,12 +479,14 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     public void updateLockInPillLabel() {
-        if (lockInPill == null) return;
+        if (lockInPill == null)
+            return;
 
         boolean isHome = viewPager != null && viewPager.getCurrentItem() == HomePagerAdapter.PAGE_HOME;
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
-        // Hide pill when not on home, no accessibility, OR a focus/lock-in session is active
+        // Hide pill when not on home, no accessibility, OR a focus/lock-in session is
+        // active
         boolean isFocusActive = FocusService.isPublicFocusRun
                 || sharedPreferences.getBoolean(FocusService.PREF_IS_LOCKED_IN, false);
 
@@ -490,6 +529,7 @@ public class HomeActivity extends AppCompatActivity {
     public void updateNavigationForFragment(Fragment fragment) {
         syncNavToPage(pageForFragment(fragment));
     }
+
     private void syncNavToPage(int page) {
         resetNav();
         int navIdx = navIndexForPage(page);
@@ -502,55 +542,70 @@ public class HomeActivity extends AppCompatActivity {
 
     private int navIndexForPage(int page) {
         switch (page) {
-            case HomePagerAdapter.PAGE_TASKS:    return 1;
-            case HomePagerAdapter.PAGE_HABITS:   return 2;
-            case HomePagerAdapter.PAGE_SETTINGS: return 3;
-            default:                             return -1; // Home — no nav item
+            case HomePagerAdapter.PAGE_TASKS:
+                return 1;
+            case HomePagerAdapter.PAGE_HABITS:
+                return 2;
+            case HomePagerAdapter.PAGE_SETTINGS:
+                return 3;
+            default:
+                return -1; // Home — no nav item
         }
     }
 
     private int pageForFragment(Fragment f) {
-        if (f instanceof TasksFragment)    return HomePagerAdapter.PAGE_TASKS;
-        if (f instanceof HabitFragment)    return HomePagerAdapter.PAGE_HABITS;
-        if (f instanceof SettingsFragment) return HomePagerAdapter.PAGE_SETTINGS;
+        if (f instanceof TasksFragment)
+            return HomePagerAdapter.PAGE_TASKS;
+        if (f instanceof HabitFragment)
+            return HomePagerAdapter.PAGE_HABITS;
+        if (f instanceof SettingsFragment)
+            return HomePagerAdapter.PAGE_SETTINGS;
         return HomePagerAdapter.PAGE_HOME;
     }
 
     private int pageIndexFor(String startKey) {
         switch (startKey) {
-            case START_FRAGMENT_TASKS:    return HomePagerAdapter.PAGE_TASKS;
-            case START_FRAGMENT_HABITS:   return HomePagerAdapter.PAGE_HABITS;
-            case START_FRAGMENT_SETTINGS: return HomePagerAdapter.PAGE_SETTINGS;
-            default:                      return HomePagerAdapter.PAGE_HOME;
+            case START_FRAGMENT_TASKS:
+                return HomePagerAdapter.PAGE_TASKS;
+            case START_FRAGMENT_HABITS:
+                return HomePagerAdapter.PAGE_HABITS;
+            case START_FRAGMENT_SETTINGS:
+                return HomePagerAdapter.PAGE_SETTINGS;
+            default:
+                return HomePagerAdapter.PAGE_HOME;
         }
     }
 
     private void resetNav() {
-        for (FrameLayout item : navItems) item.setSelected(false);
+        for (FrameLayout item : navItems)
+            item.setSelected(false);
         for (ImageView icon : navIcons)
             icon.setColorFilter(ContextCompat.getColor(this, R.color.icon_unselected));
     }
 
     public void maybeAskForReview() {
         SharedPreferences prefs = getSharedPreferences(PREF_REVIEW, MODE_PRIVATE);
-        if (prefs.getBoolean(KEY_REVIEW_DONE, false)) return;
+        if (prefs.getBoolean(KEY_REVIEW_DONE, false))
+            return;
         int count = prefs.getInt(KEY_COUNT, 0) + 1;
         prefs.edit().putInt(KEY_COUNT, count).apply();
-        if (count != 5) return;
+        if (count != 5)
+            return;
         ReviewManager manager = ReviewManagerFactory.create(this);
         manager.requestReviewFlow().addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
                 manager.launchReviewFlow(this, task.getResult())
-                        .addOnCompleteListener(t ->
-                                prefs.edit().putBoolean(KEY_REVIEW_DONE, true).apply());
+                        .addOnCompleteListener(t -> prefs.edit().putBoolean(KEY_REVIEW_DONE, true).apply());
             }
         });
     }
 
     private void checkAndShowLockInTutorial() {
-        if (lockInPill == null || lockInPill.getVisibility() != View.VISIBLE) return;
+        if (lockInPill == null || lockInPill.getVisibility() != View.VISIBLE)
+            return;
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        if (prefs.getBoolean("lock_in_tutorial_shown", false)) return;
+        if (prefs.getBoolean("lock_in_tutorial_shown", false))
+            return;
 
         com.skydoves.balloon.Balloon balloon = new com.skydoves.balloon.Balloon.Builder(this)
                 .setArrowSize(10)

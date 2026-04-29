@@ -251,7 +251,8 @@
         android:orientation="vertical"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/instructionText">
+        app:layout_constraintTop_toBottomOf="@+id/instructionText"
+        app:layout_constraintBottom_toTopOf="@+id/topicsContainer">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/permissionCard"
@@ -382,10 +383,12 @@
 
     <LinearLayout
         android:id="@+id/topicsContainer"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:layout_marginBottom="24dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@+id/buttonCard">
 
         <TextView

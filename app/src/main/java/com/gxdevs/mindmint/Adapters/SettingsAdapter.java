@@ -234,9 +234,11 @@ public class SettingsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             // Bind Icon & Background
             icon.setImageResource(item.getIconRes());
 
-            // Icon Background
+            // Icon Background — always reset first to avoid tint bleed on RecyclerView recycle
             if (item.getIconBgRes() != 0) {
                 icon.setBackgroundResource(item.getIconBgRes());
+            } else {
+                icon.setBackgroundResource(0); // clear any recycled background
             }
 
             if (item.getIconBgTint() != 0) {
@@ -245,6 +247,12 @@ public class SettingsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                     bg = DrawableCompat.wrap(bg).mutate();
                     DrawableCompat.setTint(bg, item.getIconBgTint());
                     icon.setBackground(bg);
+                }
+            } else {
+                // Clear any tint left over from a recycled cell
+                Drawable bg = icon.getBackground();
+                if (bg != null) {
+                    DrawableCompat.setTintList(DrawableCompat.wrap(bg).mutate(), null);
                 }
             }
 
@@ -330,8 +338,11 @@ public class SettingsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
             subtitle.setText(item.getSubtitle());
             icon.setImageResource(item.getIconRes());
 
+            // Icon Background — always reset first to avoid tint bleed on RecyclerView recycle
             if (item.getIconBgRes() != 0) {
                 icon.setBackgroundResource(item.getIconBgRes());
+            } else {
+                icon.setBackgroundResource(0);
             }
             if (item.getIconBgTint() != 0) {
                 Drawable bg = icon.getBackground();
@@ -339,6 +350,11 @@ public class SettingsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolde
                     bg = DrawableCompat.wrap(bg).mutate();
                     DrawableCompat.setTint(bg, item.getIconBgTint());
                     icon.setBackground(bg);
+                }
+            } else {
+                Drawable bg = icon.getBackground();
+                if (bg != null) {
+                    DrawableCompat.setTintList(DrawableCompat.wrap(bg).mutate(), null);
                 }
             }
             if (item.getIconTint() != 0) {

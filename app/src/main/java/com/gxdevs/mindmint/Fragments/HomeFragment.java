@@ -249,13 +249,10 @@ public class HomeFragment extends Fragment {
         blockerBtn = view.findViewById(R.id.blockerBtn);
         playPause = view.findViewById(R.id.playPause);
         reportBtn = view.findViewById(R.id.reportBtn);
-
         mindCard = view.findViewById(R.id.mindCard);
         brain = view.findViewById(R.id.brainHolder);
         count = view.findViewById(R.id.count);
-        totalWastedScrolls = Utils.calculateTotalUsageScrolls(sharedPreferences, "yt")
-                + Utils.calculateTotalUsageScrolls(sharedPreferences, "insta")
-                + Utils.calculateTotalUsageScrolls(sharedPreferences, "snap");
+        totalWastedScrolls = Utils.calculateTotalUsageScrolls(sharedPreferences, "yt") + Utils.calculateTotalUsageScrolls(sharedPreferences, "insta") + Utils.calculateTotalUsageScrolls(sharedPreferences, "snap");
         totalWastedTimeTextView = view.findViewById(R.id.totalWastedTime);
         circularProgress = view.findViewById(R.id.circularProgress);
         focusCard = view.findViewById(R.id.focusCard);
@@ -389,17 +386,20 @@ public class HomeFragment extends Fragment {
 
         // YouTube Mod Checkbox Listener
         applyLockedSwitch(ytModCheckbox, "Change YouTube Mod", (isChecked) -> {
-            if (ytSwitch.isChecked()) saveModState(isChecked, KEY_YT_MOD);
+            if (ytSwitch.isChecked())
+                saveModState(isChecked, KEY_YT_MOD);
         });
 
         // Instagram Mod Checkbox Listener
         applyLockedSwitch(instaModCheckbox, "Change Instagram Mod", (isChecked) -> {
-            if (instaSwitch.isChecked()) saveModState(isChecked, KEY_INSTA_MOD);
+            if (instaSwitch.isChecked())
+                saveModState(isChecked, KEY_INSTA_MOD);
         });
 
         // Snapchat Mod Checkbox Listener
         applyLockedSwitch(snapModCheckbox, "Change Snapchat Mod", (isChecked) -> {
-            if (snapSwitch.isChecked()) saveModState(isChecked, KEY_SNAP_MOD);
+            if (snapSwitch.isChecked())
+                saveModState(isChecked, KEY_SNAP_MOD);
         });
 
         crossBtn.setOnClickListener(v -> blockerSheet.dismiss());
@@ -599,9 +599,13 @@ public class HomeFragment extends Fragment {
         }
     }
 
-    /** Bug 7 fix: re-read isServicePaused from prefs and refresh icon. Called externally on session end. */
+    /**
+     * Bug 7 fix: re-read isServicePaused from prefs and refresh icon. Called
+     * externally on session end.
+     */
     public void refreshPauseButtonState() {
-        if (!isAdded() || playPause == null) return;
+        if (!isAdded() || playPause == null)
+            return;
         isServicePaused = PreferenceManager.getDefaultSharedPreferences(requireContext())
                 .getBoolean("isServicePaused", false);
         updatePlayPauseButton();
@@ -986,8 +990,8 @@ public class HomeFragment extends Fragment {
 
     private void showGoalProgressBottomSheet(Habit habit, ConstraintLayout tile, ImageView tileIcon, TextView streak) {
         BottomSheetDialog goalSheet = new BottomSheetDialog(requireContext(), R.style.CustomBottomSheetTheme);
-        View bottomSheetView = LayoutInflater.from(requireContext())
-                .inflate(R.layout.bottom_sheet_progress, view.findViewById(R.id.bottomSheetGoalProgressLayout));
+        View bottomSheetView = LayoutInflater.from(requireContext()).inflate(R.layout.bottom_sheet_progress,
+                view.findViewById(R.id.bottomSheetGoalProgressLayout));
 
         // Find views
         ImageView crossBtn = bottomSheetView.findViewById(R.id.crossBtn);
@@ -1018,7 +1022,7 @@ public class HomeFragment extends Fragment {
         habit.resetProgressIfNeeded();
 
         // Use an array to hold mutable progress value in lambda
-        final int[] currentProgress = {habit.getCurrentProgress()};
+        final int[] currentProgress = { habit.getCurrentProgress() };
         final int targetCount = habit.getTargetCount();
         final int oneTapValue = habit.getOneTapValue();
 
@@ -1391,7 +1395,8 @@ public class HomeFragment extends Fragment {
         androidx.appcompat.app.AlertDialog dialog = builder.create();
         dialog.show();
 
-        // Override the positive button click to prevent automatic dismissal on empty input
+        // Override the positive button click to prevent automatic dismissal on empty
+        // input
         dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             String name = firstNameEditText.getText() != null ? firstNameEditText.getText().toString().trim() : "";
             if (name.isEmpty()) {
@@ -1425,22 +1430,22 @@ public class HomeFragment extends Fragment {
         java.util.Calendar cal = java.util.Calendar.getInstance();
         int hour = cal.get(java.util.Calendar.HOUR_OF_DAY);
 
-        String[] lateNight = new String[]{
+        String[] lateNight = new String[] {
                 "It’s late—keep screens away and protect your sleep.",
                 "Night time: slow down and unplug a little.",
                 "Late hours—wind down, not scroll down."
         };
-        String[] morning = new String[]{
+        String[] morning = new String[] {
                 "Good morning—start light, avoid doom‑scrolling.",
                 "Fresh start—set a small goal, not a scroll.",
                 "Morning focus beats morning feed."
         };
-        String[] midday = new String[]{
+        String[] midday = new String[] {
                 "Midday check‑in: energy low? Rest a minute.",
                 "Quick reset > quick scroll. Breathe.",
                 "Hydrate, stretch, then continue."
         };
-        String[] evening = new String[]{
+        String[] evening = new String[] {
                 "Evening wind‑down: keep it calm.",
                 "Unplug a bit—your mind will thank you.",
                 "Wrap up strong, not endless scrolling."
@@ -1650,7 +1655,8 @@ public class HomeFragment extends Fragment {
         // Always refresh service state from prefs on resume
         if (sharedPreferences != null) {
             isServicePaused = sharedPreferences.getBoolean("isServicePaused", false);
-            if (playPause != null) updatePlayPauseButton();
+            if (playPause != null)
+                updatePlayPauseButton();
         }
         updatePlayPauseButton();
         updateAllData();
@@ -1700,7 +1706,8 @@ public class HomeFragment extends Fragment {
 
     private void checkAndShowUpdateLog(Runnable onDismiss) {
         try {
-            PackageInfo pInfo = requireContext().getPackageManager().getPackageInfo(requireContext().getPackageName(), 0);
+            PackageInfo pInfo = requireContext().getPackageManager().getPackageInfo(requireContext().getPackageName(),
+                    0);
             int currentVersionCode = pInfo.versionCode;
             int lastShownVersion = prefs.getInt("last_shown_update_log_version", -1);
 

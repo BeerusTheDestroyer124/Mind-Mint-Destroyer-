@@ -36,6 +36,8 @@ public class BlockingOverlayDisplayActivity extends AppCompatActivity {
     private String currentBlockedPackageName = null;
     private ImageView ivBlockedAppIcon;
     private boolean isReminderOnly = false;
+    /** Guards against sending HOME broadcast more than once per logical blocking session. */
+    private boolean homeActionDispatched = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -134,6 +136,10 @@ public class BlockingOverlayDisplayActivity extends AppCompatActivity {
         handler.removeCallbacksAndMessages(null);
         Log.d(TAG, "setupTimer: Removed any existing handler callbacks.");
 
+        // Each logical blocking session (onCreate or new blocked package via onNewIntent)
+        // gets a fresh home-action dispatch opportunity.
+        homeActionDispatched = false;
+
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         int popupDurationSeconds = sharedPreferences.getInt(AppUsageAccessibilityService.PREF_BLOCKING_POPUP_DURATION_SEC, 3);
         Log.i(TAG, "setupTimer: Loaded popupDurationSeconds from Prefs: " + popupDurationSeconds + "s");
@@ -149,12 +155,15 @@ public class BlockingOverlayDisplayActivity extends AppCompatActivity {
             Log.i(TAG, "Handler postDelayed: Time elapsed for app: " + currentBlockedAppName
                     + ". Is Reminder: " + isReminderOnly);
 
-            if (!isReminderOnly) {
+            if (!isReminderOnly && !homeActionDispatched) {
+                homeActionDispatched = true;
                 Log.d(TAG, "Sending broadcast to AppUsageAccessibilityService to perform GLOBAL_ACTION_HOME for blocking.");
                 Intent closeAppIntent = new Intent(AppUsageAccessibilityService.ACTION_PERFORM_GLOBAL_HOME_FROM_OVERLAY);
                 closeAppIntent.setPackage(getPackageName());
                 sendBroadcast(closeAppIntent);
                 Log.d(TAG, "Broadcast ACTION_PERFORM_GLOBAL_HOME_FROM_OVERLAY sent.");
+            } else if (homeActionDispatched) {
+                Log.d(TAG, "Home action already dispatched — skipping duplicate.");
             } else {
                 Log.d(TAG, "Reminder time elapsed. Not sending GLOBAL_ACTION_HOME.");
             }
@@ -184,6 +193,8 @@ public class BlockingOverlayDisplayActivity extends AppCompatActivity {
         super.onNewIntent(intent);
         Log.i(TAG, "onNewIntent: Activity received NEW INTENT: " + intent);
         setIntent(intent);
+        // Re-process the intent (may carry a different blocked app/package for focus mode).
+        // setupTimer() will reset the homeActionDispatched flag so the new session fires HOME once.
         processIntent(intent);
         setupTimer();
         Log.i(TAG, "onNewIntent: Processed new intent and rescheduled timer.");

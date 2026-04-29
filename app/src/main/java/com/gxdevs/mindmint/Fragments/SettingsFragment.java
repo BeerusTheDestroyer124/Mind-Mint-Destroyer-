@@ -86,6 +86,8 @@ public class SettingsFragment extends Fragment {
     private static final int ID_SETTINGS_LOCK = 12;
     private static final int ID_LOCK_TYPE_TAB = 13;
     private static final int ID_ALWAYS_LOCK_IN = 14;
+    private static final int ID_ROUTINES = 15;
+    private static final int ID_PREVENT_UNINSTALL = 16;
     private static final int ID_PERM_ACCESSIBILITY = 100;
     private static final int ID_PERM_NOTIFICATION = 101;
     private static final int ID_PERM_ALARM = 102;
@@ -492,6 +494,26 @@ public class SettingsFragment extends Fragment {
         if (isLockEnabled) {
             settingsItems.add(new SettingsItem(ID_LOCK_TYPE_TAB, SettingsItem.TYPE_LOCK_TAB, "", "", 0, 0));
         }
+
+        // UPCOMING FEATURES
+        settingsItems.add(new SettingsItem(SettingsItem.TYPE_HEADER, "UPCOMING FEATURES"));
+
+        int orangeIcon = Color.parseColor("#FF9800");
+        // Routines — Coming Soon
+        settingsItems.add(new SettingsItem(ID_ROUTINES, SettingsItem.TYPE_SWITCH,
+                "Routines", "Coming Soon \uD83D\uDE80",
+                R.drawable.alarm, orangeIcon)
+                .setIconValues(R.drawable.shape_circle, Color.parseColor("#33FF9800"))
+                .setOnClickListener(v ->
+                        Toast.makeText(requireContext(), "Coming Soon \uD83D\uDE80", Toast.LENGTH_SHORT).show()));
+
+        // Prevent Uninstall — Coming Soon
+        settingsItems.add(new SettingsItem(ID_PREVENT_UNINSTALL, SettingsItem.TYPE_SWITCH,
+                "Prevent Uninstall", "Coming Soon \uD83D\uDE80",
+                R.drawable.shield, redIcon)
+                .setIconValues(R.drawable.shape_circle, Color.parseColor("#33F77381"))
+                .setOnClickListener(v ->
+                        Toast.makeText(requireContext(), "Coming Soon \uD83D\uDE80", Toast.LENGTH_SHORT).show()));
 
         // APPEARANCE
         settingsItems.add(new SettingsItem(SettingsItem.TYPE_HEADER, "APPEARANCE"));
