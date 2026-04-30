@@ -194,5 +194,7 @@
     <string name="onboarding_desc5">Your data stays on your device. No cloud uploads, no tracking 100% secure.</string>
     <string name="skip">Skip</string>
 
+    <!-- Device Admin -->
+    <string name="device_admin_description">Mind Mint uses Device Administrator permission to prevent the app from being force-stopped or uninstalled while active, ensuring your focus protection stays in place.</string>
 
 </resources>

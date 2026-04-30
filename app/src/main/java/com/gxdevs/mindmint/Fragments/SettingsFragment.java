@@ -9,6 +9,8 @@ import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.app.AlarmManager;
 import android.app.AlertDialog;
+import android.app.admin.DevicePolicyManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -54,6 +56,7 @@ import com.gxdevs.mindmint.Activities.SiteBlockerActivity;
 import com.gxdevs.mindmint.Adapters.SettingsAdapter;
 import com.gxdevs.mindmint.Models.SettingsItem;
 import com.gxdevs.mindmint.R;
+import com.gxdevs.mindmint.Receivers.MindMintDeviceAdminReceiver;
 import com.gxdevs.mindmint.Services.AppUsageAccessibilityService;
 import com.gxdevs.mindmint.Utils.AdultDomainListManager;
 import com.gxdevs.mindmint.Utils.AlarmUtils;
@@ -88,6 +91,7 @@ public class SettingsFragment extends Fragment {
     private static final int ID_ALWAYS_LOCK_IN = 14;
     private static final int ID_ROUTINES = 15;
     private static final int ID_PREVENT_UNINSTALL = 16;
+    private static final int ID_LOCK_TYPES = 17;
     private static final int ID_PERM_ACCESSIBILITY = 100;
     private static final int ID_PERM_NOTIFICATION = 101;
     private static final int ID_PERM_ALARM = 102;
@@ -111,15 +115,22 @@ public class SettingsFragment extends Fragment {
     private ActivityResultLauncher<String> notificationPermissionLauncher;
     private ActivityResultLauncher<Intent> exportLauncher;
     private ActivityResultLauncher<Intent> importLauncher;
+    private ActivityResultLauncher<Intent> deviceAdminLauncher;
+
+    private DevicePolicyManager devicePolicyManager;
+    private ComponentName deviceAdminComponent;
 
     private BottomSheetDialog timerPicker;
     private boolean batteryOptimizationIgnored = false;
-    private boolean isImportOverride = false; // For import state
+    private boolean isImportOverride = false;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_settings, container, false);
         defaultSharedPreferences = PreferenceManager.getDefaultSharedPreferences(requireContext());
+
+        devicePolicyManager = (DevicePolicyManager) requireContext().getSystemService(Context.DEVICE_POLICY_SERVICE);
+        deviceAdminComponent = new ComponentName(requireContext(), MindMintDeviceAdminReceiver.class);
 
         View rootFade = view.findViewById(R.id.headerContainer);
         if (rootFade != null) {
@@ -247,7 +258,7 @@ public class SettingsFragment extends Fragment {
                 isImportOverride = override;
                 Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
-                intent.setType("*/*"); // Allow all because extension is .brain
+                intent.setType("*/*");
                 importLauncher.launch(intent);
             }
         });
@@ -271,7 +282,6 @@ public class SettingsFragment extends Fragment {
         int popupBg = getThemeColor(R.attr.popup_bg);
         int textSecondary = getThemeColor(R.attr.text_secondary);
 
-        // Hex Tints from backup
         int redIcon = Color.parseColor("#F77381");
         int blueIcon = Color.parseColor("#61A2F2");
         int greenIcon = Color.parseColor("#3DD7A5");
@@ -279,10 +289,8 @@ public class SettingsFragment extends Fragment {
         int grayIcon = Color.parseColor("#ABABAB");
         int tealIcon = Color.parseColor("#009688");
 
-        // FOCUS CONTROLS
         settingsItems.add(new SettingsItem(SettingsItem.TYPE_HEADER, "FOCUS CONTROLS"));
 
-        // Remind Doom Scrolling
         boolean isRemindEnabled = defaultSharedPreferences.getBoolean(AppUsageAccessibilityService.PREF_REMIND_DOOM_SCROLLING_ENABLED, false);
         SettingsItem remindItem = new SettingsItem(ID_REMIND_DOOM, SettingsItem.TYPE_SWITCH, "Remind me",
                 "Get nudges to return to focus", R.drawable.bell, textSecondary)
@@ -330,14 +338,12 @@ public class SettingsFragment extends Fragment {
         }
         settingsItems.add(blockItem);
 
-        // Keep Service Alive
         boolean isKeepAlive = defaultSharedPreferences.getBoolean("keepServiceAlive", false);
         settingsItems.add(new SettingsItem(ID_KEEP_ALIVE, SettingsItem.TYPE_SWITCH, "Keep service alive",
                 "Prevent OS from killing app", R.drawable.zap, grayIcon).setSwitch(true, isKeepAlive, (buttonView, isChecked) -> {
             lockedSwitchAction("Change Keep service alive", buttonView, !isChecked, isChecked, () -> handleKeepAliveToggle(buttonView, isChecked));
         }));
 
-        // --- Scroll Counter ---
         boolean isScrollCounterOn = defaultSharedPreferences.getBoolean("pref_scroll_counter_enabled", false);
         settingsItems.add(new SettingsItem(ID_SCROLL_COUNTER, SettingsItem.TYPE_SWITCH, "Show scroll counter",
                 isScrollCounterOn ? "Pill shown on blocked app screens" : "Show daily scroll count on blocking screen",
@@ -361,10 +367,8 @@ public class SettingsFragment extends Fragment {
                     .setScrollTabPerApp(perApp));
         }
 
-        // BLOCKING RULES
         settingsItems.add(new SettingsItem(SettingsItem.TYPE_HEADER, "BLOCKING RULES"));
 
-        // Browser Blocking
         boolean isBrowserBlockEnabled = defaultSharedPreferences.getBoolean(PREF_BLOCK_BROWSERS_DOOMSCROLLING_ENABLED, false);
         SettingsItem browserItem = new SettingsItem(ID_BROWSER_BLOCKER, SettingsItem.TYPE_SWITCH, "Blocker on browsers",
                 isBrowserBlockEnabled ? "Blocking active on browsers" : "Activate blocking on browsers",
@@ -395,7 +399,6 @@ public class SettingsFragment extends Fragment {
                 }));
         settingsItems.add(browserItem);
 
-        // Block Adult Sites
         boolean isAdultEnabled = defaultSharedPreferences.getBoolean(PREF_BLOCK_ADULT_SITES_ENABLED, false);
         settingsItems.add(new SettingsItem(ID_ADULT_BLOCK, SettingsItem.TYPE_SWITCH, "Block adult sites", "In Beta",
                 R.drawable.shield, redIcon)
@@ -419,7 +422,6 @@ public class SettingsFragment extends Fragment {
                 .setArrow(isAdultEnabled)
                 .setOnClickListener(v -> authenticateToChangeSetting("Update list", this::showAdultListDownloadDialogAndEnsure)));
 
-        // Blocking Popup Duration
         int savedDuration = defaultSharedPreferences.getInt(AppUsageAccessibilityService.PREF_BLOCKING_POPUP_DURATION_SEC, 5);
         if (savedDuration < 3)
             savedDuration = 3;
@@ -455,8 +457,6 @@ public class SettingsFragment extends Fragment {
                             lm.setLockType(SettingsLockManager.LOCK_TYPE_CUSTOM);
                             Toast.makeText(requireContext(), "Device lock not found. Please set a custom PIN.", Toast.LENGTH_LONG).show();
                         }
-                        
-                        // Enabling: if Custom PIN mode but no PIN set yet, prompt to create one
                         lm.setLockEnabled(true);
                         if (lm.isCustomPin() && !lm.hasCustomPin()) {
                             lm.showSetCustomPinDialog(requireContext(), false, this::refreshList);
@@ -464,8 +464,7 @@ public class SettingsFragment extends Fragment {
                             refreshList();
                         }
                     } else {
-                        // Disabling: gate behind current auth
-                        buttonView.setChecked(true); // revert visually until verified
+                        buttonView.setChecked(true);
                         authenticateToChangeSetting("Disable settings lock", () -> {
                             lm.setLockEnabled(false);
                             lm.clearCustomPin();
@@ -490,16 +489,47 @@ public class SettingsFragment extends Fragment {
                     return false;
                 }));
 
-        // Lock type sub-tab (shown only when lock is enabled)
         if (isLockEnabled) {
             settingsItems.add(new SettingsItem(ID_LOCK_TYPE_TAB, SettingsItem.TYPE_LOCK_TAB, "", "", 0, 0));
         }
 
-        // UPCOMING FEATURES
+        settingsItems.add(new SettingsItem(SettingsItem.TYPE_HEADER, "PROTECTION"));
+
+        boolean isAdminActive = devicePolicyManager != null
+                && devicePolicyManager.isAdminActive(deviceAdminComponent);
+        String preventUninstallSubtitle = isAdminActive
+                ? "App is protected — cannot be force-stopped or uninstalled"
+                : "Prevent uninstall or force-stop by granting Device Admin permission";
+        settingsItems.add(new SettingsItem(ID_PREVENT_UNINSTALL, SettingsItem.TYPE_SWITCH,
+                "Prevent Uninstall", preventUninstallSubtitle,
+                R.drawable.shield, redIcon)
+                .setIconValues(R.drawable.shape_circle, Color.parseColor("#33F77381"))
+                .setSwitch(true, isAdminActive, (buttonView, isChecked) -> {
+                    android.util.Log.d("PA_SWITCH", "listener fired — isChecked=" + isChecked + "  isAdminActive=" + isAdminActive);
+                    if (isChecked) {
+                        android.util.Log.d("PA_SWITCH", "ON branch → launching device admin intent");
+                        Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
+                        intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, deviceAdminComponent);
+                        intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                                "Granting this permission prevents Mind Mint from being " +
+                                "uninstalled or force-stopped while active, keeping your " +
+                                "focus protection intact.");
+                        deviceAdminLauncher.launch(intent);
+                    } else {
+                        android.util.Log.d("PA_SWITCH", "OFF branch → calling lockedSwitchAction");
+                        lockedSwitchAction("Disable Prevent Uninstall", buttonView, true, false, () -> {
+                            android.util.Log.d("PA_SWITCH", "lockedSwitchAction success → opening Security Settings");
+                            Toast.makeText(requireContext(),
+                                    "Disable Mind Mint in Device admin apps to remove protection.",
+                                    Toast.LENGTH_LONG).show();
+                            startActivity(new Intent(android.provider.Settings.ACTION_SECURITY_SETTINGS));
+                        });
+                    }
+                }));
+
         settingsItems.add(new SettingsItem(SettingsItem.TYPE_HEADER, "UPCOMING FEATURES"));
 
         int orangeIcon = Color.parseColor("#FF9800");
-        // Routines — Coming Soon
         settingsItems.add(new SettingsItem(ID_ROUTINES, SettingsItem.TYPE_SWITCH,
                 "Routines", "Coming Soon \uD83D\uDE80",
                 R.drawable.alarm, orangeIcon)
@@ -507,24 +537,20 @@ public class SettingsFragment extends Fragment {
                 .setOnClickListener(v ->
                         Toast.makeText(requireContext(), "Coming Soon \uD83D\uDE80", Toast.LENGTH_SHORT).show()));
 
-        // Prevent Uninstall — Coming Soon
-        settingsItems.add(new SettingsItem(ID_PREVENT_UNINSTALL, SettingsItem.TYPE_SWITCH,
-                "Prevent Uninstall", "Coming Soon \uD83D\uDE80",
-                R.drawable.shield, redIcon)
-                .setIconValues(R.drawable.shape_circle, Color.parseColor("#33F77381"))
+        settingsItems.add(new SettingsItem(ID_LOCK_TYPES, SettingsItem.TYPE_SWITCH,
+                "Lock types", "Coming Soon \uD83D\uDE80",
+                R.drawable.shield, purpleIcon)
+                .setIconValues(R.drawable.shape_circle, Color.parseColor("#33BF83FB"))
                 .setOnClickListener(v ->
                         Toast.makeText(requireContext(), "Coming Soon \uD83D\uDE80", Toast.LENGTH_SHORT).show()));
 
-        // APPEARANCE
         settingsItems.add(new SettingsItem(SettingsItem.TYPE_HEADER, "APPEARANCE"));
         settingsItems.add(new SettingsItem(ID_THEME, SettingsItem.TYPE_THEME, "Theme", "", 0, 0));
 
-        // BACKUP
         settingsItems.add(new SettingsItem(SettingsItem.TYPE_HEADER, "DATA MANAGEMENT"));
         settingsItems.add(new SettingsItem(ID_BACKUP, SettingsItem.TYPE_BACKUP, "Data Backup",
                 "Import or export your data", R.drawable.backup, tealIcon).setIconValues(R.drawable.shape_circle, mobileBg));
 
-        // PERMISSIONS
         addPermissionCards();
     }
 
@@ -838,6 +864,21 @@ public class SettingsFragment extends Fragment {
         batteryOptimizationLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
                 result -> {
                     refreshList();
+                });
+
+        deviceAdminLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    boolean active = devicePolicyManager != null
+                            && devicePolicyManager.isAdminActive(deviceAdminComponent);
+                    android.util.Log.d("PA_LAUNCHER", "deviceAdminLauncher result — resultCode=" + result.getResultCode() + "  isAdminActive=" + active);
+                    refreshList();
+                    android.util.Log.d("PA_LAUNCHER", "refreshList() done");
+                    if (active) {
+                        android.util.Log.d("PA_LAUNCHER", "showing enabled toast");
+                        Toast.makeText(requireContext(),
+                                "Prevent Uninstall enabled — app is now protected.",
+                                Toast.LENGTH_SHORT).show();
+                    }
                 });
     }
 

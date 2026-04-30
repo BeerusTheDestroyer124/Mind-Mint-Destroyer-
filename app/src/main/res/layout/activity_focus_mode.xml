@@ -69,15 +69,15 @@
         android:id="@+id/progressContainer"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="15dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/toolbar">
 
         <com.airbnb.lottie.LottieAnimationView
             android:id="@+id/lottie"
-            android:layout_width="270dp"
-            android:layout_height="270dp"
+            android:layout_width="250dp"
+            android:layout_height="250dp"
             android:layout_gravity="center"
             app:lottie_autoPlay="true"
             app:lottie_fileName="ruby.json"
@@ -85,8 +85,8 @@
 
         <me.tankery.lib.circularseekbar.CircularSeekBar
             android:id="@+id/circularProgress"
-            android:layout_width="270dp"
-            android:layout_height="270dp"
+            android:layout_width="250dp"
+            android:layout_height="250dp"
             android:layout_gravity="center"
             app:cs_circle_color="@color/sexyGrey"
             app:cs_circle_progress_color="@color/brainColor"
@@ -102,14 +102,14 @@
         <!-- Crystal Container with Growing Effect using custom mask logic -->
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/crystalContainer"
-            android:layout_width="140dp"
-            android:layout_height="140dp"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
             android:layout_gravity="center">
 
             <com.gxdevs.mindmint.Views.RevealMaskImageView
                 android:id="@+id/crystalColor"
-                android:layout_width="140dp"
-                android:layout_height="140dp"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
                 android:elevation="2dp"
                 android:src="@drawable/ruby"
                 app:layout_constraintBottom_toBottomOf="parent"
@@ -119,8 +119,8 @@
 
             <ImageView
                 android:id="@+id/crystalBase"
-                android:layout_width="140dp"
-                android:layout_height="140dp"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
                 android:src="@drawable/ruby"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -135,7 +135,7 @@
         android:id="@+id/timerText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="30dp"
+        android:layout_marginTop="5dp"
         android:fontFamily="sans-serif-light"
         android:textColor="?attr/tintGlobalColor"
         android:textSize="50sp"
