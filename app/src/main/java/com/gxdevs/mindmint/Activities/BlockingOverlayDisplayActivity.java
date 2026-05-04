@@ -3,22 +3,20 @@ package com.gxdevs.mindmint.Activities;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.View;
 import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.AnimationSet;
 import android.view.animation.RotateAnimation;
 import android.view.animation.TranslateAnimation;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceManager;
@@ -26,23 +24,27 @@ import androidx.preference.PreferenceManager;
 import com.gxdevs.mindmint.R;
 import com.gxdevs.mindmint.Services.AppUsageAccessibilityService;
 import com.gxdevs.mindmint.Services.FocusService;
-import com.gxdevs.mindmint.Utils.Utils;
 
 public class BlockingOverlayDisplayActivity extends AppCompatActivity {
 
     private static final String TAG = "BlockingOverlayDisplay";
     private final Handler handler = new Handler(Looper.getMainLooper());
     private String currentBlockedAppName = "Unknown";
-    private String currentBlockedPackageName = null;
     private ImageView ivBlockedAppIcon;
     private boolean isReminderOnly = false;
-    /** Guards against sending HOME broadcast more than once per logical blocking session. */
     private boolean homeActionDispatched = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.i(TAG, "onCreate: Activity CREATING. Intent: " + getIntent());
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                handleBackPress();
+            }
+        });
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -66,11 +68,10 @@ public class BlockingOverlayDisplayActivity extends AppCompatActivity {
             isReminderOnly = false;
         } else {
             currentBlockedAppName = intent.getStringExtra(AppUsageAccessibilityService.EXTRA_BLOCKED_APP_NAME);
-            currentBlockedPackageName = intent.getStringExtra(AppUsageAccessibilityService.EXTRA_BLOCKED_PACKAGE_NAME);
+            String currentBlockedPackageName = intent.getStringExtra(AppUsageAccessibilityService.EXTRA_BLOCKED_PACKAGE_NAME);
             isReminderOnly = intent.getBooleanExtra(AppUsageAccessibilityService.EXTRA_IS_REMINDER_ONLY, false);
             isFocus = intent.getBooleanExtra(AppUsageAccessibilityService.EXTRA_IS_FOCUS, false);
-            Log.i(TAG, "processIntent: Received blocked app name: " + currentBlockedAppName
-                    + ", package: " + currentBlockedPackageName + ", isReminder: " + isReminderOnly);
+            Log.i(TAG, "processIntent: Received blocked app name: " + currentBlockedAppName + ", package: " + currentBlockedPackageName + ", isReminder: " + isReminderOnly);
 
             if (TextUtils.isEmpty(currentBlockedAppName)) {
                 currentBlockedAppName = "This app";
@@ -80,9 +81,7 @@ public class BlockingOverlayDisplayActivity extends AppCompatActivity {
 
         TextView tvBlockingMessage = findViewById(R.id.tv_blocking_message);
         TextView tv_blocking_subtitle = findViewById(R.id.tv_blocking_subtitle);
-        String customSubtitle = intent != null
-                ? intent.getStringExtra(AppUsageAccessibilityService.EXTRA_CUSTOM_SUBTITLE)
-                : null;
+        String customSubtitle = intent != null ? intent.getStringExtra(AppUsageAccessibilityService.EXTRA_CUSTOM_SUBTITLE) : null;
         if (tvBlockingMessage != null) {
             if (customSubtitle != null) {
                 tvBlockingMessage.setText(currentBlockedAppName + " is Protected");
@@ -118,14 +117,10 @@ public class BlockingOverlayDisplayActivity extends AppCompatActivity {
     }
 
 
-
     @NonNull
     private static AnimationSet getAnimationSet() {
         AnimationSet angryShake = new AnimationSet(true);
-        TranslateAnimation moveZigZag = new TranslateAnimation(TranslateAnimation.RELATIVE_TO_SELF, -0.05f,
-                Animation.RELATIVE_TO_SELF, 0.05f,
-                Animation.RELATIVE_TO_SELF, -0.05f,
-                Animation.RELATIVE_TO_SELF, 0.05f);
+        TranslateAnimation moveZigZag = new TranslateAnimation(TranslateAnimation.RELATIVE_TO_SELF, -0.05f, Animation.RELATIVE_TO_SELF, 0.05f, Animation.RELATIVE_TO_SELF, -0.05f, Animation.RELATIVE_TO_SELF, 0.05f);
         moveZigZag.setDuration(80);
         moveZigZag.setRepeatCount(Animation.INFINITE);
         moveZigZag.setRepeatMode(Animation.REVERSE);
@@ -155,11 +150,9 @@ public class BlockingOverlayDisplayActivity extends AppCompatActivity {
             popupDurationSeconds = 1;
         }
 
-        Log.i(TAG, "setupTimer: Scheduling finish() in " + popupDurationSeconds + " seconds for app: "
-                + currentBlockedAppName + ". Is Reminder: " + isReminderOnly);
+        Log.i(TAG, "setupTimer: Scheduling finish() in " + popupDurationSeconds + " seconds for app: " + currentBlockedAppName + ". Is Reminder: " + isReminderOnly);
         handler.postDelayed(() -> {
-            Log.i(TAG, "Handler postDelayed: Time elapsed for app: " + currentBlockedAppName
-                    + ". Is Reminder: " + isReminderOnly);
+            Log.i(TAG, "Handler postDelayed: Time elapsed for app: " + currentBlockedAppName + ". Is Reminder: " + isReminderOnly);
 
             if (!isReminderOnly && !homeActionDispatched) {
                 homeActionDispatched = true;
@@ -183,9 +176,8 @@ public class BlockingOverlayDisplayActivity extends AppCompatActivity {
         }, popupDurationSeconds * 1000L);
     }
 
-    @SuppressLint("MissingSuperCall")
-    @Override
-    public void onBackPressed() {
+
+    private void handleBackPress() {
         if (isReminderOnly) {
             Log.d(TAG, "onBackPressed: Back press allowed for reminder. Finishing activity.");
             finish();
@@ -193,6 +185,7 @@ public class BlockingOverlayDisplayActivity extends AppCompatActivity {
             Log.d(TAG, "onBackPressed: Back press ignored for blocking mode.");
         }
     }
+
 
     @Override
     protected void onNewIntent(@NonNull Intent intent) {
