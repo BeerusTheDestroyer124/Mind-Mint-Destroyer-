@@ -39,13 +39,15 @@ public class AnalogClockView extends View {
     }
 
     private void init() {
+        int brand = Color.parseColor("#FD7D81");
+
         hourPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        hourPaint.setColor(Color.parseColor("#4ECDC4")); // brainColor
+        hourPaint.setColor(brand);
         hourPaint.setStrokeWidth(8);
         hourPaint.setStrokeCap(Paint.Cap.ROUND);
 
         minutePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        minutePaint.setColor(Color.parseColor("#4ECDC4"));
+        minutePaint.setColor(brand);
         minutePaint.setStrokeWidth(4);
         minutePaint.setStrokeCap(Paint.Cap.ROUND);
 
@@ -58,7 +60,7 @@ public class AnalogClockView extends View {
         dotPaint.setColor(Color.parseColor("#666666"));
 
         centerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        centerPaint.setColor(Color.parseColor("#4ECDC4"));
+        centerPaint.setColor(brand);
     }
 
     @Override

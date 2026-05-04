@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/bottomSheetTaskFocusGuideLayout"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/surface_card"
+    android:elevation="20dp"
+    app:layout_constraintBottom_toBottomOf="parent"
+    tools:ignore="HardcodedText,ContentDescription">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/mainHolder"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="20dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <!-- Header -->
+        <LinearLayout
+            android:id="@+id/headerContainer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginEnd="25dp"
+            android:orientation="vertical"
+            app:layout_constraintEnd_toStartOf="@+id/crossBtn"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:alpha="0.5"
+                android:fontFamily="@font/poppins_semibold"
+                android:letterSpacing="0.1"
+                android:text="How It Works"
+                android:textAllCaps="true"
+                android:textColor="?attr/text_tertiary"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-light"
+                android:lineSpacingMultiplier="0.8"
+                android:text="Task Focus"
+                android:textColor="?attr/text_primary"
+                android:textSize="35sp" />
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/crossBtn"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:background="@drawable/glass_circle"
+            android:padding="10dp"
+            android:src="@drawable/x"
+            app:layout_constraintBottom_toBottomOf="@+id/headerContainer"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/headerContainer"
+            app:tint="?attr/text_secondary" />
+
+        <!-- Content Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/contentCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:elevation="4dp"
+            app:cardBackgroundColor="?attr/surface_nested"
+            app:cardCornerRadius="25dp"
+            app:layout_constraintTop_toBottomOf="@+id/headerContainer"
+            app:strokeColor="?attr/glass_stroke"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <!-- Point 1: Tap any task -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="18dp"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_marginEnd="12dp"
+                        android:layout_marginTop="2dp"
+                        android:src="@drawable/ic_target"
+                        app:tint="@color/brainColor" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/poppins_semibold"
+                            android:text="Tap Any Task → Enter Focus"
+                            android:textColor="?attr/text_primary"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:lineSpacingMultiplier="1.2"
+                            android:text="Tapping any task (whether it has a focus timer set or not) opens it in Focus Mode. Tasks with a set duration run a countdown; all others run open-ended."
+                            android:textColor="?attr/text_secondary"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Divider -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginBottom="18dp"
+                    android:background="?attr/glass_stroke" />
+
+                <!-- Point 2: Checkbox behavior -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="18dp"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_marginEnd="12dp"
+                        android:layout_marginTop="2dp"
+                        android:src="@drawable/ic_check_circle"
+                        app:tint="@color/brainColor" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/poppins_semibold"
+                            android:text="Checkbox Behaviour"
+                            android:textColor="?attr/text_primary"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:lineSpacingMultiplier="1.2"
+                            android:text="• Normal task checkbox → marks it complete directly.\n• Focus-linked task checkbox → opens Focus Mode instead (same as tapping)."
+                            android:textColor="?attr/text_secondary"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Divider -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginBottom="18dp"
+                    android:background="?attr/glass_stroke" />
+
+                <!-- Point 3: Focus card / Currently Working -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_marginEnd="12dp"
+                        android:layout_marginTop="2dp"
+                        android:src="@drawable/zap"
+                        app:tint="@color/brainColor" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/poppins_semibold"
+                            android:text="Current Focus Card"
+                            android:textColor="?attr/text_primary"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:lineSpacingMultiplier="1.2"
+                            android:text="The top card shows your highest-priority task, or the task currently being worked on (shown with a ● WORKING badge). Tap &quot;Go to Focus&quot; to jump back into an active session."
+                            android:textColor="?attr/text_secondary"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Got it button -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/gotItBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/circular_rectangle"
+            android:backgroundTint="?attr/text_primary"
+            android:fontFamily="@font/poppins_semibold"
+            android:gravity="center"
+            android:padding="14dp"
+            android:text="Got it!"
+            android:textColor="?attr/surface_card"
+            android:textSize="15sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/contentCard" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/surface_card"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/sheetTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-medium"
+        android:text="Configure Schedule"
+        android:textColor="?attr/text_primary"
+        android:textSize="20sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSelectTime"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        app:backgroundTint="?attr/surface_nested"
+        android:textColor="?attr/text_primary"
+        app:icon="@drawable/ic_edit"
+        app:iconTint="?attr/text_primary"
+        app:strokeColor="@color/glass_stroke"
+        app:strokeWidth="1dp"
+        android:fontFamily="sans-serif-medium"
+        android:text="Select Time (HH:MM)"
+        app:cornerRadius="12dp"
+        app:layout_constraintTop_toBottomOf="@+id/sheetTitle" />
+
+    <TextView
+        android:id="@+id/daysLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:fontFamily="sans-serif-medium"
+        android:text="Repeat On"
+        android:textColor="?attr/text_secondary"
+        android:textSize="14sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnSelectTime" />
+
+    <LinearLayout
+        android:id="@+id/daysChipGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toBottomOf="@+id/daysLabel">
+
+        <TextView android:id="@+id/chipMon" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginHorizontal="2dp" android:background="@drawable/bg_chip_unselected" android:gravity="center" android:paddingVertical="10dp" android:text="MON" android:textColor="?attr/text_tertiary" android:textSize="11sp" android:textStyle="bold" />
+        <TextView android:id="@+id/chipTue" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginHorizontal="2dp" android:background="@drawable/bg_chip_unselected" android:gravity="center" android:paddingVertical="10dp" android:text="TUE" android:textColor="?attr/text_tertiary" android:textSize="11sp" android:textStyle="bold" />
+        <TextView android:id="@+id/chipWed" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginHorizontal="2dp" android:background="@drawable/bg_chip_unselected" android:gravity="center" android:paddingVertical="10dp" android:text="WED" android:textColor="?attr/text_tertiary" android:textSize="11sp" android:textStyle="bold" />
+        <TextView android:id="@+id/chipThu" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginHorizontal="2dp" android:background="@drawable/bg_chip_unselected" android:gravity="center" android:paddingVertical="10dp" android:text="THU" android:textColor="?attr/text_tertiary" android:textSize="11sp" android:textStyle="bold" />
+        <TextView android:id="@+id/chipFri" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginHorizontal="2dp" android:background="@drawable/bg_chip_unselected" android:gravity="center" android:paddingVertical="10dp" android:text="FRI" android:textColor="?attr/text_tertiary" android:textSize="11sp" android:textStyle="bold" />
+        <TextView android:id="@+id/chipSat" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginHorizontal="2dp" android:background="@drawable/bg_chip_unselected" android:gravity="center" android:paddingVertical="10dp" android:text="SAT" android:textColor="?attr/text_tertiary" android:textSize="11sp" android:textStyle="bold" />
+        <TextView android:id="@+id/chipSun" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginHorizontal="2dp" android:background="@drawable/bg_chip_unselected" android:gravity="center" android:paddingVertical="10dp" android:text="SUN" android:textColor="?attr/text_tertiary" android:textSize="11sp" android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/durationLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:fontFamily="sans-serif-medium"
+        android:text="Duration (Minutes): 30"
+        android:textColor="?attr/text_secondary"
+        android:textSize="14sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/daysChipGroup" />
+
+    <SeekBar
+        android:id="@+id/durationSeekBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:max="180"
+        android:progress="30"
+        app:layout_constraintTop_toBottomOf="@+id/durationLabel" />
+
+    <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/lockInSwitch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:fontFamily="sans-serif-medium"
+        android:text="Lock In (Block Apps)"
+        android:textColor="?attr/text_primary"
+        app:layout_constraintTop_toBottomOf="@+id/durationSeekBar" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSaveSchedule"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginTop="24dp"
+        android:backgroundTint="?attr/text_primary"
+        android:fontFamily="sans-serif-medium"
+        android:text="Save"
+        android:textColor="@color/mainBgColor"
+        android:textSize="16sp"
+        app:cornerRadius="16dp"
+        app:layout_constraintTop_toBottomOf="@+id/lockInSwitch" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

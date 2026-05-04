@@ -58,12 +58,14 @@ import com.gxdevs.mindmint.Models.SettingsItem;
 import com.gxdevs.mindmint.R;
 import com.gxdevs.mindmint.Receivers.MindMintDeviceAdminReceiver;
 import com.gxdevs.mindmint.Services.AppUsageAccessibilityService;
+import com.gxdevs.mindmint.Utils.CustomDialogUtils;
 import com.gxdevs.mindmint.Utils.AdultDomainListManager;
 import com.gxdevs.mindmint.Utils.AlarmUtils;
 import com.gxdevs.mindmint.Utils.BackupManager;
 import com.gxdevs.mindmint.Utils.BlockedSitesManager;
 import com.gxdevs.mindmint.Utils.SettingsLockManager;
 import com.gxdevs.mindmint.Utils.Utils;
+import com.gxdevs.mindmint.Utils.AnimUtils;
 import com.gxdevs.mindmint.Utils.WarningUtils;
 
 import java.util.ArrayList;
@@ -97,11 +99,6 @@ public class SettingsFragment extends Fragment {
     private static final int ID_PERM_ALARM = 102;
     private static final int ID_PERM_BATTERY = 103;
     private static final int ID_BACKUP = 104;
-    public static final String PREF_BLOCK_AFTER_WASTED_TIME_ENABLED = "pref_block_after_wasted_time_enabled";
-    public static final String PREF_BLOCK_AFTER_WASTED_TIME_HOURS = "pref_block_after_wasted_time_hours";
-    public static final float DEFAULT_BLOCK_AFTER_WASTED_TIME_HOURS = 1.0f;
-    public static final String PREF_BLOCK_BROWSERS_DOOMSCROLLING_ENABLED = "pref_block_browsers_doom_enabled";
-    public static final String PREF_BLOCK_ADULT_SITES_ENABLED = "pref_block_adult_sites_enabled";
     public static final String PREF_THEME_MODE = "pref_theme_mode";
     private static final String PREF_BROWSER_BLOCK_TUTORIAL_SHOWN = "pref_browser_block_tutorial_shown";
 
@@ -123,6 +120,8 @@ public class SettingsFragment extends Fragment {
     private BottomSheetDialog timerPicker;
     private boolean batteryOptimizationIgnored = false;
     private boolean isImportOverride = false;
+    /** Guards entrance animation — only plays on first tab visit. */
+    private boolean firstResume = true;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -131,12 +130,6 @@ public class SettingsFragment extends Fragment {
 
         devicePolicyManager = (DevicePolicyManager) requireContext().getSystemService(Context.DEVICE_POLICY_SERVICE);
         deviceAdminComponent = new ComponentName(requireContext(), MindMintDeviceAdminReceiver.class);
-
-        View rootFade = view.findViewById(R.id.headerContainer);
-        if (rootFade != null) {
-            rootFade.setAlpha(0f);
-            rootFade.animate().alpha(1f).setDuration(180).start();
-        }
 
         recyclerView = view.findViewById(R.id.settingsRecyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -150,6 +143,11 @@ public class SettingsFragment extends Fragment {
         registerNotificationPermissionLauncher();
         registerBackupLaunchers();
         refreshList();
+
+        // Pre-hide views that onResume will animate in — prevents flash on initial render
+        View headerContainer = view.findViewById(R.id.headerContainer);
+        if (headerContainer != null) { headerContainer.setAlpha(0f); headerContainer.setTranslationY(80f); }
+        if (recyclerView != null) recyclerView.setAlpha(0f);
 
         return view;
     }
@@ -193,9 +191,28 @@ public class SettingsFragment extends Fragment {
                 });
     }
 
+    /** Returns true only when this fragment is the page currently shown by the host ViewPager2. */
+    private boolean isCurrentPage(int expectedPageIndex) {
+        if (getActivity() instanceof com.gxdevs.mindmint.Activities.HomeActivity) {
+            androidx.viewpager2.widget.ViewPager2 vp =
+                    getActivity().findViewById(com.gxdevs.mindmint.R.id.nav_host_container);
+            if (vp != null) return vp.getCurrentItem() == expectedPageIndex;
+        }
+        return true;
+    }
+
     @Override
     public void onResume() {
         super.onResume();
+        // Run entrance animation only the first time this tab is actually VISIBLE.
+        // ViewPager2 with offscreenPageLimit calls onResume for ALL pre-loaded fragments
+        // when the Activity resumes — guard against that.
+        if (firstResume && isCurrentPage(com.gxdevs.mindmint.Adapters.HomePagerAdapter.PAGE_SETTINGS)) {
+            firstResume = false;
+            View headerContainer = getView() != null ? getView().findViewById(R.id.headerContainer) : null;
+            if (headerContainer != null) headerContainer.post(() -> AnimUtils.enterSlideUp(headerContainer, 0));
+            if (recyclerView != null) recyclerView.post(() -> AnimUtils.fadeIn(recyclerView, 60, 280));
+        }
         refreshList();
     }
 
@@ -316,7 +333,7 @@ public class SettingsFragment extends Fragment {
         }
         settingsItems.add(remindItem);
 
-        boolean isBlockEnabled = defaultSharedPreferences.getBoolean(PREF_BLOCK_AFTER_WASTED_TIME_ENABLED, false);
+        boolean isBlockEnabled = defaultSharedPreferences.getBoolean(AppUsageAccessibilityService.PREF_BLOCK_AFTER_WASTED_TIME_ENABLED, false);
         SettingsItem blockItem = new SettingsItem(ID_BLOCK_CONTENT, SettingsItem.TYPE_SWITCH, "Block content",
                 "Automatically block content", R.drawable.eye_off, redIcon)
                 .setIconValues(R.drawable.shape_circle, eyeBg)
@@ -324,11 +341,11 @@ public class SettingsFragment extends Fragment {
                     lockedSwitchAction("Change Block content", buttonView, !isChecked, isChecked, () -> {
                         if (isChecked && !isAccessibilityPermissionGranted(requireContext())) {
                             buttonView.setChecked(false);
-                            defaultSharedPreferences.edit().putBoolean(PREF_BLOCK_AFTER_WASTED_TIME_ENABLED, false).apply();
+                            defaultSharedPreferences.edit().putBoolean(AppUsageAccessibilityService.PREF_BLOCK_AFTER_WASTED_TIME_ENABLED, false).apply();
                             shakeCard(ID_PERM_ACCESSIBILITY);
                             return;
                         }
-                        defaultSharedPreferences.edit().putBoolean(PREF_BLOCK_AFTER_WASTED_TIME_ENABLED, isChecked).apply();
+                        defaultSharedPreferences.edit().putBoolean(AppUsageAccessibilityService.PREF_BLOCK_AFTER_WASTED_TIME_ENABLED, isChecked).apply();
                     });
                 });
 
@@ -369,7 +386,7 @@ public class SettingsFragment extends Fragment {
 
         settingsItems.add(new SettingsItem(SettingsItem.TYPE_HEADER, "BLOCKING RULES"));
 
-        boolean isBrowserBlockEnabled = defaultSharedPreferences.getBoolean(PREF_BLOCK_BROWSERS_DOOMSCROLLING_ENABLED, false);
+        boolean isBrowserBlockEnabled = defaultSharedPreferences.getBoolean(AppUsageAccessibilityService.PREF_BLOCK_BROWSERS_DOOMSCROLLING_ENABLED, false);
         SettingsItem browserItem = new SettingsItem(ID_BROWSER_BLOCKER, SettingsItem.TYPE_SWITCH, "Blocker on browsers",
                 isBrowserBlockEnabled ? "Blocking active on browsers" : "Activate blocking on browsers",
                 R.drawable.globe, greenIcon)
@@ -378,11 +395,11 @@ public class SettingsFragment extends Fragment {
                     lockedSwitchAction("Change Browser Blocker", buttonView, !isChecked, isChecked, () -> {
                         if (isChecked && !isAccessibilityPermissionGranted(requireContext())) {
                             buttonView.setChecked(false);
-                            defaultSharedPreferences.edit().putBoolean(PREF_BLOCK_BROWSERS_DOOMSCROLLING_ENABLED, false).apply();
+                            defaultSharedPreferences.edit().putBoolean(AppUsageAccessibilityService.PREF_BLOCK_BROWSERS_DOOMSCROLLING_ENABLED, false).apply();
                             shakeCard(ID_PERM_ACCESSIBILITY);
                             return;
                         }
-                        defaultSharedPreferences.edit().putBoolean(PREF_BLOCK_BROWSERS_DOOMSCROLLING_ENABLED, isChecked)
+                        defaultSharedPreferences.edit().putBoolean(AppUsageAccessibilityService.PREF_BLOCK_BROWSERS_DOOMSCROLLING_ENABLED, isChecked)
                                 .apply();
                         if (isChecked) {
                             BlockedSitesManager.seedDefaultsIfFirstTimeAndEmpty(requireContext());
@@ -399,7 +416,7 @@ public class SettingsFragment extends Fragment {
                 }));
         settingsItems.add(browserItem);
 
-        boolean isAdultEnabled = defaultSharedPreferences.getBoolean(PREF_BLOCK_ADULT_SITES_ENABLED, false);
+        boolean isAdultEnabled = defaultSharedPreferences.getBoolean(AppUsageAccessibilityService.PREF_BLOCK_ADULT_SITES_ENABLED, false);
         settingsItems.add(new SettingsItem(ID_ADULT_BLOCK, SettingsItem.TYPE_SWITCH, "Block adult sites", "In Beta",
                 R.drawable.shield, redIcon)
                 .setIconValues(R.drawable.shape_circle, blockBg)
@@ -407,14 +424,14 @@ public class SettingsFragment extends Fragment {
                     lockedSwitchAction("Change Adult Blocker", buttonView, !isChecked, isChecked, () -> {
                         if (isChecked && !isAccessibilityPermissionGranted(requireContext())) {
                             buttonView.setChecked(false);
-                            defaultSharedPreferences.edit().putBoolean(PREF_BLOCK_ADULT_SITES_ENABLED, false).apply();
+                            defaultSharedPreferences.edit().putBoolean(AppUsageAccessibilityService.PREF_BLOCK_ADULT_SITES_ENABLED, false).apply();
                             shakeCard(ID_PERM_ACCESSIBILITY);
                             return;
                         }
                         if (isChecked) {
                             showAdultListDownloadDialogAndEnsure();
                         } else {
-                            defaultSharedPreferences.edit().putBoolean(PREF_BLOCK_ADULT_SITES_ENABLED, false).apply();
+                            defaultSharedPreferences.edit().putBoolean(AppUsageAccessibilityService.PREF_BLOCK_ADULT_SITES_ENABLED, false).apply();
                         }
                     });
                 })
@@ -507,20 +524,44 @@ public class SettingsFragment extends Fragment {
                 .setSwitch(true, isAdminActive, (buttonView, isChecked) -> {
                     android.util.Log.d("PA_SWITCH", "listener fired — isChecked=" + isChecked + "  isAdminActive=" + isAdminActive);
                     if (isChecked) {
-                        android.util.Log.d("PA_SWITCH", "ON branch → launching device admin intent");
-                        Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
-                        intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, deviceAdminComponent);
-                        intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION,
-                                "Granting this permission prevents Mind Mint from being " +
-                                "uninstalled or force-stopped while active, keeping your " +
-                                "focus protection intact.");
-                        deviceAdminLauncher.launch(intent);
+                        android.util.Log.d("PA_SWITCH", "ON branch → showing warning dialog");
+                        CustomDialogUtils.showCustomDialog(
+                            requireContext(),
+                            "⚠️ Prevent Uninstall?",
+                                """
+                                        Once active, Mind Mint cannot be:
+                                        
+                                          • Uninstalled
+                                          • Force-stopped
+                                          • Have its data cleared
+                                        
+                                        The only way to remove this protection is by disabling it from Mind Mint's own Settings. \
+                                        Going through Android's App Info or Settings will not work.
+                                        
+                                        Proceed only if you're serious about staying focused.""",
+                            "Enable",
+                            "Cancel",
+                            () -> {
+                                android.util.Log.d("PA_SWITCH", "Warning confirmed → launching device admin intent");
+                                Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
+                                intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, deviceAdminComponent);
+                                intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                                        "Grants Mind Mint Device Admin rights to prevent uninstall and force-stop while protection is active.");
+                                deviceAdminLauncher.launch(intent);
+                            },
+                            () -> {
+                                buttonView.setChecked(false);
+                            }
+                        );
                     } else {
-                        android.util.Log.d("PA_SWITCH", "OFF branch → calling lockedSwitchAction");
+                        android.util.Log.d("PA_SWITCH", "OFF branch → lockedSwitchAction");
                         lockedSwitchAction("Disable Prevent Uninstall", buttonView, true, false, () -> {
-                            android.util.Log.d("PA_SWITCH", "lockedSwitchAction success → opening Security Settings");
+                            defaultSharedPreferences.edit()
+                                    .putLong(AppUsageAccessibilityService.PREF_ADMIN_GUARD_TRUSTED_TOKEN,
+                                            System.currentTimeMillis())
+                                    .commit();
                             Toast.makeText(requireContext(),
-                                    "Disable Mind Mint in Device admin apps to remove protection.",
+                                    "Tap 'Deactivate' next to Mind Mint to remove protection.",
                                     Toast.LENGTH_LONG).show();
                             startActivity(new Intent(android.provider.Settings.ACTION_SECURITY_SETTINGS));
                         });
@@ -822,7 +863,7 @@ public class SettingsFragment extends Fragment {
     }
 
     private CharSequence getBlockTimeFormattedSubtitle() {
-        float hours = defaultSharedPreferences.getFloat(PREF_BLOCK_AFTER_WASTED_TIME_HOURS, DEFAULT_BLOCK_AFTER_WASTED_TIME_HOURS);
+        float hours = defaultSharedPreferences.getFloat(AppUsageAccessibilityService.PREF_BLOCK_AFTER_WASTED_TIME_HOURS, AppUsageAccessibilityService.DEFAULT_BLOCK_AFTER_WASTED_TIME_HOURS);
         int wholeHours = (int) hours;
         int minutes = Math.round((hours - wholeHours) * 60);
         String timeText = formatTimeDisplay(wholeHours, minutes);
@@ -998,8 +1039,8 @@ public class SettingsFragment extends Fragment {
             hourPicker.setMaxValue(23);
             minutePicker.setMinValue(0);
             minutePicker.setMaxValue(59);
-            float current = defaultSharedPreferences.getFloat(PREF_BLOCK_AFTER_WASTED_TIME_HOURS,
-                    DEFAULT_BLOCK_AFTER_WASTED_TIME_HOURS);
+            float current = defaultSharedPreferences.getFloat(AppUsageAccessibilityService.PREF_BLOCK_AFTER_WASTED_TIME_HOURS,
+                    AppUsageAccessibilityService.DEFAULT_BLOCK_AFTER_WASTED_TIME_HOURS);
             int h = (int) current;
             int m = Math.round((current - h) * 60);
             hourPicker.setValue(h);
@@ -1014,7 +1055,7 @@ public class SettingsFragment extends Fragment {
                 Toast.makeText(requireContext(), "Reminder set", Toast.LENGTH_SHORT).show();
             } else {
                 float val = hourPicker.getValue() + (minutePicker.getValue() / 60.0f);
-                defaultSharedPreferences.edit().putFloat(PREF_BLOCK_AFTER_WASTED_TIME_HOURS, val).apply();
+                defaultSharedPreferences.edit().putFloat(AppUsageAccessibilityService.PREF_BLOCK_AFTER_WASTED_TIME_HOURS, val).apply();
                 Toast.makeText(requireContext(), "Block time set", Toast.LENGTH_SHORT).show();
             }
             timerPicker.dismiss();
@@ -1049,7 +1090,7 @@ public class SettingsFragment extends Fragment {
                         getActivity().runOnUiThread(() -> {
                             progressDialog.dismiss();
                             Toast.makeText(requireContext(), "List updated successfully", Toast.LENGTH_SHORT).show();
-                            defaultSharedPreferences.edit().putBoolean(PREF_BLOCK_ADULT_SITES_ENABLED, true).apply();
+                            defaultSharedPreferences.edit().putBoolean(AppUsageAccessibilityService.PREF_BLOCK_ADULT_SITES_ENABLED, true).apply();
                             refreshList();
                         });
                     }
@@ -1062,7 +1103,7 @@ public class SettingsFragment extends Fragment {
                             progressDialog.dismiss();
                             Toast.makeText(requireContext(), "Update failed: " + e.getMessage(), Toast.LENGTH_SHORT)
                                     .show();
-                            defaultSharedPreferences.edit().putBoolean(PREF_BLOCK_ADULT_SITES_ENABLED, false).apply();
+                            defaultSharedPreferences.edit().putBoolean(AppUsageAccessibilityService.PREF_BLOCK_ADULT_SITES_ENABLED, false).apply();
                             refreshList();
                         });
                     }

@@ -77,6 +77,7 @@ public class AppUsageAccessibilityService extends AccessibilityService {
     public static final String EXTRA_BLOCKED_PACKAGE_NAME = "extra_blocked_package_name";
     public static final String EXTRA_IS_REMINDER_ONLY = "extra_is_reminder_only";
     public static final String EXTRA_IS_FOCUS = "extra_is_focus";
+    public static final String EXTRA_CUSTOM_SUBTITLE = "extra_custom_subtitle";
 
     public static final String PREF_REMIND_DOOM_SCROLLING_ENABLED = "pref_remind_doom_scrolling_enabled";
     public static final String PREF_REMIND_DOOM_SCROLLING_MINUTES = "pref_remind_doom_scrolling_minutes";
@@ -99,6 +100,12 @@ public class AppUsageAccessibilityService extends AccessibilityService {
     // Broadcast Action for internal state refresh at midnight
     public static final String ACTION_REFRESH_DAILY_STATE_INTERNAL = "com.gxdevs.mindmint.action.REFRESH_DAILY_STATE_INTERNAL";
     public static final String ACTION_UPDATE_KEEP_ALIVE = "com.gxdevs.mindmint.action.UPDATE_KEEP_ALIVE";
+
+    // Admin Guard — App Info page blocker
+    public static final String PREF_ADMIN_GUARD_TRUSTED_TOKEN = "pref_admin_guard_trusted_token_ms";
+    private static final long ADMIN_GUARD_TOKEN_VALIDITY_MS = 30_000L; // bypass window
+    private static final long ADMIN_GUARD_COOLDOWN_MS = 1_500L; // HOME spam guard
+    private volatile long lastAdminGuardHomeTimeMs = 0L;
     private static final String PREF_HOME_YT_SWITCH_STATE = "ytSwitchState";
     private static final String PREF_HOME_INSTA_SWITCH_STATE = "instaSwitchState";
     private static final String PREF_HOME_SNAP_SWITCH_STATE = "snapSwitchState";
@@ -125,103 +132,28 @@ public class AppUsageAccessibilityService extends AccessibilityService {
     // --- Variables for Custom Blocking (Focus Mode) ---
     private Set<String> customBlockedApps = new HashSet<>();
 
-    // Hardcoded essential apps that are NEVER blocked in Locked In mode
+    // Exact-match set only for packages whose names contain no identifying
+    // keywords.
     private static final Set<String> LOCKED_IN_ESSENTIAL_WHITELIST = new HashSet<>(java.util.Arrays.asList(
-            // Mind Mint
             "com.gxdevs.mindmint",
-
-            // --- Dialers & Call UI ---
-            "com.android.dialer",
-            "com.google.android.dialer",
-            "com.android.phone",
-            "com.samsung.android.incallui",
-            "com.oneplus.dialer",
-            "com.oneplus.phone",
-            "com.miui.securitycenter",
-            "com.miui.calls",
-            "com.coloros.phonemanager", // Oppo/Realme
-            "com.coloros.dialer",
-            "com.bbk.contacts", // Vivo
-            "com.vivo.incallui",
-            "com.motorola.incallui",
-            "com.lge.phone", // LG
-            "com.htc.sense.dialer", // HTC
-
-            // --- SMS / Messaging ---
-            "com.android.mms",
-            "com.google.android.apps.messaging",
-            "com.android.messaging",
-            "com.samsung.android.messaging",
-            "com.oneplus.mms",
-            "com.miui.sms",
-
-            // --- System Core ---
             "android",
-            "com.android.systemui",
-            "com.android.settings",
             "com.android.server.telecom",
-            "com.miui.home",
-            "com.miui.systemui",
-            "com.samsung.android.app.cocktailbarservice",
-            "com.oneplus.launcher",
-            "com.sec.android.app.launcher",
-            "com.coloros.launcher",
-            "com.vivo.launcher",
-
-            // --- Package Installer & Permissions ---
-            "com.google.android.packageinstaller",
-            "com.android.packageinstaller",
-            "com.google.android.permissioncontroller",
-            "com.android.permissioncontroller",
-            "com.miui.packageinstaller",
-            "com.samsung.android.packageinstaller",
-
-            // --- Camera ---
-            "com.android.camera",
-            "com.android.camera2",
-            "com.google.android.GoogleCamera",
-            "com.sec.android.app.camera",
-            "com.oneplus.camera",
-            "com.miui.camera",
-            "com.coloros.camera",
-            "com.vivo.camera",
-            "com.motorola.camera2",
-
-            // --- Keyboards ---
-            "com.google.android.inputmethod.latin",
             "com.touchtype.swiftkey",
-            "com.samsung.android.honeyboard",
-            "com.samsung.android.inputmethod",
-            "com.android.inputmethod.latin",
-            "com.miui.inputmethod",
+            "com.swiftkey.swiftkeyapp",
             "com.baidu.input_mi",
-            "com.iflytek.inputmethod.miui",
-
-            // --- Emergency / Safety ---
-            "com.android.emergency",
+            "com.bbk.contacts",
+            "com.samsung.rcs.eab",
             "com.google.android.apps.safetyhub",
-            "com.samsung.android.emergency",
-            "com.sec.android.emergencylauncher",
-            "com.oneplus.emergency",
-            "com.miui.emergency",
-
-            // --- Accessibility Settings ---
-            "com.android.accessibility.accessibilitymenu",
             "com.google.android.marvin.talkback",
-            "com.samsung.accessibility",
-            "com.samsung.android.accessibility.speak"));
+            "com.google.android.apps.jibe",
+            "com.google.android.apps.nbu.files",
+            "com.samsung.android.app.cocktailbarservice"));
 
     public static final String PREF_LOCKED_IN_EXTRA_WHITELIST = "pref_locked_in_extra_whitelist";
     private final Set<String> dynamicLauncherPackages = new HashSet<>();
 
-    /**
-     * Cache for system-navigation package detection.
-     * Maps package name -> whether it is a system gesture/nav overlay.
-     * Avoids repeated PackageManager calls in the hot event path.
-     */
     private final Map<String, Boolean> systemNavPackageCache = new HashMap<>();
 
-    // --- Variables for Reminders ---
     private boolean remindDoomScrollingEnabled;
     private int remindDoomScrollingMinutes;
     private final Map<String, Long> lastReminderTimestampForAppTag = new HashMap<>();
@@ -315,11 +247,8 @@ public class AppUsageAccessibilityService extends AccessibilityService {
     private long lastActionTime = 0L;
     public static boolean serviceStatus = false;
     private final Map<String, Long> lastLockInOverlayTimeMs = new HashMap<>();
-    private static final long LOCK_IN_OVERLAY_DEBOUNCE_MS = 3000L;
-    private volatile long lastOverlayLaunchTimeMs = 0L;
-    private static final long OVERLAY_GLOBAL_COOLDOWN_MS = 2500L;
-    private volatile long lastHomeActionTimeMs = 0L;
-    private static final long POST_HOME_SUPPRESSION_MS = 3000L;
+    private static final long LOCK_IN_OVERLAY_DEBOUNCE_MS = 1500L;
+    private String lastBlockedPackageForDebounceReset = null;
     private BroadcastReceiver screenReceiver;
     private boolean isScreenReceiverRegistered = false;
     public static final String RESTORE_NOTIFICATION = "restore_notification";
@@ -426,11 +355,7 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                         loadLastReminderTimestampsForAppTags();
                         break;
                     case FocusService.PREF_IS_LOCKED_IN:
-                        // Clear ALL overlay timing state when a Lock-In session starts or ends so
-                        // stale cooldowns from a previous session don't prevent first-block in new one.
                         lastLockInOverlayTimeMs.clear();
-                        lastOverlayLaunchTimeMs = 0L;
-                        lastHomeActionTimeMs = 0L;
                         break;
                     case "pref_scroll_counter_enabled":
                     case "pref_scroll_counter_per_app":
@@ -462,8 +387,12 @@ public class AppUsageAccessibilityService extends AccessibilityService {
             @Override
             public void onReceive(Context context, Intent intent) {
                 if (intent != null && ACTION_PERFORM_GLOBAL_HOME_FROM_OVERLAY.equals(intent.getAction())) {
-                    // Record the moment the HOME action fires so we can suppress re-triggering
-                    lastHomeActionTimeMs = System.currentTimeMillis();
+                    long slideNow = System.currentTimeMillis();
+                    for (String pkg : lastLockInOverlayTimeMs.keySet()) {
+                        lastLockInOverlayTimeMs.put(pkg, slideNow);
+                        Log.d(TAG, "Debounce slid on HOME for: " + pkg);
+                    }
+                    lastBlockedPackageForDebounceReset = null;
                     performThrottledGlobalAction(GLOBAL_ACTION_HOME);
                 } else if (intent != null && ACTION_PERFORM_GLOBAL_BACK_FROM_OVERLAY.equals(intent.getAction())) {
                     performThrottledGlobalAction(GLOBAL_ACTION_BACK);
@@ -493,13 +422,10 @@ public class AppUsageAccessibilityService extends AccessibilityService {
     private void loadLauncherPackages() {
         Intent intent = new Intent(Intent.ACTION_MAIN);
         intent.addCategory(Intent.CATEGORY_HOME);
-        List<ResolveInfo> resolveInfos = getPackageManager().queryIntentActivities(intent,
-                PackageManager.MATCH_DEFAULT_ONLY);
-        if (resolveInfos != null) {
-            for (ResolveInfo info : resolveInfos) {
-                if (info.activityInfo != null && info.activityInfo.packageName != null) {
-                    dynamicLauncherPackages.add(info.activityInfo.packageName);
-                }
+        List<ResolveInfo> resolveInfos = getPackageManager().queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
+        for (ResolveInfo info : resolveInfos) {
+            if (info.activityInfo != null && info.activityInfo.packageName != null) {
+                dynamicLauncherPackages.add(info.activityInfo.packageName);
             }
         }
     }
@@ -555,6 +481,21 @@ public class AppUsageAccessibilityService extends AccessibilityService {
         isYtHomeSwitchOn = sharedPreferences.getBoolean(PREF_HOME_YT_SWITCH_STATE, false);
         isInstaHomeSwitchOn = sharedPreferences.getBoolean(PREF_HOME_INSTA_SWITCH_STATE, false);
         isSnapHomeSwitchOn = sharedPreferences.getBoolean(PREF_HOME_SNAP_SWITCH_STATE, false);
+    }
+
+    /**
+     * Returns true when the home-screen switch for the given appTag is ON (i.e. the
+     * app is being blocked).
+     */
+    private boolean isAppTagBlocked(String appTag) {
+        if (appTag == null)
+            return false;
+        return switch (appTag) {
+            case "yt" -> isYtHomeSwitchOn;
+            case "insta" -> isInstaHomeSwitchOn;
+            case "snap" -> isSnapHomeSwitchOn;
+            default -> false;
+        };
     }
 
     private void updateBlockingStateFromIntent(Intent intent) {
@@ -724,15 +665,15 @@ public class AppUsageAccessibilityService extends AccessibilityService {
             String eventPackageName = event.getPackageName() != null ? event.getPackageName().toString() : null;
             int eventType = event.getEventType();
 
+            if (eventPackageName != null
+                    && (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+                            || eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED)) {
+                handleAdminProtectionGuard(eventPackageName);
+            }
+
             if (!isLockedInActive || isPackageAllowedInLockedIn(eventPackageName)) {
                 handleScrollCounting(event);
             }
-
-            // For Lock-In blocking, ONLY react to true window-state transitions (not
-            // content changes).
-            // TYPE_WINDOW_CONTENT_CHANGED fires very frequently within the same app window
-            // and
-            // is the primary cause of double-overlay firing.
             boolean isWindowStateEvent = (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED);
 
             if (isFocusRunning && isWindowStateEvent) {
@@ -740,55 +681,38 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                     // DEBUG: log every window-state event when Lock-In is active
                     android.util.Log.d("LockInDebug",
                             "=== WINDOW_STATE event | pkg=" + eventPackageName
-                            + " | ownPkg=" + getPackageName()
-                            + " | isOwnApp=" + getPackageName().equals(eventPackageName));
+                                    + " | ownPkg=" + getPackageName()
+                                    + " | isOwnApp=" + getPackageName().equals(eventPackageName));
+                }
+
+                if (eventPackageName != null
+                        && dynamicLauncherPackages.contains(eventPackageName)
+                        && lastBlockedPackageForDebounceReset != null) {
+                    long slideNow = System.currentTimeMillis();
+                    lastLockInOverlayTimeMs.put(lastBlockedPackageForDebounceReset, slideNow);
+                    Log.d(TAG, "Debounce slid to launcher-arrival for " + lastBlockedPackageForDebounceReset);
+                    lastBlockedPackageForDebounceReset = null;
                 }
 
                 if (eventPackageName != null && !eventPackageName.equals(getPackageName())) {
                     long now = System.currentTimeMillis();
 
-                    // Global guard: suppress if the overlay was launched very recently OR
-                    // if the HOME action was fired recently (post-home bounce protection).
-                    boolean globalCooldownActive = (now - lastOverlayLaunchTimeMs) < OVERLAY_GLOBAL_COOLDOWN_MS
-                            || (now - lastHomeActionTimeMs) < POST_HOME_SUPPRESSION_MS;
-
                     if (isLockedInPref) {
                         boolean allowed = isPackageAllowedInLockedIn(eventPackageName);
-                        android.util.Log.d("LockInDebug",
-                                "  → NOT own pkg | allowed=" + allowed
-                                + " | globalCooldown=" + globalCooldownActive
-                                + " | timeSinceOverlay=" + (now - lastOverlayLaunchTimeMs) + "ms"
-                                + " | timeSinceHome=" + (now - lastHomeActionTimeMs) + "ms");
 
-                        if (!allowed) {
+                        if (allowed) {
+                            Log.i(TAG, "LOCK-IN: allowed (whitelist) → " + eventPackageName);
+                        } else {
                             Long lastTime = lastLockInOverlayTimeMs.get(eventPackageName);
                             boolean debounceOk = lastTime == null || (now - lastTime) > LOCK_IN_OVERLAY_DEBOUNCE_MS;
-                            android.util.Log.d("LockInDebug",
-                                    "  → BLOCKED pkg | debounceOk=" + debounceOk
-                                    + " | timeSinceLastBlock=" + (lastTime == null ? "never" : (now - lastTime) + "ms")
-                                    + " | willLaunchOverlay=" + (!globalCooldownActive && debounceOk));
 
-                            if (!globalCooldownActive) {
-                                if (debounceOk) {
-                                    lastLockInOverlayTimeMs.put(eventPackageName, now);
-                                    lastOverlayLaunchTimeMs = now;
-                                    Intent intent = new Intent(this, BlockingOverlayDisplayActivity.class);
-                                    intent.putExtra(EXTRA_IS_FOCUS, true);
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                                            | Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                            | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                                    startActivity(intent);
-                                    resetUsageAndTimersForPackage(eventPackageName);
-                                }
-                            }
-                            return;
-                        }
-                    } else if (customBlockedApps != null && customBlockedApps.contains(eventPackageName)) {
-                        if (!globalCooldownActive) {
-                            Long lastTime = lastLockInOverlayTimeMs.get(eventPackageName);
-                            if (lastTime == null || (now - lastTime) > LOCK_IN_OVERLAY_DEBOUNCE_MS) {
+                            if (debounceOk) {
+                                Log.i(TAG, "LOCK-IN: overlay fired → " + eventPackageName);
+                                Log.e(TAG, "LOCKED IN BLOCKER POP UP CAUSED BY PACKAGE: " + eventPackageName);
+                                Toast.makeText(getApplicationContext(),
+                                        "Lock-In Blocker triggered by: " + eventPackageName, Toast.LENGTH_LONG).show();
                                 lastLockInOverlayTimeMs.put(eventPackageName, now);
-                                lastOverlayLaunchTimeMs = now;
+                                lastBlockedPackageForDebounceReset = eventPackageName;
                                 Intent intent = new Intent(this, BlockingOverlayDisplayActivity.class);
                                 intent.putExtra(EXTRA_IS_FOCUS, true);
                                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
@@ -796,7 +720,33 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                                         | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                                 startActivity(intent);
                                 resetUsageAndTimersForPackage(eventPackageName);
+                            } else {
+                                Log.w(TAG, "LOCK-IN: overlay skipped (debounce) → " + eventPackageName
+                                        + " | " + (now - lastTime) + "ms since last block");
                             }
+                            return;
+                        }
+                    } else if (customBlockedApps != null && customBlockedApps.contains(eventPackageName)) {
+                        Long lastTime = lastLockInOverlayTimeMs.get(eventPackageName);
+                        boolean debounceOk = lastTime == null || (now - lastTime) > LOCK_IN_OVERLAY_DEBOUNCE_MS;
+
+                        if (debounceOk) {
+                            Log.i(TAG, "FOCUS: overlay fired → " + eventPackageName);
+                            Log.e(TAG, "FOCUS BLOCKER POP UP CAUSED BY PACKAGE: " + eventPackageName);
+                            Toast.makeText(getApplicationContext(), "Focus Blocker triggered by: " + eventPackageName,
+                                    Toast.LENGTH_LONG).show();
+                            lastLockInOverlayTimeMs.put(eventPackageName, now);
+                            lastBlockedPackageForDebounceReset = eventPackageName;
+                            Intent intent = new Intent(this, BlockingOverlayDisplayActivity.class);
+                            intent.putExtra(EXTRA_IS_FOCUS, true);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                                    | Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                    | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                            startActivity(intent);
+                            resetUsageAndTimersForPackage(eventPackageName);
+                        } else {
+                            Log.w(TAG, "FOCUS: overlay skipped (debounce) → " + eventPackageName
+                                    + " | " + (now - lastTime) + "ms since last block");
                         }
                         return;
                     }
@@ -827,8 +777,10 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                     String previouslyTrackedAppTag = currentAppTagForReminderViewTracking;
 
                     if (isTrackedViewVisibleNow) {
-                        if (scrollCounterEnabled) {
+                        if (scrollCounterEnabled && !isAppTagBlocked(activeAppTagNow)) {
                             showScrollCounterPill(activeAppTagNow, eventPackageName);
+                        } else if (scrollCounterEnabled) {
+                            hideScrollCounterPill(false);
                         }
                         if (remindDoomScrollingEnabled) {
                             if (!activeAppTagNow.equals(previouslyTrackedAppTag)) {
@@ -922,16 +874,7 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                         String viewIdToLookFor = getReminderViewIdForAppTag(appTagForGlobalBlock);
 
                         if (viewIdToLookFor != null && rootNode != null) {
-                            List<AccessibilityNodeInfo> nodes = rootNode
-                                    .findAccessibilityNodeInfosByViewId(
-                                            eventPackageName + ":id/" + viewIdToLookFor);
-                            boolean specificViewPresent = nodes != null && !nodes.isEmpty();
-                            if (nodes != null) {
-                                for (AccessibilityNodeInfo node : nodes)
-                                    node.recycle();
-                            }
-
-                            if (specificViewPresent) {
+                            if (isReminderViewVisible(rootNode, eventPackageName, viewIdToLookFor)) {
                                 launchOverlay(eventPackageName);
                                 resetUsageAndTimersForPackage(eventPackageName);
                                 return; // Important to return after blocking
@@ -979,6 +922,21 @@ public class AppUsageAccessibilityService extends AccessibilityService {
         String appTag = getAppTagFromAllPackages(packageName);
         if (appTag == null) {
             return;
+        }
+
+        switch (appTag) {
+            case "yt":
+                if (isYtHomeSwitchOn)
+                    return;
+                break;
+            case "insta":
+                if (isInstaHomeSwitchOn)
+                    return;
+                break;
+            case "snap":
+                if (isSnapHomeSwitchOn)
+                    return;
+                break;
         }
 
         String viewId;
@@ -1058,14 +1016,6 @@ public class AppUsageAccessibilityService extends AccessibilityService {
         sendBroadcast(intent);
     }
 
-    /**
-     * Returns true if the given package should be allowed through in Locked In mode.
-     * Priority order:
-     *   1. Hardcoded essential whitelist (exact match, O(1))
-     *   2. Dynamically detected launcher packages
-     *   3. System gesture / navigation overlay auto-detection (any OEM)
-     *   4. User-added extra packages
-     */
     private boolean isPackageAllowedInLockedIn(String packageName) {
         if (packageName == null)
             return true;
@@ -1073,30 +1023,46 @@ public class AppUsageAccessibilityService extends AccessibilityService {
             return true;
         if (dynamicLauncherPackages.contains(packageName))
             return true;
-        // Auto-allow OEM gesture / navigation overlay packages (Samsung, Xiaomi, Oppo, etc.)
+        if (isEssentialPackage(packageName))
+            return true;
         if (isSystemNavigationPackage(packageName))
             return true;
-        // Check user-added packages
         Set<String> extraWhitelist = sharedPreferences.getStringSet(
                 PREF_LOCKED_IN_EXTRA_WHITELIST, new HashSet<>());
         return extraWhitelist.contains(packageName);
     }
 
-    /**
-     * Returns true if {@code pkg} is a system-installed gesture/navigation overlay.
-     *
-     * Strategy:
-     *  - Must be a system app (FLAG_SYSTEM) — guards against user apps with "gesture" in name.
-     *  - Package name must match at least one known gesture/nav keyword.
-     *
-     * Results are cached so PackageManager is only queried once per unique package.
-     */
-    private boolean isSystemNavigationPackage(String pkg) {
-        if (pkg == null) return false;
-        Boolean cached = systemNavPackageCache.get(pkg);
-        if (cached != null) return cached;
+    /** Keyword-based check covering all OEM variants of essential system apps. */
+    private static boolean isEssentialPackage(String pkg) {
+        String p = pkg.toLowerCase();
+        return p.contains("dialer")
+                || p.contains("incallui")
+                || p.contains("phone")
+                || p.contains("telecom")
+                || p.contains("contacts")
+                || p.contains("messaging")
+                || p.contains(".mms")
+                || p.contains(".sms")
+                || p.contains("inputmethod")
+                || p.contains("honeyboard")
+                || p.contains("keyboard")
+                || p.contains("camera")
+                || p.contains("launcher")
+                || p.contains("systemui")
+                || p.contains("packageinstaller")
+                || p.contains("permissioncontroller")
+                || p.contains("emergency")
+                || p.contains(".sos")
+                || p.contains("accessibility");
+    }
 
-        // Quick keyword check first (cheap) — if no keyword matches, skip PM lookup
+    private boolean isSystemNavigationPackage(String pkg) {
+        if (pkg == null)
+            return false;
+        Boolean cached = systemNavPackageCache.get(pkg);
+        if (cached != null)
+            return cached;
+
         boolean nameMatches = isNameMatches(pkg);
 
         if (!nameMatches) {
@@ -1104,28 +1070,19 @@ public class AppUsageAccessibilityService extends AccessibilityService {
             return false;
         }
 
-        // Verify it is an OEM/system-origin package, not a user-installed app.
-        // Checks:
-        //   FLAG_SYSTEM            — pre-installed in /system partition
-        //   FLAG_UPDATED_SYSTEM_APP — system app updated via OTA/sideload
-        //   No Play Store installer — OEM pre-loaded on /data but never user-installed
-        //     (e.g. Samsung sidegesturepad ships without FLAG_SYSTEM but has no Play installer)
         try {
-            ApplicationInfo info =
-                    getPackageManager().getApplicationInfo(pkg, 0);
-            boolean hasSystemFlag = (info.flags & ApplicationInfo.FLAG_SYSTEM) != 0
+            ApplicationInfo info = getPackageManager().getApplicationInfo(pkg, 0);
+            boolean isSystem = (info.flags & ApplicationInfo.FLAG_SYSTEM) != 0
                     || (info.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0;
-            if (hasSystemFlag) {
+            if (isSystem) {
                 systemNavPackageCache.put(pkg, true);
                 return true;
             }
-            // Not a /system partition app — check if it was ever installed by the user via a store
             String installer = null;
             try {
-                installer = getPackageManager()
-                        .getInstallerPackageName(pkg);
-            } catch (Exception ignored) {}
-            // If there is no installer (null), the package was pre-loaded by the OEM, not the user
+                installer = getPackageManager().getInstallerPackageName(pkg);
+            } catch (Exception ignored) {
+            }
             boolean oemPreloaded = (installer == null);
             systemNavPackageCache.put(pkg, oemPreloaded);
             return oemPreloaded;
@@ -1137,7 +1094,6 @@ public class AppUsageAccessibilityService extends AccessibilityService {
 
     private static boolean isNameMatches(String pkg) {
         String lower = pkg.toLowerCase();
-        // AOSP gesture home
         return lower.contains("gesture")
                 || lower.contains("sidepad")
                 || lower.contains("edgepad")
@@ -1145,12 +1101,186 @@ public class AppUsageAccessibilityService extends AccessibilityService {
                 || lower.contains("edgepanel")
                 || lower.contains("navigationbar")
                 || lower.contains("navgesture")
-                || lower.contains("sidegesturepad ")
                 || lower.contains("navbar")
                 || lower.contains("gesturepad")
                 || lower.contains("quickstep");
     }
 
+    // Admin Guard
+
+    private static boolean isSettingsPackage(String pkg) {
+        if (pkg == null)
+            return false;
+        switch (pkg) {
+            case "com.android.settings", "com.samsung.android.settings", "com.miui.settings" -> {
+                return true;
+            }
+            case "com.android.settings.applications" -> {
+                return true; // AOSP/Samsung App Info
+            }
+        }
+        if (pkg.startsWith("com.oneplus.settings") || pkg.startsWith("com.oplus.settings"))
+            return true;
+        if (pkg.startsWith("com.coloros.settings") || pkg.startsWith("com.realme.settings"))
+            return true;
+        if (pkg.startsWith("com.vivo.settings"))
+            return true;
+        if (pkg.startsWith("com.motorola.settings"))
+            return true;
+        if (pkg.startsWith("com.lge.settings"))
+            return true;
+        if (pkg.startsWith("com.huawei.settings") || pkg.startsWith("com.android.hwsettings"))
+            return true;
+        return pkg.startsWith("com.") && pkg.endsWith(".settings");
+    }
+
+    private boolean isOurAppInfoPageOpen(AccessibilityNodeInfo root, String pkg) {
+        String appName = getString(R.string.app_name);
+        if (viewIdMatchesAppName(root, pkg + ":id/entity_header_title", appName))
+            return true;
+        if (viewIdMatchesAppName(root, pkg + ":id/title", appName))
+            return true;
+        if (viewIdMatchesAppName(root, "com.android.settings:id/admin_name", appName))
+            return true;
+        return textScanFindsAppInfo(root, appName, 6);
+    }
+
+    private boolean viewIdMatchesAppName(AccessibilityNodeInfo root, String viewId, String appName) {
+        List<AccessibilityNodeInfo> nodes = root.findAccessibilityNodeInfosByViewId(viewId);
+        if (nodes == null || nodes.isEmpty())
+            return false;
+        boolean found = false;
+        for (AccessibilityNodeInfo node : nodes) {
+            if (node != null) {
+                CharSequence text = node.getText();
+                if (!found && text != null && text.toString().trim().equals(appName))
+                    found = true;
+                node.recycle();
+            }
+        }
+        return found;
+    }
+
+    private boolean textScanFindsAppInfo(AccessibilityNodeInfo node, String appName, int depth) {
+        if (node == null || depth < 0)
+            return false;
+        CharSequence text = node.getText();
+        if (text != null) {
+            String t = text.toString().trim();
+            if (t.equalsIgnoreCase(appName)
+                    || t.equalsIgnoreCase("force stop")
+                    || t.equalsIgnoreCase("uninstall")
+                    || t.equalsIgnoreCase("device admin")
+                    || t.equalsIgnoreCase("deactivate"))
+                return true;
+        }
+        CharSequence cd = node.getContentDescription();
+        if (cd != null && cd.toString().trim().equalsIgnoreCase(appName))
+            return true;
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo child = null;
+            try {
+                child = node.getChild(i);
+                if (textScanFindsAppInfo(child, appName, depth - 1))
+                    return true;
+            } catch (Exception ignored) {
+            } finally {
+                if (child != null)
+                    child.recycle();
+            }
+        }
+        return false;
+    }
+
+    private void handleAdminProtectionGuard(String eventPackageName) {
+        if (!isSettingsPackage(eventPackageName))
+            return;
+
+        android.app.admin.DevicePolicyManager dpm = (android.app.admin.DevicePolicyManager) getSystemService(
+                Context.DEVICE_POLICY_SERVICE);
+        if (dpm == null)
+            return;
+        android.content.ComponentName adminComponent = new android.content.ComponentName(this,
+                com.gxdevs.mindmint.Receivers.MindMintDeviceAdminReceiver.class);
+        if (!dpm.isAdminActive(adminComponent))
+            return;
+
+        long tokenTimestamp = sharedPreferences.getLong(PREF_ADMIN_GUARD_TRUSTED_TOKEN, 0L);
+        if (tokenTimestamp > 0L
+                && (System.currentTimeMillis() - tokenTimestamp) < ADMIN_GUARD_TOKEN_VALIDITY_MS) {
+            return; // legit in-app navigation, let it through
+        }
+
+        long now = System.currentTimeMillis();
+        if ((now - lastAdminGuardHomeTimeMs) < ADMIN_GUARD_COOLDOWN_MS)
+            return;
+
+        AccessibilityNodeInfo root = null;
+        try {
+            root = getRootInActiveWindow();
+            if (root == null)
+                return;
+            if (isOurAppInfoPageOpen(root, eventPackageName)
+                    || isDeviceAdminPageOpen(root)) {
+                Log.d(TAG, "AdminGuard: blocked settings page in " + eventPackageName);
+                lastAdminGuardHomeTimeMs = now;
+
+                // Launch the same BlockingOverlayDisplayActivity used for reel/app blocking.
+                // The Activity handles HOME itself via ACTION_PERFORM_GLOBAL_HOME_FROM_OVERLAY
+                // broadcast after its popup timer — no manual HOME call needed here.
+                Intent overlay = new Intent(this, BlockingOverlayDisplayActivity.class);
+                overlay.putExtra(EXTRA_BLOCKED_APP_NAME, getString(R.string.app_name));
+                overlay.putExtra(EXTRA_CUSTOM_SUBTITLE,
+                        "Access denied. Disable Prevent Uninstall from Mind Mint settings first.");
+                overlay.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP
+                        | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
+                try {
+                    startActivity(overlay);
+                } catch (Exception e) {
+                    Log.e(TAG, "AdminGuard overlay launch failed", e);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "AdminGuard error", e);
+        } finally {
+            if (root != null)
+                root.recycle();
+        }
+    }
+
+    /** True when the current screen looks like the Device Admin management page. */
+    private boolean isDeviceAdminPageOpen(AccessibilityNodeInfo root) {
+        if (root == null)
+            return false;
+        // The Device Admin page shows a button with text "Deactivate" — this is the
+        // clearest unique signal that the user is trying to revoke admin rights.
+        return nodeTreeContainsText(root, "Deactivate", 8)
+                || nodeTreeContainsText(root, "Remove device admin app", 8);
+    }
+
+    private boolean nodeTreeContainsText(AccessibilityNodeInfo node, String target, int depth) {
+        if (node == null || depth < 0)
+            return false;
+        CharSequence text = node.getText();
+        if (text != null && text.toString().trim().equalsIgnoreCase(target))
+            return true;
+        CharSequence cd = node.getContentDescription();
+        if (cd != null && cd.toString().trim().equalsIgnoreCase(target))
+            return true;
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo child = null;
+            try {
+                child = node.getChild(i);
+                if (nodeTreeContainsText(child, target, depth - 1))
+                    return true;
+            } catch (Exception ignored) {
+            } finally {
+                if (child != null)
+                    child.recycle();
+            }
+        }
+        return false;
+    }
 
     private void handleBackPress(String currentEventPackageName, AccessibilityNodeInfo rootNode,
             AccessibilityEvent event) {

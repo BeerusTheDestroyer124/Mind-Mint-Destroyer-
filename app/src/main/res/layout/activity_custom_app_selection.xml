@@ -11,8 +11,9 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/toolbarHolder"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
+        android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
+        android:paddingBottom="12dp"
         app:layout_constraintTop_toTopOf="parent">
 
         <ImageView
@@ -20,24 +21,56 @@
             android:layout_width="35dp"
             android:layout_height="35dp"
             android:layout_marginStart="10dp"
+            android:layout_marginTop="10dp"
             android:contentDescription="@string/back"
             android:src="@drawable/ic_right_arrow"
             android:rotation="180"
-            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:tint="?attr/tintGlobalColor" />
 
         <TextView
-            android:layout_width="wrap_content"
+            android:id="@+id/toolbarTitle"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
-            android:text="@string/select_apps_to_block"
+            android:layout_marginEnd="16dp"
+            android:text="Custom App Blocking"
             android:textColor="?attr/tintGlobalColor"
             android:textSize="22sp"
-            app:layout_constraintBottom_toBottomOf="parent"
+            android:fontFamily="sans-serif-medium"
+            app:layout_constraintBottom_toBottomOf="@+id/backBtn"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@+id/backBtn"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="@+id/backBtn" />
+
+        <!-- Mode explanation badge — tinted red for blacklist, green for whitelist -->
+        <LinearLayout
+            android:id="@+id/modeBadge"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/rounded_bg"
+            android:backgroundTint="#22FF5F5F"
+            android:orientation="horizontal"
+            android:padding="10dp"
+            android:gravity="center_vertical"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/backBtn">
+
+            <TextView
+                android:id="@+id/modeBadgeText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif"
+                android:text="Apps toggled ON will be BLOCKED during all focus sessions"
+                android:textColor="#FF5F5F"
+                android:textSize="12sp" />
+
+        </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

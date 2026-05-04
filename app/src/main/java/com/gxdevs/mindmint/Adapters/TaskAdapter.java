@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.apachat.swipereveallayout.core.SwipeLayout;
 import com.gxdevs.mindmint.Models.Task;
 import com.gxdevs.mindmint.R;
+import com.gxdevs.mindmint.Utils.AnimUtils;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -57,6 +58,9 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         this.manageOnly = manageOnly;
     }
 
+    // Tracks last animated item position to skip re-animation on scroll
+    private final int[] lastAnimatedPosition = {-1};
+
     public void setOnTaskClickListener(OnTaskClickListener listener) {
         this.onTaskClickListener = listener;
     }
@@ -71,6 +75,11 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     @Override
     public void onBindViewHolder(@NonNull TaskViewHolder holder, int position) {
         Task task = filteredTaskList.get(position);
+
+        // Item entrance animation
+        AnimUtils.animateItemEnter(holder.itemView, position, lastAnimatedPosition);
+        // Tap-press feedback on the card
+        AnimUtils.attachTouchRipple(holder.taskCardView);
 
         holder.taskName.setText(task.getName());
         int iconRes = task.getIcon() != 0 ? task.getIcon() : R.drawable.list_todo;

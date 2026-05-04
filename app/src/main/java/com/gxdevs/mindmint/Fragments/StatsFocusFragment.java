@@ -13,6 +13,8 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.gxdevs.mindmint.Utils.AnimUtils;
+
 import com.github.mikephil.charting.animation.Easing;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
@@ -82,6 +84,13 @@ public class StatsFocusFragment extends Fragment {
         focusPieChart = view.findViewById(R.id.focusPieChart);
         tvPieHighlight = view.findViewById(R.id.tvPieHighlight);
         tvHistorySuggestion = view.findViewById(R.id.tvHistorySuggestion);
+
+        // Entrance animations
+        if (tvMetricLeftValue != null) AnimUtils.enterSlideUp(tvMetricLeftValue, 0);
+        if (tvMetricRightValue != null) AnimUtils.enterSlideUp(tvMetricRightValue, 40);
+        if (focusBarChart != null) AnimUtils.fadeIn(focusBarChart, 120, 400);
+        if (focusPieChart != null) AnimUtils.fadeIn(focusPieChart, 240, 400);
+        if (suggestionCard != null) AnimUtils.fadeIn(suggestionCard, 360, 300);
     }
 
     private void updateStats(StatsViewModel.PeriodRange range) {

@@ -18,6 +18,8 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.gxdevs.mindmint.Utils.AnimUtils;
+
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.charts.PieChart;
 import com.github.mikephil.charting.components.Legend;
@@ -104,6 +106,15 @@ public class StatsHabitsFragment extends Fragment {
         globalEmotionChart = view.findViewById(R.id.globalEmotionChart);
         globalAverageMoodValue = view.findViewById(R.id.globalAverageMoodValue);
         globalEmotionInsight = view.findViewById(R.id.globalEmotionInsight);
+
+        // Entrance animations
+        if (tvMetricLeftValue != null) AnimUtils.enterSlideUp(tvMetricLeftValue, 0);
+        if (tvMetricRightValue != null) AnimUtils.enterSlideUp(tvMetricRightValue, 40);
+        if (globalHeatmap != null) AnimUtils.fadeIn(globalHeatmap, 80, 380);
+        if (habitPieChart != null) AnimUtils.fadeIn(habitPieChart, 180, 380);
+        if (habitLineChart != null) AnimUtils.fadeIn(habitLineChart, 280, 380);
+        if (globalEmotionChart != null) AnimUtils.fadeIn(globalEmotionChart, 380, 380);
+        if (suggestionCard != null) AnimUtils.fadeIn(suggestionCard, 460, 300);
     }
 
     private void updateStats(StatsViewModel.PeriodRange range) {

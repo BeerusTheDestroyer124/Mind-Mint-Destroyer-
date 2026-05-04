@@ -10,28 +10,31 @@ import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.activity.OnBackPressedCallback;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.preference.PreferenceManager;
 import androidx.viewpager2.widget.ViewPager2;
 
+import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.play.core.review.ReviewManager;
 import com.google.android.play.core.review.ReviewManagerFactory;
 import com.gxdevs.mindmint.Adapters.HomePagerAdapter;
 import com.gxdevs.mindmint.Fragments.HabitFragment;
-import com.gxdevs.mindmint.Fragments.HomeFragment;
 import com.gxdevs.mindmint.Fragments.SettingsFragment;
 import com.gxdevs.mindmint.Fragments.TasksFragment;
 import com.gxdevs.mindmint.R;
 import com.gxdevs.mindmint.Utils.MidnightResetManager;
 import com.gxdevs.mindmint.Utils.Utils;
+import com.gxdevs.mindmint.Utils.AnimUtils;
 
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.NumberPicker;
 import android.widget.TextView;
+
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.gxdevs.mindmint.Services.FocusService;
@@ -53,13 +56,9 @@ public class HomeActivity extends AppCompatActivity {
     private static final String KEY_REVIEW_DONE = "review_done";
 
     private static final String PREF_LOCK_IN_SAVED_MS = "pref_lock_in_saved_ms";
-    /** Cumulative milliseconds spent in Lock In mode across all sessions. */
-    public static final String PREF_LOCK_IN_TOTAL_MS = "pref_lock_in_total_ms";
-    /** Whether the user has already seen the first-time Lock In warning. */
     private static final String PREF_LOCK_IN_WARNING_SHOWN = "pref_lock_in_warning_shown";
 
     private ViewPager2 viewPager;
-    private HomePagerAdapter pagerAdapter;
     private ImageButton btnHome;
     private MaterialButton lockInPill;
     private android.content.BroadcastReceiver focusSessionEndedReceiver;
@@ -119,7 +118,7 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onNewIntent(Intent intent) {
+    protected void onNewIntent(@NonNull Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
         handleFcmIntent(intent);
@@ -150,20 +149,20 @@ public class HomeActivity extends AppCompatActivity {
                         viewPager.setCurrentItem(HomePagerAdapter.PAGE_HABITS, false);
                         break;
                     case "open_stats":
-                        startActivity(new Intent(this, com.gxdevs.mindmint.Activities.StatsActivity.class));
+                        startActivity(new Intent(this, StatsActivity.class));
                         break;
                     case "open_stats_focus":
-                        Intent sf = new Intent(this, com.gxdevs.mindmint.Activities.StatsActivity.class);
+                        Intent sf = new Intent(this, StatsActivity.class);
                         sf.putExtra("stats_tab", "focus");
                         startActivity(sf);
                         break;
                     case "open_stats_habits":
-                        Intent sh = new Intent(this, com.gxdevs.mindmint.Activities.StatsActivity.class);
+                        Intent sh = new Intent(this, StatsActivity.class);
                         sh.putExtra("stats_tab", "habits");
                         startActivity(sh);
                         break;
                     case "open_stats_tasks":
-                        Intent st = new Intent(this, com.gxdevs.mindmint.Activities.StatsActivity.class);
+                        Intent st = new Intent(this, StatsActivity.class);
                         st.putExtra("stats_tab", "tasks");
                         startActivity(st);
                         break;
@@ -171,10 +170,10 @@ public class HomeActivity extends AppCompatActivity {
                         viewPager.setCurrentItem(HomePagerAdapter.PAGE_SETTINGS, false);
                         break;
                     case "open_site_blocker":
-                        startActivity(new Intent(this, com.gxdevs.mindmint.Activities.SiteBlockerActivity.class));
+                        startActivity(new Intent(this, SiteBlockerActivity.class));
                         break;
                     case "open_onboarding":
-                        startActivity(new Intent(this, com.gxdevs.mindmint.Activities.OnBoarding.class));
+                        startActivity(new Intent(this, OnBoarding.class));
                         break;
                     case "open_url":
                         String url = intent.getStringExtra("intent_value");
@@ -264,7 +263,7 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void setupAdapter() {
-        pagerAdapter = new HomePagerAdapter(this);
+        HomePagerAdapter pagerAdapter = new HomePagerAdapter(this);
         viewPager.setAdapter(pagerAdapter);
 
         viewPager.setOffscreenPageLimit(3);
@@ -276,16 +275,16 @@ public class HomeActivity extends AppCompatActivity {
 
     private void setupNavigation() {
         navItems.get(0).setOnClickListener(v -> // "Friends" — coming soon
-        Toast.makeText(this, "Your friends are coming soon!", Toast.LENGTH_SHORT).show());
+                Toast.makeText(this, "Your friends are coming soon!", Toast.LENGTH_SHORT).show());
 
         navItems.get(1).setOnClickListener(v -> // Tasks
-        viewPager.setCurrentItem(HomePagerAdapter.PAGE_TASKS, true));
+                viewPager.setCurrentItem(HomePagerAdapter.PAGE_TASKS, true));
 
         navItems.get(2).setOnClickListener(v -> // Habits
-        viewPager.setCurrentItem(HomePagerAdapter.PAGE_HABITS, true));
+                viewPager.setCurrentItem(HomePagerAdapter.PAGE_HABITS, true));
 
         navItems.get(3).setOnClickListener(v -> // Settings
-        viewPager.setCurrentItem(HomePagerAdapter.PAGE_SETTINGS, true));
+                viewPager.setCurrentItem(HomePagerAdapter.PAGE_SETTINGS, true));
 
         btnHome.setOnClickListener(v -> {
             btnHome.animate()
@@ -326,8 +325,6 @@ public class HomeActivity extends AppCompatActivity {
         });
 
         lockInPill.setOnLongClickListener(v -> {
-            // Long press always shows the picker so user can change the saved time
-            // But not if session is already active
             SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
             boolean isAlreadyActive = FocusService.isPublicFocusRun
                     || sharedPreferences.getBoolean(FocusService.PREF_IS_LOCKED_IN, false);
@@ -358,8 +355,7 @@ public class HomeActivity extends AppCompatActivity {
         NumberPicker minutePicker = sheetView.findViewById(R.id.minutes_selector_bottom_sheet);
         Button confirmBtn = sheetView.findViewById(R.id.setLimitBtnBottomSheet);
         View rememberRow = sheetView.findViewById(R.id.rememberTimeRow);
-        com.google.android.material.materialswitch.MaterialSwitch rememberSwitch = sheetView
-                .findViewById(R.id.rememberTimeSwitch);
+        MaterialSwitch rememberSwitch = sheetView.findViewById(R.id.rememberTimeSwitch);
 
         if (confirmBtn != null)
             confirmBtn.setText("Lock In");
@@ -407,11 +403,8 @@ public class HomeActivity extends AppCompatActivity {
         sheet.setContentView(sheetView);
         sheet.show();
     }
-    /**
-     * Returns true if both notification and exact-alarm permissions are granted.
-     * These are required for Lock-In mode to show its foreground notification and
-     * schedule the session-end alarm reliably.
-     */
+
+
     private boolean hasLockInPermissions() {
         // Exact alarm — required on Android 12+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
@@ -420,9 +413,8 @@ public class HomeActivity extends AppCompatActivity {
         }
         // Notification — required on Android 13+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            if (androidx.core.content.ContextCompat.checkSelfPermission(this,
-                    android.Manifest.permission.POST_NOTIFICATIONS)
-                    != android.content.pm.PackageManager.PERMISSION_GRANTED) return false;
+            return ContextCompat.checkSelfPermission(this,
+                    android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED;
         }
         return true;
     }
@@ -440,11 +432,14 @@ public class HomeActivity extends AppCompatActivity {
             new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
                     .setTitle("🔒 Lock In Mode")
                     .setMessage(
-                            "Once you start Lock In, all non-essential apps will be blocked "
-                                    + "for the entire duration you set.\n\n"
-                                    + "You will NOT be able to stop the session early. "
-                                    + "Make sure you are ready before confirming.\n\n"
-                                    + "Essential apps (calls, camera, settings) remain accessible.")
+                            """
+                                    Once you start Lock In, all non-essential apps will be blocked \
+                                    for the entire duration you set.
+                                    
+                                    You will NOT be able to stop the session early. \
+                                    Make sure you are ready before confirming.
+                                    
+                                    Essential apps (calls, camera, settings) remain accessible.""")
                     .setPositiveButton("I'm Ready, Lock In", (d, w) -> {
                         sp.edit().putBoolean(PREF_LOCK_IN_WARNING_SHOWN, true).apply();
                         doStartLockIn(durationMs);
@@ -485,8 +480,6 @@ public class HomeActivity extends AppCompatActivity {
         boolean isHome = viewPager != null && viewPager.getCurrentItem() == HomePagerAdapter.PAGE_HOME;
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
-        // Hide pill when not on home, no accessibility, OR a focus/lock-in session is
-        // active
         boolean isFocusActive = FocusService.isPublicFocusRun
                 || sharedPreferences.getBoolean(FocusService.PREF_IS_LOCKED_IN, false);
 
@@ -522,35 +515,27 @@ public class HomeActivity extends AppCompatActivity {
         });
     }
 
-    public void navigateTo(int page) {
-        viewPager.setCurrentItem(page, true);
-    }
-
-    public void updateNavigationForFragment(Fragment fragment) {
-        syncNavToPage(pageForFragment(fragment));
-    }
-
     private void syncNavToPage(int page) {
         resetNav();
         int navIdx = navIndexForPage(page);
         if (navIdx >= 0 && navIdx < navItems.size()) {
             navItems.get(navIdx).setSelected(true);
-            navIcons.get(navIdx).setColorFilter(
+            ImageView selectedIcon = navIcons.get(navIdx);
+            selectedIcon.setColorFilter(
                     ContextCompat.getColor(this, R.color.icon_selected));
+            AnimUtils.navIconSelect(selectedIcon);
         }
+        // Show/hide Lock In pill based on current page
+        updateLockInPillLabel();
     }
 
     private int navIndexForPage(int page) {
-        switch (page) {
-            case HomePagerAdapter.PAGE_TASKS:
-                return 1;
-            case HomePagerAdapter.PAGE_HABITS:
-                return 2;
-            case HomePagerAdapter.PAGE_SETTINGS:
-                return 3;
-            default:
-                return -1; // Home — no nav item
-        }
+        return switch (page) {
+            case HomePagerAdapter.PAGE_TASKS -> 1;
+            case HomePagerAdapter.PAGE_HABITS -> 2;
+            case HomePagerAdapter.PAGE_SETTINGS -> 3;
+            default -> -1; // Home — no nav item
+        };
     }
 
     private int pageForFragment(Fragment f) {
@@ -564,16 +549,12 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private int pageIndexFor(String startKey) {
-        switch (startKey) {
-            case START_FRAGMENT_TASKS:
-                return HomePagerAdapter.PAGE_TASKS;
-            case START_FRAGMENT_HABITS:
-                return HomePagerAdapter.PAGE_HABITS;
-            case START_FRAGMENT_SETTINGS:
-                return HomePagerAdapter.PAGE_SETTINGS;
-            default:
-                return HomePagerAdapter.PAGE_HOME;
-        }
+        return switch (startKey) {
+            case START_FRAGMENT_TASKS -> HomePagerAdapter.PAGE_TASKS;
+            case START_FRAGMENT_HABITS -> HomePagerAdapter.PAGE_HABITS;
+            case START_FRAGMENT_SETTINGS -> HomePagerAdapter.PAGE_SETTINGS;
+            default -> HomePagerAdapter.PAGE_HOME;
+        };
     }
 
     private void resetNav() {

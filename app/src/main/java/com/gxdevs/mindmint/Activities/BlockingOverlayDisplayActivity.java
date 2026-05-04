@@ -80,8 +80,14 @@ public class BlockingOverlayDisplayActivity extends AppCompatActivity {
 
         TextView tvBlockingMessage = findViewById(R.id.tv_blocking_message);
         TextView tv_blocking_subtitle = findViewById(R.id.tv_blocking_subtitle);
+        String customSubtitle = intent != null
+                ? intent.getStringExtra(AppUsageAccessibilityService.EXTRA_CUSTOM_SUBTITLE)
+                : null;
         if (tvBlockingMessage != null) {
-            if (isReminderOnly) {
+            if (customSubtitle != null) {
+                tvBlockingMessage.setText(currentBlockedAppName + " is Protected");
+                tv_blocking_subtitle.setText(customSubtitle);
+            } else if (isReminderOnly) {
                 tvBlockingMessage.setText("Quick Reminder for: " + currentBlockedAppName);
                 tv_blocking_subtitle.setText("Time's up! This is your reminder to close " + currentBlockedAppName + ".");
             } else {

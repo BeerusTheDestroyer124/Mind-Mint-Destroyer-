@@ -1680,7 +1680,7 @@ public class FocusMode extends AppCompatActivity {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 dialog.getWindow().setBackgroundBlurRadius(10);
             }
-            dialog.getWindow().setLayout(MATCH_PARENT, MATCH_PARENT);
+            dialog.getWindow().setLayout(MATCH_PARENT, WRAP_CONTENT);
         }
 
         ImageView crystalImg = dialog.findViewById(R.id.crystalImage);
@@ -1688,7 +1688,7 @@ public class FocusMode extends AppCompatActivity {
         TextView title = dialog.findViewById(R.id.titleText);
         TextView desc = dialog.findViewById(R.id.descText);
         TextView coinsText = dialog.findViewById(R.id.coinsText);
-        MaterialTextView okBtn = dialog.findViewById(R.id.okBtn);
+        MaterialButton okBtn = dialog.findViewById(R.id.okBtn);
 
         int coins;
         int crystalRes;
@@ -1734,11 +1734,9 @@ public class FocusMode extends AppCompatActivity {
         if (desc != null) {
             String compText = "Focus complete: " + minutes + " min";
             desc.setText(compText);
-            desc.setTextColor(progressColor);
-            desc.setAlpha(0.8f);
         }
         if (coinsText != null) {
-            coinsText.setTextColor(progressColor);
+            coinsText.setBackgroundTintList(android.content.res.ColorStateList.valueOf(progressColor));
         }
         // NOTE: okBtn click listener is set below (after touch listener) — don't set it here
 
@@ -1791,20 +1789,6 @@ public class FocusMode extends AppCompatActivity {
             okBtn.setOnClickListener(v -> {
                 dialog.dismiss();
                 if (onDismiss != null) onDismiss.run();
-            });
-
-            okBtn.setOnTouchListener((v, e) -> {
-                switch (e.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        v.animate().scaleX(0.98f).scaleY(0.98f).setDuration(80).start();
-                        break;
-                    case MotionEvent.ACTION_UP:
-                    case MotionEvent.ACTION_CANCEL:
-                        v.animate().scaleX(1f).scaleY(1f).setDuration(120).start();
-                        break;
-                }
-                v.performClick();
-                return true;
             });
         }
 
@@ -2075,7 +2059,18 @@ public class FocusMode extends AppCompatActivity {
         View customAppBlockCard = sheet.findViewById(R.id.customAppBlockCard);
         if (customAppBlockCard != null) {
             customAppBlockCard.setOnClickListener(v -> {
-                startActivity(new Intent(this, CustomAppSelectionActivity.class));
+                Intent i = new Intent(this, CustomAppSelectionActivity.class);
+                i.putExtra(CustomAppSelectionActivity.EXTRA_MODE, CustomAppSelectionActivity.MODE_BLACKLIST);
+                startActivity(i);
+            });
+        }
+
+        View strictWhitelistCard = sheet.findViewById(R.id.strictWhitelistCard);
+        if (strictWhitelistCard != null) {
+            strictWhitelistCard.setOnClickListener(v -> {
+                Intent i = new Intent(this, CustomAppSelectionActivity.class);
+                i.putExtra(CustomAppSelectionActivity.EXTRA_MODE, CustomAppSelectionActivity.MODE_WHITELIST);
+                startActivity(i);
             });
         }
 
@@ -2391,12 +2386,12 @@ public class FocusMode extends AppCompatActivity {
 
         btnTime.setOnClickListener(v -> {
             MaterialTimePicker timePicker = new MaterialTimePicker.Builder()
+                    .setTheme(R.style.ThemeOverlay_MindMint_TimePicker)
                     .setTimeFormat(TimeFormat.CLOCK_12H)
                     .setHour(hour[0])
                     .setMinute(min[0])
                     .setTitleText("Select Schedule Time")
                     .build();
-
             timePicker.addOnPositiveButtonClickListener(v1 -> {
                 hour[0] = timePicker.getHour();
                 min[0] = timePicker.getMinute();
@@ -2510,11 +2505,12 @@ public class FocusMode extends AppCompatActivity {
                 v.setBackgroundResource(R.drawable.bg_segment_selected);
                 ((TextView) v).setTextColor(colorPrimary);
             } else {
-                v.setBackground(null);
+                v.setBackgroundResource(R.drawable.bg_chip_unselected);
                 ((TextView) v).setTextColor(colorTertiary);
             }
         };
     }
+
 
 }
 

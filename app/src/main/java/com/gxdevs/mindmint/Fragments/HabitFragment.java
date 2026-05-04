@@ -35,6 +35,7 @@ import com.gxdevs.mindmint.Models.Habit;
 import com.gxdevs.mindmint.Models.Task;
 import com.gxdevs.mindmint.R;
 import com.gxdevs.mindmint.Utils.HabitManager;
+import com.gxdevs.mindmint.Utils.AnimUtils;
 import com.gxdevs.mindmint.Utils.MintCrystals;
 import com.gxdevs.mindmint.Utils.StreakManager;
 import com.gxdevs.mindmint.Utils.TaskManager;
@@ -71,6 +72,8 @@ public class HabitFragment extends Fragment implements HabitAdapter.OnHabitActio
     private CircularProgressIndicator circularProgress;
     private LottieAnimationView streakLottie;
     private View streakGlow;
+    /** Guards entrance animation — only plays on first tab visit. */
+    private boolean firstResume = true;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -83,7 +86,9 @@ public class HabitFragment extends Fragment implements HabitAdapter.OnHabitActio
         recyclerView.setLayoutManager(new GridLayoutManager(requireContext(), 2));
         adapter = new HabitAdapter(requireContext(), habits, this);
         recyclerView.setAdapter(adapter);
-        view.findViewById(R.id.addHabitBtn).setOnClickListener(v -> startActivity(new Intent(requireContext(), HabitCreateActivity.class)));
+        View addHabitBtn = view.findViewById(R.id.addHabitBtn);
+        AnimUtils.attachTouchRipple(addHabitBtn);
+        addHabitBtn.setOnClickListener(v -> startActivity(new Intent(requireContext(), HabitCreateActivity.class)));
         searchEditText = view.findViewById(R.id.searchEditText);
         dateDetails = view.findViewById(R.id.dateDetails);
         streakText = view.findViewById(R.id.streakText);
@@ -99,10 +104,40 @@ public class HabitFragment extends Fragment implements HabitAdapter.OnHabitActio
         setupSearch();
         load();
         setupLottieColors();
+        preHideAnimatedViews(); // Prevent flash: views are invisible until animateEntrance() in onResume fires
         // Post to ensure view is ready
         view.post(this::updateOverallStreakUI);
         updateDateHeader();
         return view;
+    }
+
+    /** Pre-hides views that animateEntrance() animates in, so there is no flash before onResume fires. */
+    private void preHideAnimatedViews() {
+        View streakCard = view.findViewById(R.id.streakCard);
+        if (streakCard != null) { streakCard.setAlpha(0f); streakCard.setTranslationY(90f); }
+        if (searchEditText != null) searchEditText.setAlpha(0f);
+        if (dateDetails != null) dateDetails.setAlpha(0f);
+        View addBtn = view.findViewById(R.id.addHabitBtn);
+        if (addBtn != null) { addBtn.setAlpha(0f); addBtn.setScaleX(0.6f); addBtn.setScaleY(0.6f); }
+        if (recyclerView != null) recyclerView.setAlpha(0f);
+    }
+
+    /** Entrance animations for the Habits screen — runs from onResume so it is visible. */
+    private void animateEntrance() {
+        // Streak card slides up prominently
+        View streakCard = view.findViewById(R.id.streakCard);
+        if (streakCard != null) AnimUtils.enterSlideUp(streakCard, 0);
+
+        // Search and date fade in
+        if (searchEditText != null) AnimUtils.fadeIn(searchEditText, 60, 260);
+        if (dateDetails != null) AnimUtils.fadeIn(dateDetails, 40, 240);
+
+        // Add button bounces in after streak card is visible
+        View addBtn = view.findViewById(R.id.addHabitBtn);
+        if (addBtn != null) AnimUtils.bounceIn(addBtn, 140);
+
+        // Recycler fades in last
+        if (recyclerView != null) AnimUtils.fadeIn(recyclerView, 180, 300);
     }
 
     private void setupSearch() {
@@ -399,9 +434,26 @@ public class HabitFragment extends Fragment implements HabitAdapter.OnHabitActio
                 Math.min(b, 255));
     }
 
+    /** Returns true only when this fragment is the page currently shown by the host ViewPager2. */
+    private boolean isCurrentPage(int expectedPageIndex) {
+        if (getActivity() instanceof com.gxdevs.mindmint.Activities.HomeActivity) {
+            androidx.viewpager2.widget.ViewPager2 vp =
+                    getActivity().findViewById(com.gxdevs.mindmint.R.id.nav_host_container);
+            if (vp != null) return vp.getCurrentItem() == expectedPageIndex;
+        }
+        return true;
+    }
+
     @Override
     public void onResume() {
         super.onResume();
+        // Run entrance animation only the first time this tab is actually VISIBLE.
+        // ViewPager2 with offscreenPageLimit calls onResume for ALL pre-loaded fragments
+        // when the Activity resumes — guard against that.
+        if (firstResume && isCurrentPage(com.gxdevs.mindmint.Adapters.HomePagerAdapter.PAGE_HABITS)) {
+            firstResume = false;
+            if (view != null) view.post(this::animateEntrance);
+        }
         load();
         updateDateHeader();
         updateOverallStreakUI();

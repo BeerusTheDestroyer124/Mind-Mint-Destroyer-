@@ -486,7 +486,7 @@
 
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Custom App Blocking Card -->
+        <!-- Custom App Blocking Card (BLACKLIST — blocks during focus) -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/customAppBlockCard"
             android:layout_width="match_parent"
@@ -498,7 +498,7 @@
             app:cardBackgroundColor="?attr/surface_nested"
             app:cardCornerRadius="25dp"
             app:layout_constraintTop_toBottomOf="@+id/alwaysLockInCard"
-            app:strokeColor="@color/glass_stroke"
+            app:strokeColor="#4DFF5F5F"
             app:strokeWidth="2dp">
 
             <androidx.constraintlayout.widget.ConstraintLayout
@@ -511,11 +511,12 @@
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:background="@drawable/glass_circle"
+                    android:backgroundTint="#33FF5F5F"
                     android:padding="10dp"
                     android:src="@drawable/smartphone"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
-                    app:tint="?attr/text_primary" />
+                    app:tint="#FF5F5F" />
 
                 <TextView
                     android:id="@+id/customAppBlockTitle"
@@ -536,8 +537,8 @@
                     android:layout_marginTop="2dp"
                     android:layout_marginEnd="16dp"
                     android:fontFamily="sans-serif"
-                    android:text="@string/select_apps_to_block_during_focus_mode"
-                    android:textColor="?attr/text_secondary"
+                    android:text="Blocked in all focus modes · Blacklist"
+                    android:textColor="#FF5F5F"
                     android:textSize="11sp"
                     app:layout_constraintEnd_toStartOf="@+id/customAppBlockArrow"
                     app:layout_constraintStart_toStartOf="@+id/customAppBlockTitle"
@@ -557,11 +558,84 @@
 
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Strict Focus Whitelist Card (WHITELIST — allowed during Strict Lock-In) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/strictWhitelistCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:elevation="4dp"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="?attr/surface_nested"
+            app:cardCornerRadius="25dp"
+            app:layout_constraintTop_toBottomOf="@+id/customAppBlockCard"
+            app:strokeColor="#4D4CAF50"
+            app:strokeWidth="2dp">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="18dp">
+
+                <ImageView
+                    android:id="@+id/whitelistLogo"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/glass_circle"
+                    android:backgroundTint="#334CAF50"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_add"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:tint="#4CAF50" />
+
+                <TextView
+                    android:id="@+id/whitelistTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="Strict Focus Whitelist"
+                    android:textColor="?attr/text_primary"
+                    android:textSize="15sp"
+                    app:layout_constraintStart_toEndOf="@+id/whitelistLogo"
+                    app:layout_constraintTop_toTopOf="@+id/whitelistLogo" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginEnd="16dp"
+                    android:fontFamily="sans-serif"
+                    android:text="Apps allowed during Strict Lock-In · Whitelist"
+                    android:textColor="#4CAF50"
+                    android:textSize="11sp"
+                    app:layout_constraintEnd_toStartOf="@+id/whitelistArrow"
+                    app:layout_constraintStart_toStartOf="@+id/whitelistTitle"
+                    app:layout_constraintTop_toBottomOf="@+id/whitelistTitle" />
+
+                <ImageView
+                    android:id="@+id/whitelistArrow"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_right_arrow"
+                    app:layout_constraintBottom_toBottomOf="@+id/whitelistLogo"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@+id/whitelistLogo"
+                    app:tint="?attr/text_secondary" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
         <View
             android:layout_width="match_parent"
             android:layout_height="10dp"
-            app:layout_constraintTop_toBottomOf="@+id/customAppBlockCard" />
+            app:layout_constraintTop_toBottomOf="@+id/strictWhitelistCard" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
+
+

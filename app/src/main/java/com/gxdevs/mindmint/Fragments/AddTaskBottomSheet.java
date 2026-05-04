@@ -24,20 +24,19 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.AppCompatButton;
-import androidx.core.content.ContextCompat;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.materialswitch.MaterialSwitch;
+import com.google.android.material.timepicker.MaterialTimePicker;
+import com.google.android.material.timepicker.TimeFormat;
 import com.google.gson.Gson;
 import com.gxdevs.mindmint.Models.Task;
 import com.gxdevs.mindmint.R;
-import com.gxdevs.mindmint.Views.AnalogClockView;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Locale;
-import java.util.Objects;
 
 public class AddTaskBottomSheet extends BottomSheetDialogFragment {
 
@@ -281,93 +280,24 @@ public class AddTaskBottomSheet extends BottomSheetDialogFragment {
     }
 
     private void showCustomTimePicker() {
-        com.google.android.material.dialog.MaterialAlertDialogBuilder builder = new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialogTheme);
-        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_time_picker, null);
-        TextView hourDisplay = dialogView.findViewById(R.id.hourDisplay);
-        TextView minuteDisplay = dialogView.findViewById(R.id.minuteDisplay);
-        TextView amButton = dialogView.findViewById(R.id.amButton);
-        TextView pmButton = dialogView.findViewById(R.id.pmButton);
-        AnalogClockView analogClock = dialogView.findViewById(R.id.analogClock);
-        AppCompatButton cancelButton = dialogView.findViewById(R.id.cancelButton);
-        AppCompatButton okButton = dialogView.findViewById(R.id.okButton);
-
-        // Initialize with current time
-        int currentHour = selectedDateTime.get(Calendar.HOUR);
+        int currentHour = selectedDateTime.get(Calendar.HOUR_OF_DAY);
         int currentMinute = selectedDateTime.get(Calendar.MINUTE);
-        boolean isPM = selectedDateTime.get(Calendar.AM_PM) == Calendar.PM;
-
-        if (currentHour == 0) currentHour = 12;
-
-        updateTimeDisplay(hourDisplay, minuteDisplay, amButton, pmButton, currentHour, currentMinute, isPM);
-        analogClock.setTime(currentHour, currentMinute);
-
-        AlertDialog dialog = builder.setView(dialogView).create();
-
-        // Clock interaction
-        analogClock.setOnTimeChangeListener((hour, minute) -> updateTimeDisplay(hourDisplay, minuteDisplay, amButton, pmButton, hour, minute, isPM));
-
-        // AM/PM toggle
-        amButton.setOnClickListener(v -> updateTimeDisplay(hourDisplay, minuteDisplay, amButton, pmButton,
-                Integer.parseInt(hourDisplay.getText().toString()),
-                Integer.parseInt(minuteDisplay.getText().toString()), false));
-
-        pmButton.setOnClickListener(v -> updateTimeDisplay(hourDisplay, minuteDisplay, amButton, pmButton,
-                Integer.parseInt(hourDisplay.getText().toString()),
-                Integer.parseInt(minuteDisplay.getText().toString()), true));
-
-        // Hour display click
-        hourDisplay.setOnClickListener(v -> {
-            analogClock.setSelectingHour(true);
-            hourDisplay.setBackgroundResource(R.drawable.time_picker_selected_bg);
-            minuteDisplay.setBackgroundResource(R.drawable.background_outline);
-        });
-
-        // Minute display click
-        minuteDisplay.setOnClickListener(v -> {
-            analogClock.setSelectingHour(false);
-            hourDisplay.setBackgroundResource(R.drawable.background_outline);
-            minuteDisplay.setBackgroundResource(R.drawable.time_picker_selected_bg);
-        });
-
-        cancelButton.setOnClickListener(v -> dialog.dismiss());
-
-        okButton.setOnClickListener(v -> {
-            int finalHour = Integer.parseInt(hourDisplay.getText().toString());
-            int finalMinute = Integer.parseInt(minuteDisplay.getText().toString());
-            boolean finalIsPM = Objects.equals(pmButton.getBackground().getConstantState(), Objects.requireNonNull(ContextCompat.getDrawable(requireContext(), R.drawable.time_picker_selected_bg)).getConstantState());
-
-            // Convert to 24-hour format
-            if (finalIsPM && finalHour != 12) {
-                finalHour += 12;
-            } else if (!finalIsPM && finalHour == 12) {
-                finalHour = 0;
-            }
-
-            selectedDateTime.set(Calendar.HOUR_OF_DAY, finalHour);
-            selectedDateTime.set(Calendar.MINUTE, finalMinute);
+        MaterialTimePicker timePicker = new MaterialTimePicker.Builder()
+                .setTheme(R.style.ThemeOverlay_MindMint_TimePicker)
+                .setTimeFormat(TimeFormat.CLOCK_12H)
+                .setHour(currentHour)
+                .setMinute(currentMinute)
+                .setTitleText("Select Time")
+                .build();
+        timePicker.addOnPositiveButtonClickListener(v -> {
+            selectedDateTime.set(Calendar.HOUR_OF_DAY, timePicker.getHour());
+            selectedDateTime.set(Calendar.MINUTE, timePicker.getMinute());
             updateDateTimeDisplay();
-            dialog.dismiss();
         });
-
-        dialog.show();
+        timePicker.show(getParentFragmentManager(), "task_time_picker");
     }
 
-    private void updateTimeDisplay(TextView hourDisplay, TextView minuteDisplay, TextView amButton, TextView pmButton, int hour, int minute, boolean isPM) {
-        hourDisplay.setText(String.format(Locale.getDefault(), "%02d", hour));
-        minuteDisplay.setText(String.format(Locale.getDefault(), "%02d", minute));
 
-        if (isPM) {
-            amButton.setBackgroundResource(R.drawable.background_outline);
-            amButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.textColor));
-            pmButton.setBackgroundResource(R.drawable.time_picker_selected_bg);
-            pmButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.white));
-        } else {
-            amButton.setBackgroundResource(R.drawable.time_picker_selected_bg);
-            amButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.white));
-            pmButton.setBackgroundResource(R.drawable.background_outline);
-            pmButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.textColor));
-        }
-    }
 
     private void updateDateTimeDisplay() {
         SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd", Locale.getDefault());

@@ -58,6 +58,7 @@ import com.gxdevs.mindmint.Utils.TaskManager;
 import com.gxdevs.mindmint.Utils.TaskNotificationManager;
 import com.gxdevs.mindmint.Utils.Utils;
 import com.gxdevs.mindmint.Utils.CustomDialogUtils;
+import com.gxdevs.mindmint.Utils.AnimUtils;
 import com.skydoves.balloon.ArrowOrientation;
 import com.skydoves.balloon.Balloon;
 import com.skydoves.balloon.BalloonAnimation;
@@ -77,6 +78,8 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskClickLi
     private static final String KEY_TASK_FOCUS_GUIDE_SHOWN = "task_focus_guide_shown";
     // Tracks whether this fragment has been seen at least once this app session
     private boolean tutorialsShownThisSession = false;
+    /** Guards entrance animation — only plays on first tab visit. */
+    private boolean firstResume = true;
     private View view;
     private MaterialButton addTaskButton;
     private EditText searchEditText;
@@ -135,6 +138,7 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskClickLi
         loadTasks();
         checkPermissionAndMoveOn();
         setupSearchAndFilter();
+        preHideAnimatedViews(); // Prevent flash: views invisible until animateEntrance() fires in onResume
 
         focusUpdateReceiver = new android.content.BroadcastReceiver() {
             @Override
@@ -181,9 +185,26 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskClickLi
         }
     }
 
+    /** Returns true only when this fragment is the page currently shown by the host ViewPager2. */
+    private boolean isCurrentPage(int expectedPageIndex) {
+        if (getActivity() instanceof com.gxdevs.mindmint.Activities.HomeActivity) {
+            androidx.viewpager2.widget.ViewPager2 vp =
+                    getActivity().findViewById(com.gxdevs.mindmint.R.id.nav_host_container);
+            if (vp != null) return vp.getCurrentItem() == expectedPageIndex;
+        }
+        return true;
+    }
+
     @Override
     public void onResume() {
         super.onResume();
+        // Run entrance animation only the first time this tab is actually VISIBLE.
+        // ViewPager2 with offscreenPageLimit calls onResume for ALL pre-loaded fragments
+        // when the Activity resumes — guard against that.
+        if (firstResume && isCurrentPage(com.gxdevs.mindmint.Adapters.HomePagerAdapter.PAGE_TASKS)) {
+            firstResume = false;
+            if (view != null) view.post(this::animateEntrance);
+        }
         checkPermissionAndMoveOn();
         updateNotificationPermissionCard();
         // Reload tasks when returning from FocusMode so the list and focus card
@@ -490,14 +511,37 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskClickLi
     }
 
     private void setupClickListeners() {
+        AnimUtils.attachTouchRipple(addTaskButton);
         addTaskButton.setOnClickListener(v -> showAddTaskBottomSheet());
+        AnimUtils.attachTouchRipple(filterButton);
         filterButton.setOnClickListener(v -> {
             if (filterScrollView.getVisibility() == VISIBLE) {
-                filterScrollView.setVisibility(GONE);
+                filterScrollView.animate().alpha(0f).translationY(-8f).setDuration(200)
+                        .withEndAction(() -> filterScrollView.setVisibility(GONE)).start();
             } else {
+                filterScrollView.setAlpha(0f);
+                filterScrollView.setTranslationY(-8f);
                 filterScrollView.setVisibility(VISIBLE);
+                filterScrollView.animate().alpha(1f).translationY(0f).setDuration(220)
+                        .setInterpolator(new AccelerateDecelerateInterpolator()).start();
             }
         });
+    }
+
+    /** Pre-hides views that animateEntrance() animates in, so there is no flash before onResume fires. */
+    private void preHideAnimatedViews() {
+        if (addTaskButton != null) { addTaskButton.setAlpha(0f); addTaskButton.setScaleX(0.6f); addTaskButton.setScaleY(0.6f); }
+        if (searchEditText != null) searchEditText.setAlpha(0f);
+        // filterScrollView starts GONE by default — do NOT hide it here, the filter button manages it
+        if (tasksRecyclerView != null) tasksRecyclerView.setAlpha(0f);
+    }
+
+    /** Entrance animations for tasks screen — runs from onResume so it is visible. */
+    private void animateEntrance() {
+        if (addTaskButton != null) AnimUtils.bounceIn(addTaskButton, 30);
+        if (searchEditText != null) AnimUtils.fadeIn(searchEditText, 0, 280);
+        // filterScrollView excluded — starts GONE, revealed by filter button on demand
+        if (tasksRecyclerView != null) AnimUtils.fadeIn(tasksRecyclerView, 120, 300);
     }
 
     private void filterTasks() {

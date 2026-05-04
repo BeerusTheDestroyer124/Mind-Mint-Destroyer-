@@ -20,6 +20,7 @@ import com.gxdevs.mindmint.Activities.HabitStatActivity;
 import com.gxdevs.mindmint.Models.Habit;
 import com.gxdevs.mindmint.R;
 import com.gxdevs.mindmint.Utils.HabitManager;
+import com.gxdevs.mindmint.Utils.AnimUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -65,6 +66,9 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
         this.brandColor = getThemeColor(context, R.attr.brand_pink);
     }
 
+    // Tracks the last position that was animated (to avoid re-animating on scroll)
+    private final int[] lastAnimatedPosition = {-1};
+
     private int getThemeColor(Context context, int attr) {
         TypedValue typedValue = new TypedValue();
         context.getTheme().resolveAttribute(attr, typedValue, true);
@@ -83,6 +87,9 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
         Habit habit = habits.get(position);
         boolean isCompleted = habitManager.isCompletedToday(habit);
         boolean isGoal = habit.isGoalTracking();
+
+        // Item entrance animation
+        AnimUtils.animateItemEnter(holder.itemView, position, lastAnimatedPosition);
 
         holder.title.setText(habit.getName());
         holder.reason.setText(habit.getReason());
@@ -107,6 +114,9 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
         } else {
             setupNormalHabit(holder, habit, isCompleted);
         }
+
+        // Tap feedback on the whole item
+        AnimUtils.attachTouchRipple(holder.itemView);
 
         // Long press
         holder.itemView.setOnLongClickListener(v -> {

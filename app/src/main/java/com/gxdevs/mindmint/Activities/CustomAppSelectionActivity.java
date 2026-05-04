@@ -5,10 +5,12 @@ import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -31,12 +33,20 @@ import java.util.Set;
 
 public class CustomAppSelectionActivity extends AppCompatActivity implements AppSelectionAdapter.OnAppBlockStateChangedListener {
 
+    /** Intent extra: pass "blacklist" (default) or "whitelist" to switch modes. */
+    public static final String EXTRA_MODE = "extra_app_selection_mode";
+    public static final String MODE_BLACKLIST = "blacklist";
+    public static final String MODE_WHITELIST = "whitelist";
+
     private RecyclerView recyclerViewApps;
     private AppSelectionAdapter adapter;
     private final List<AppInfo> appList = new ArrayList<>();
     private SharedPreferences sharedPreferences;
-    private Set<String> blockedAppPackages;
+    private Set<String> selectedPackages;
     private CircularProgressIndicator progressBar;
+
+    private String mode = MODE_BLACKLIST;
+    private String prefKey;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,17 +57,64 @@ public class CustomAppSelectionActivity extends AppCompatActivity implements App
         Utils.setPad(findViewById(R.id.main), "bottom", this);
         findViewById(R.id.backBtn).setOnClickListener(v -> getOnBackPressedDispatcher().onBackPressed());
 
+        // Resolve mode from intent
+        String intentMode = getIntent().getStringExtra(EXTRA_MODE);
+        if (MODE_WHITELIST.equals(intentMode)) {
+            mode = MODE_WHITELIST;
+        }
+        prefKey = MODE_WHITELIST.equals(mode)
+                ? AppUsageAccessibilityService.PREF_LOCKED_IN_EXTRA_WHITELIST
+                : AppUsageAccessibilityService.PREF_CUSTOM_BLOCKED_APPS;
+
+        // Update toolbar text and accent to reflect mode
+        applyModeVisuals();
+
         recyclerViewApps = findViewById(R.id.rv_apps_list);
         progressBar = findViewById(R.id.pb_loading_apps);
         recyclerViewApps.setLayoutManager(new LinearLayoutManager(this));
 
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-        blockedAppPackages = new HashSet<>(sharedPreferences.getStringSet(AppUsageAccessibilityService.PREF_CUSTOM_BLOCKED_APPS, new HashSet<>()));
+        selectedPackages = new HashSet<>(sharedPreferences.getStringSet(prefKey, new HashSet<>()));
 
         adapter = new AppSelectionAdapter(this, appList, this);
         recyclerViewApps.setAdapter(adapter);
 
         loadInstalledApps();
+    }
+
+    /** Adjusts the toolbar title, subtitle pill, and progress indicator color to match the mode. */
+    private void applyModeVisuals() {
+        boolean isWhitelist = MODE_WHITELIST.equals(mode);
+
+        // Toolbar title
+        TextView toolbarTitle = findViewById(R.id.toolbarTitle);
+        if (toolbarTitle != null) {
+            toolbarTitle.setText(isWhitelist ? "Strict Focus Whitelist" : "Custom App Blocking");
+        }
+
+        // Mode badge (tag below title)
+        View modeBadge = findViewById(R.id.modeBadge);
+        TextView modeBadgeText = findViewById(R.id.modeBadgeText);
+        if (modeBadge != null && modeBadgeText != null) {
+            modeBadge.setVisibility(View.VISIBLE);
+            if (isWhitelist) {
+                modeBadge.setBackgroundTintList(
+                        android.content.res.ColorStateList.valueOf(Color.parseColor("#224CAF50")));
+                modeBadgeText.setText("✓  Apps toggled ON will be ALLOWED through Strict Lock-In");
+                modeBadgeText.setTextColor(Color.parseColor("#4CAF50"));
+            } else {
+                modeBadge.setBackgroundTintList(
+                        android.content.res.ColorStateList.valueOf(Color.parseColor("#22FF5F5F")));
+                modeBadgeText.setText("✕  Apps toggled ON will be BLOCKED during all focus sessions");
+                modeBadgeText.setTextColor(Color.parseColor("#FF5F5F"));
+            }
+        }
+
+        // Progress indicator color
+        if (progressBar != null) {
+            int color = isWhitelist ? Color.parseColor("#4CAF50") : Color.parseColor("#FFAFB2");
+            progressBar.setIndicatorColor(color);
+        }
     }
 
     private void loadInstalledApps() {
@@ -82,8 +139,8 @@ public class CustomAppSelectionActivity extends AppCompatActivity implements App
                         ApplicationInfo appInfo = pm.getApplicationInfo(packageName, 0);
                         String appName = pm.getApplicationLabel(appInfo).toString();
                         Drawable icon = pm.getApplicationIcon(appInfo);
-                        boolean isBlocked = blockedAppPackages.contains(packageName);
-                        installedApps.add(new AppInfo(appName, packageName, icon, isBlocked));
+                        boolean isSelected = selectedPackages.contains(packageName);
+                        installedApps.add(new AppInfo(appName, packageName, icon, isSelected));
                     }
                 } catch (Exception e) {
                     Log.e("CustomAppSelection", "Error getting app info for " + packageName, e);
@@ -109,22 +166,17 @@ public class CustomAppSelectionActivity extends AppCompatActivity implements App
     @Override
     public void onAppBlockStateChanged(String packageName, boolean isBlocked) {
         if (isBlocked) {
-            blockedAppPackages.add(packageName);
-            Log.d("CustomAppSelection", "Adding to block list: " + packageName);
+            selectedPackages.add(packageName);
         } else {
-            blockedAppPackages.remove(packageName);
-            Log.d("CustomAppSelection", "Removing from block list: " + packageName);
+            selectedPackages.remove(packageName);
         }
 
         SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putStringSet(AppUsageAccessibilityService.PREF_CUSTOM_BLOCKED_APPS, blockedAppPackages);
+        editor.putStringSet(prefKey, selectedPackages);
 
         boolean success = editor.commit();
-        if (success) {
-            Log.d("CustomAppSelection", "SharedPreferences commit successful. Current blocked apps: " + blockedAppPackages.toString());
-        } else {
-            Log.e("CustomAppSelection", "SharedPreferences commit FAILED. Blocked apps may not be saved.");
-            Toast.makeText(this, "Error saving blocked apps list!", Toast.LENGTH_SHORT).show();
+        if (!success) {
+            Toast.makeText(this, "Error saving app list!", Toast.LENGTH_SHORT).show();
         }
     }
 

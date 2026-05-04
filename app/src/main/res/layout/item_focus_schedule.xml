@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/glass_circle"
+    android:backgroundTint="?attr/surface_nested"
+    android:padding="12dp">
+
+    <TextView
+        android:id="@+id/scheduleTimeText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-medium"
+        android:text="14:30"
+        android:textColor="?attr/text_primary"
+        android:textSize="18sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/scheduleDaysText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:fontFamily="sans-serif-medium"
+        android:text="MON, WED, FRI"
+        android:textColor="?attr/text_secondary"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toBottomOf="@+id/scheduleTimeText"
+        app:layout_constraintEnd_toStartOf="@+id/scheduleDeleteBtn"
+        app:layout_constraintStart_toEndOf="@+id/scheduleTimeText"
+        app:layout_constraintTop_toTopOf="@+id/scheduleTimeText" />
+
+    <TextView
+        android:id="@+id/scheduleConfigText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:fontFamily="sans-serif"
+        android:text="30 min • Topic"
+        android:textColor="?attr/text_tertiary"
+        android:textSize="12sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/scheduleTimeText" />
+
+    <ImageView
+        android:id="@+id/scheduleDeleteBtn"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginEnd="8dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="6dp"
+        app:srcCompat="@drawable/trash"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/scheduleSwitch"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="?attr/status_error_icon" />
+
+    <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/scheduleSwitch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:thumbTint="?attr/switchThumb"
+        app:trackTint="?attr/switchTrack" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -86,6 +86,7 @@ import com.gxdevs.mindmint.Utils.SettingsLockManager;
 import com.gxdevs.mindmint.Utils.StreakManager;
 import com.gxdevs.mindmint.Utils.TaskManager;
 import com.gxdevs.mindmint.Utils.UpdateLogData;
+import com.gxdevs.mindmint.Utils.AnimUtils;
 import com.gxdevs.mindmint.Utils.Utils;
 import com.gxdevs.mindmint.Widgets.HabitListWidgetProvider;
 import com.skydoves.balloon.ArrowOrientation;
@@ -145,6 +146,8 @@ public class HomeFragment extends Fragment {
     private StreakManager streakManager;
     private Habit[] currentHabits = new Habit[4]; // Store current habits to preserve order
     private TextView habitStreak1, habitStreak2, habitStreak3, habitStreak4;
+    /** True until the first onResume fires — guards entrance animations. */
+    private boolean firstResume = true;
 
     private final ActivityResultLauncher<IntentSenderRequest> updateLauncher = registerForActivityResult(
             new ActivityResultContracts.StartIntentSenderForResult(), result -> {
@@ -162,6 +165,7 @@ public class HomeFragment extends Fragment {
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(requireContext());
         checkAndShowDataMigrationDialog();
         initViews();
+        preHideAnimatedViews(); // Prevent flash: hide before first render, animateEntrance() will reveal them
         initClicks();
         updateGreetingWithFirstName();
         checkAndShowPermissionCard();
@@ -196,7 +200,37 @@ public class HomeFragment extends Fragment {
         return view;
     }
 
+    /** Pre-hides views that animateEntrance() will animate-in, so they are invisible from the
+     *  first render and won't flash visible before the animation fires in onResume. */
+    private void preHideAnimatedViews() {
+        if (greetings != null) greetings.setAlpha(0f);
+        if (mindCard != null) mindCard.setAlpha(0f);
+        if (focusCard != null) focusCard.setAlpha(0f);
+        if (taskCard != null) taskCard.setAlpha(0f);
+        if (blockerBtn != null) { blockerBtn.setAlpha(0f); blockerBtn.setScaleX(0.6f); blockerBtn.setScaleY(0.6f); }
+        if (playPause != null) { playPause.setAlpha(0f); playPause.setScaleX(0.6f); playPause.setScaleY(0.6f); }
+        if (reportBtn != null) { reportBtn.setAlpha(0f); reportBtn.setScaleX(0.6f); reportBtn.setScaleY(0.6f); }
+    }
+
+    /** Staggered entrance animations for the home screen cards and buttons.
+     *  Must be called from onResume() so it runs AFTER the fragment is visible. */
+    private void animateEntrance() {
+        // Greeting fades in first
+        if (greetings != null) AnimUtils.fadeIn(greetings, 0, 260);
+
+        // Cards bounce in with slight stagger for energetic feel
+        if (mindCard != null) AnimUtils.bounceIn(mindCard, 40);
+        if (focusCard != null) AnimUtils.bounceIn(focusCard, 110);
+        if (taskCard != null) AnimUtils.bounceIn(taskCard, 180);
+
+        // Action buttons spring in after cards
+        if (blockerBtn != null) AnimUtils.bounceIn(blockerBtn, 200);
+        if (playPause != null) AnimUtils.bounceIn(playPause, 250);
+        if (reportBtn != null) AnimUtils.bounceIn(reportBtn, 300);
+    }
+
     private void initClicks() {
+        AnimUtils.attachTouchRipple(blockerBtn);
         blockerBtn.setOnClickListener(v -> {
             if (isAccessibilityPermissionGranted(requireContext())) {
                 showBlockerBottomSheet();
@@ -206,6 +240,7 @@ public class HomeFragment extends Fragment {
             }
         });
 
+        AnimUtils.attachTouchRipple(reportBtn);
         reportBtn.setOnClickListener(v -> {
             String reportUrl = "https://forms.gle/rNiEevQ2aEDojpBi9";
             try {
@@ -216,6 +251,7 @@ public class HomeFragment extends Fragment {
             }
         });
 
+        AnimUtils.attachTouchRipple(playPause);
         playPause.setOnClickListener(v -> {
             // Block pause if a focus/lock-in session is active
             SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(requireContext());
@@ -230,11 +266,15 @@ public class HomeFragment extends Fragment {
             } else {
                 showTimePickerBottomSheet();
             }
-
         });
+
+        AnimUtils.attachTouchRipple(mindCard);
         mindCard.setOnClickListener(v -> startActivity(new Intent(requireContext(), StatsActivity.class),
                 makeSceneTransitionAnimation(requireActivity(), brain, "brainTransition").toBundle()));
+
+        AnimUtils.attachTouchRipple(focusCard);
         focusCard.setOnClickListener(v -> startActivity(new Intent(requireContext(), FocusMode.class)));
+
         greetings.setOnLongClickListener(v -> {
             showFirstNameDialog(true);
             return true;
@@ -783,6 +823,8 @@ public class HomeFragment extends Fragment {
     }
 
     private void bindHabitTile(ConstraintLayout tile, ImageView icon, TextView title, TextView streak, Habit habit) {
+        // Add spring press feedback to every tile
+        AnimUtils.attachTouchRipple(tile);
         if (habit == null) {
             icon.getLayoutParams().width = dpToPx(35);
             icon.getLayoutParams().height = dpToPx(35);
@@ -1649,6 +1691,13 @@ public class HomeFragment extends Fragment {
 
     public void onResume() {
         super.onResume();
+        // Play entrance animations only the first time this tab is actually VISIBLE.
+        // ViewPager2 with offscreenPageLimit calls onResume for ALL pre-loaded fragments
+        // when the Activity resumes, so we must additionally confirm this page is current.
+        if (firstResume && isCurrentPage(com.gxdevs.mindmint.Adapters.HomePagerAdapter.PAGE_HOME)) {
+            firstResume = false;
+            if (view != null) view.post(this::animateEntrance);
+        }
         if (view != null) {
             setupTaskList();
         }
@@ -1683,6 +1732,16 @@ public class HomeFragment extends Fragment {
                 }
             }
         });
+    }
+
+    /** Returns true only when this fragment is the page currently shown by the host ViewPager2. */
+    private boolean isCurrentPage(int expectedPageIndex) {
+        if (getActivity() instanceof HomeActivity) {
+            androidx.viewpager2.widget.ViewPager2 vp =
+                    getActivity().findViewById(com.gxdevs.mindmint.R.id.nav_host_container);
+            if (vp != null) return vp.getCurrentItem() == expectedPageIndex;
+        }
+        return true; // fallback: allow animation
     }
 
     @Override
