@@ -140,13 +140,16 @@ Make productivity motivating.
 <div align="center">
 <table>
   <tr>
-    <td><img src="./screenshots/0.jpg" width="220"/></td>
-    <td><img src="./screenshots/1.jpg" width="220"/></td>
-    <td><img src="./screenshots/2.jpg" width="220"/></td>
-    <td><img src="./screenshots/3.jpg" width="220"/></td>
-    <td><img src="./screenshots/4.jpg" width="220"/></td>
-    <td><img src="./screenshots/5.jpg" width="220"/></td>
-    <td><img src="./screenshots/6.jpg" width="220"/></td>
+    <td><img src="./screenshots/0.jpg" width="185"/></td>
+    <td><img src="./screenshots/1.jpg" width="185"/></td>
+    <td><img src="./screenshots/2.jpg" width="185"/></td>
+    <td><img src="./screenshots/3.jpg" width="185"/></td>
+  </tr>
+  <tr>
+    <td><img src="./screenshots/4.jpg" width="185"/></td>
+    <td><img src="./screenshots/5.jpg" width="185"/></td>
+    <td><img src="./screenshots/6.jpg" width="185"/></td>
+    <td></td>
   </tr>
 </table>
 </div>
