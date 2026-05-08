@@ -6,187 +6,202 @@
     android:layout_height="match_parent"
     android:fillViewport="true">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
         android:paddingHorizontal="16dp"
         android:paddingBottom="20dp">
 
         <!-- BENTO GRID ROW 1: Metrics (Left & Right Cards) -->
-        <LinearLayout
-            android:layout_width="match_parent"
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardMetricLeft"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
             android:layout_marginTop="16dp"
-            android:orientation="horizontal">
+            app:cardBackgroundColor="?attr/surface_card"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp"
+            app:layout_constraintEnd_toStartOf="@+id/cardMetricRight"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
-            <!-- Streak -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="6dp"
-                android:layout_weight="1"
-                app:cardBackgroundColor="?attr/surface_card"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="0dp">
+                android:padding="16dp">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <ImageView
+                    android:id="@+id/ivMetricLeftIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/trophy"
+                    app:tint="@color/amber"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <TextView
+                    android:id="@+id/tvMetricLeftLabel"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:layout_marginStart="6dp"
+                    android:text="STREAK"
+                    android:textColor="?attr/text_tertiary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    app:layout_constraintBottom_toBottomOf="@id/ivMetricLeftIcon"
+                    app:layout_constraintStart_toEndOf="@id/ivMetricLeftIcon"
+                    app:layout_constraintTop_toTopOf="@id/ivMetricLeftIcon" />
 
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical">
+                <TextView
+                    android:id="@+id/tvMetricLeftValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:fontFamily="sans-serif-light"
+                    android:text="--"
+                    android:textColor="?attr/text_primary"
+                    android:textSize="36sp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/ivMetricLeftIcon" />
 
-                        <ImageView
-                            android:id="@+id/ivMetricLeftIcon"
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:layout_marginEnd="6dp"
-                            android:importantForAccessibility="no"
-                            android:src="@drawable/trophy"
-                            app:tint="@color/amber" />
+                <TextView
+                    android:id="@+id/tvMetricLeftSub"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Days"
+                    android:textColor="?attr/text_tertiary"
+                    android:textSize="12sp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvMetricLeftValue" />
 
-                        <TextView
-                            android:id="@+id/tvMetricLeftLabel"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="STREAK"
-                            android:textColor="?attr/text_tertiary"
-                            android:textSize="11sp"
-                            android:textStyle="bold" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
-                    </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-                    <TextView
-                        android:id="@+id/tvMetricLeftValue"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:fontFamily="sans-serif-light"
-                        android:text="--"
-                        android:textColor="?attr/text_primary"
-                        android:textSize="36sp" />
+        <!-- Completed Volume -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardMetricRight"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_marginTop="16dp"
+            app:cardBackgroundColor="?attr/surface_card"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/cardMetricLeft"
+            app:layout_constraintTop_toTopOf="parent">
 
-                    <TextView
-                        android:id="@+id/tvMetricLeftSub"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Days"
-                        android:textColor="?attr/text_tertiary"
-                        android:textSize="12sp" />
-
-                </LinearLayout>
-
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Completed Volume -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:layout_weight="1"
-                app:cardBackgroundColor="?attr/surface_card"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="0dp">
+                android:padding="16dp">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <ImageView
+                    android:id="@+id/ivMetricRightIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/flame"
+                    app:tint="@color/brand_pink"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <TextView
+                    android:id="@+id/tvMetricRightLabel"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:layout_marginStart="6dp"
+                    android:text="COMPLETED"
+                    android:textColor="?attr/text_tertiary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    app:layout_constraintBottom_toBottomOf="@id/ivMetricRightIcon"
+                    app:layout_constraintStart_toEndOf="@id/ivMetricRightIcon"
+                    app:layout_constraintTop_toTopOf="@id/ivMetricRightIcon" />
 
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical">
+                <TextView
+                    android:id="@+id/tvMetricRightValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:fontFamily="sans-serif-light"
+                    android:text="--"
+                    android:textColor="?attr/text_primary"
+                    android:textSize="36sp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/ivMetricRightIcon" />
 
-                        <ImageView
-                            android:id="@+id/ivMetricRightIcon"
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:layout_marginEnd="6dp"
-                            android:importantForAccessibility="no"
-                            android:src="@drawable/flame"
-                            app:tint="@color/brand_pink" />
+                <TextView
+                    android:id="@+id/tvMetricRightSub"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="This Week"
+                    android:textColor="?attr/text_tertiary"
+                    android:textSize="12sp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvMetricRightValue" />
 
-                        <TextView
-                            android:id="@+id/tvMetricRightLabel"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="COMPLETED"
-                            android:textColor="?attr/text_tertiary"
-                            android:textSize="11sp"
-                            android:textStyle="bold" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
-                    </LinearLayout>
-
-                    <TextView
-                        android:id="@+id/tvMetricRightValue"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:fontFamily="sans-serif-light"
-                        android:text="--"
-                        android:textColor="?attr/text_primary"
-                        android:textSize="36sp" />
-
-                    <TextView
-                        android:id="@+id/tvMetricRightSub"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="This Week"
-                        android:textColor="?attr/text_tertiary"
-                        android:textSize="12sp" />
-
-                </LinearLayout>
-
-            </com.google.android.material.card.MaterialCardView>
-
-        </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <!-- Suggestion -->
         <include
             android:id="@+id/statsSuggestionCard"
             layout="@layout/item_suggestion_card"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp" />
+            android:layout_marginTop="12dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/cardMetricLeft" />
 
         <!-- Heatmap Card (Full Width) -->
         <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
+            android:id="@+id/cardHeatmap"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             app:cardBackgroundColor="?attr/surface_card"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
-            app:strokeWidth="0dp">
+            app:strokeWidth="0dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/statsSuggestionCard">
 
-            <LinearLayout
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
                 android:padding="16dp">
 
                 <TextView
+                    android:id="@+id/tvHeatmapTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
                     android:text="CONSISTENCY MAP"
                     android:textColor="?attr/text_tertiary"
                     android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
 
                 <HorizontalScrollView
-                    android:layout_width="match_parent"
+                    android:id="@+id/scrollHeatmap"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:scrollbars="none">
+                    android:layout_marginTop="12dp"
+                    android:scrollbars="none"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvHeatmapTitle">
 
                     <com.gxdevs.mindmint.Views.HabitHeatmapView
                         android:id="@+id/globalHeatmap"
@@ -195,159 +210,183 @@
 
                 </HorizontalScrollView>
 
-            </LinearLayout>
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
         </com.google.android.material.card.MaterialCardView>
 
         <!-- Time Breakdown Card -->
         <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
+            android:id="@+id/cardTimeBreakdown"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             app:cardBackgroundColor="?attr/surface_card"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
-            app:strokeWidth="0dp">
+            app:strokeWidth="0dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/cardHeatmap">
 
-            <LinearLayout
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
                 android:padding="16dp">
 
                 <TextView
+                    android:id="@+id/tvTimeBreakdownTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
                     android:text="TIME BREAKDOWN"
                     android:textColor="?attr/text_tertiary"
                     android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <com.github.mikephil.charting.charts.PieChart
+                    android:id="@+id/habitPieChart"
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:layout_marginTop="12dp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvTimeBreakdownTitle" />
+
+                <TextView
+                    android:id="@+id/tvHabitTimeInsight"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    android:layout_marginStart="16dp"
+                    android:lineSpacingMultiplier="1.2"
+                    android:textColor="?attr/text_secondary"
+                    android:textSize="13sp"
+                    app:layout_constraintBottom_toBottomOf="@id/habitPieChart"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toEndOf="@id/habitPieChart"
+                    app:layout_constraintTop_toTopOf="@id/habitPieChart"
+                    tools:text="You mostly complete habits in the Morning." />
 
-                    <com.github.mikephil.charting.charts.PieChart
-                        android:id="@+id/habitPieChart"
-                        android:layout_width="120dp"
-                        android:layout_height="120dp" />
-
-                    <TextView
-                        android:id="@+id/tvHabitTimeInsight"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
-                        android:layout_weight="1"
-                        android:lineSpacingMultiplier="1.2"
-                        android:textColor="?attr/text_secondary"
-                        android:textSize="13sp"
-                        tools:text="You mostly complete habits in the Morning." />
-
-                </LinearLayout>
-
-            </LinearLayout>
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
         </com.google.android.material.card.MaterialCardView>
 
         <!-- Trend Chart Card -->
         <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
+            android:id="@+id/cardTrendChart"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             app:cardBackgroundColor="?attr/surface_card"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
-            app:strokeWidth="0dp">
+            app:strokeWidth="0dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/cardTimeBreakdown">
 
-            <LinearLayout
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
                 android:padding="16dp">
 
                 <TextView
+                    android:id="@+id/tvTrendChartTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
                     android:text="COMPLETION TREND"
                     android:textColor="?attr/text_tertiary"
                     android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
 
                 <com.github.mikephil.charting.charts.LineChart
                     android:id="@+id/habitLineChart"
-                    android:layout_width="match_parent"
-                    android:layout_height="150dp" />
+                    android:layout_width="0dp"
+                    android:layout_height="150dp"
+                    android:layout_marginTop="12dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvTrendChartTitle" />
 
-            </LinearLayout>
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
         </com.google.android.material.card.MaterialCardView>
 
         <!-- Emotion Analysis Card -->
         <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
+            android:id="@+id/cardEmotionAnalysis"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             app:cardBackgroundColor="?attr/surface_card"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
-            app:strokeWidth="0dp">
+            app:strokeWidth="0dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/cardTrendChart">
 
-            <LinearLayout
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
                 android:padding="16dp">
 
                 <TextView
+                    android:id="@+id/tvEmotionTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
                     android:text="EMOTION ANALYSIS"
                     android:textColor="?attr/text_tertiary"
                     android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
 
                 <com.github.mikephil.charting.charts.PieChart
                     android:id="@+id/globalEmotionChart"
-                    android:layout_width="match_parent"
-                    android:layout_height="250dp" />
+                    android:layout_width="0dp"
+                    android:layout_height="250dp"
+                    android:layout_marginTop="12dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvEmotionTitle" />
 
                 <!-- AI Analytics Section -->
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/layoutAiAnalytics"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
                     android:background="@drawable/bg_surface_glass"
                     android:backgroundTint="?attr/glass_circle"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="16dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/globalEmotionChart">
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
+                    <ImageView
+                        android:id="@+id/ivAiFlame"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:contentDescription="streak"
+                        android:src="@drawable/flame"
+                        app:tint="@color/brand_pink"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <TextView
+                        android:id="@+id/tvAiTitle"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:src="@drawable/flame"
-                            app:tint="@color/brand_pink" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:fontFamily="@font/poppins_semibold"
-                            android:text="AI Mood Analytics"
-                            android:textColor="?attr/text_primary"
-                            android:textSize="14sp" />
-
-                    </LinearLayout>
+                        android:layout_marginStart="8dp"
+                        android:fontFamily="@font/poppins_semibold"
+                        android:text="AI Mood Analytics"
+                        android:textColor="?attr/text_primary"
+                        android:textSize="14sp"
+                        app:layout_constraintBottom_toBottomOf="@id/ivAiFlame"
+                        app:layout_constraintStart_toEndOf="@id/ivAiFlame"
+                        app:layout_constraintTop_toTopOf="@id/ivAiFlame" />
 
                     <TextView
                         android:id="@+id/globalAverageMoodValue"
@@ -357,24 +396,29 @@
                         android:fontFamily="@font/poppins_semibold"
                         android:textColor="?attr/text_primary"
                         android:textSize="24sp"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/ivAiFlame"
                         tools:text="Average Mood: +1.5" />
 
                     <TextView
                         android:id="@+id/globalEmotionInsight"
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:lineSpacingExtra="4dp"
                         android:textColor="?attr/text_secondary"
                         android:textSize="13sp"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/globalAverageMoodValue"
                         tools:text="Log emotions to view insights." />
 
-                </LinearLayout>
+                </androidx.constraintlayout.widget.ConstraintLayout>
 
-            </LinearLayout>
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
         </com.google.android.material.card.MaterialCardView>
 
-    </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.core.widget.NestedScrollView>

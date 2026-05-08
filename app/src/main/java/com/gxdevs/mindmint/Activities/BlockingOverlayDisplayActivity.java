@@ -192,8 +192,6 @@ public class BlockingOverlayDisplayActivity extends AppCompatActivity {
         super.onNewIntent(intent);
         Log.i(TAG, "onNewIntent: Activity received NEW INTENT: " + intent);
         setIntent(intent);
-        // Re-process the intent (may carry a different blocked app/package for focus mode).
-        // setupTimer() will reset the homeActionDispatched flag so the new session fires HOME once.
         processIntent(intent);
         setupTimer();
         Log.i(TAG, "onNewIntent: Processed new intent and rescheduled timer.");

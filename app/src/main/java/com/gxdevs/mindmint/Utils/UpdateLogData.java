@@ -9,7 +9,15 @@ public class UpdateLogData {
         public static List<UpdateLogItem> getLogs() {
                 List<UpdateLogItem> list = new ArrayList<>();
 
-                addVersion(list, "Pumpkin 11 (Current)",
+                addVersion(list, "Pumpkin 12 (Current)",
+                        "Improved prevent uninstall working",
+                        "Added subtle animations",
+                        "Added option to add apps to whitelist while Lock In mode",
+                        "Fixed bugs in Locked In mode",
+                        "Made the blocking more robust",
+                        "Fixed minor bugs");
+
+                addVersion(list, "Pumpkin 11",
                                 "Prevent uninstall - stop anyone from removing the app without your permission",
                                 "Lock types coming soon - more ways to protect your settings",
                                 "Added Task-Linked Focus Mode",

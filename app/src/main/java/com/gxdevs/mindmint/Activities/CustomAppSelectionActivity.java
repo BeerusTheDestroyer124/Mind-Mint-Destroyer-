@@ -182,7 +182,7 @@ public class CustomAppSelectionActivity extends AppCompatActivity implements App
 
     @Override
     public boolean onSupportNavigateUp() {
-        onBackPressed();
+        getOnBackPressedDispatcher();
         return true;
     }
 

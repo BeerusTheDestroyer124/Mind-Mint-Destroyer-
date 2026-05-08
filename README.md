@@ -19,7 +19,7 @@
     <a href="https://github.com/gtxPrime/Mind-Mint/blob/main/LICENSE">
       <img src="https://img.shields.io/badge/License-Modified%20MIT-brightgreen?style=for-the-badge" alt="License" />
     </a>
-     <a href="#">
+    <a href="#">
       <img src="https://img.shields.io/badge/Platform-Android-3DDC84?logo=android&logoColor=white&style=for-the-badge" alt="Platform" />
     </a>
     <a href="https://play.google.com/store/apps/details?id=com.gxdevs.mindmint">
@@ -30,21 +30,22 @@
   <h3>
     <a href="#-features">Features</a>
     <span> | </span>
+    <a href="#-screenshots">Screenshots</a>
+    <span> | </span>
     <a href="#-tech-stack">Tech Stack</a>
     <span> | </span>
     <a href="#-installation">Installation</a>
     <span> | </span>
     <a href="#-contributing">Contributing</a>
   </h3>
+
 </div>
 
 ---
 
-<br />
-
 ## 📱 About Mind Mint
 
-**Mind Mint** is not just an app blocker; it's a comprehensive productivity ecosystem designed to help you break free from the doomscrolling cycle. By combining powerful blocking tools with gamification and detailed analytics, Mind Mint turns the difficult task of staying focused into a rewarding experience.
+**Mind Mint** is a comprehensive productivity ecosystem that helps you break free from the doomscrolling cycle. It combines a robust app blocker, an immersive focus timer, a habit tracker, and a task manager — all tied together with gamification and deep analytics — turning the hard work of staying focused into a genuinely rewarding experience.
 
 > "Productivity is not about doing more. It's about doing what matters."
 
@@ -52,101 +53,133 @@
 
 ## <a id="-features"></a>🚀 Features
 
-Mind Mint comes packed with powerful features designed to help you stay on track.
+### 🧘 Immersive Focus Mode
 
-### 🧘 **Immersive Focus Mode**
+Transform your work sessions into a visual journey.
 
-Transform your productivity sessions into a visual journey.
+- **Crystal Progression** — Watch your Focus Crystal grow and evolve across rarity tiers (Ruby, Emerald, Amethyst, and more) as you accumulate deep work time.
+- **Pomodoro Timer** — Built-in Pomodoro support with configurable work and break intervals, plus an optional auto-start break switch.
+- **Nebula Ambience** — A calming animated starfield eases you into a flow state.
+- **Session Tagging** — Tag sessions by topic (Study, Work, Reading, etc.) to understand where your time actually goes.
+- **Task-Linked Focus** — Attach a focus session directly to a specific task for end-to-end accountability.
+- **Scheduled Sessions** — Plan focus blocks in advance with 12-hour time format support.
+- **Dedicated Settings** — A focused settings sheet to tune every aspect of your focus experience.
 
-- **Crystal Progression**: Watch your "Focus Crystal" grow and evolve as you complete your sessions. The longer you focus, the rarer the crystal acts as a visual reward (Ruby, Emerald, Amethyst, and more).
-- **Pomodoro Support**: Built-in support for the Pomodoro technique with customizable work/break intervals.
-- **Nebula Ambience**: A calming, animated starfield background helps you enter a flow state.
-- **Tagging**: Categorize your sessions (Study, Work, Reading) to track where your time goes.
-- **Task-Linked Focus**: Link your focus sessions directly to specific tasks.
-- **Scheduled Focus**: Pre-plan and schedule your focus sessions with 12-hour time format support.
-- **Lock In Mode**: A stricter mode that optimizes session management and prevents you from bypassing the blocker.
+### 🔒 Lock-In Mode
 
-### 🚫 **Intelligent App Blocker**
+A hardened, distraction-proof session mode for when you need maximum discipline.
 
-Stop doomscrolling before it starts.
+- **Strict App Blocking** — Accessibility-service-powered blocking that intercepts and redirects distracting apps the moment they are opened.
+- **Browser Blocking** — Blocks distracting content directly inside mobile browsers, not just app launchers.
+- **Adult Content Filter** — Keyword-aware host-level blocking for adult content across all browsers.
+- **Whitelist Support** — Configure a per-session whitelist so permitted apps (e.g., navigation, calls) remain accessible even during Lock-In.
+- **Robust Re-Entry Guard** — Intelligent debounce and suppression logic prevents the blocker from misfiring on OS-generated background events.
+- **Overlay Shield** — A firm but non-intrusive overlay prevents bypassing the blocker without ending your session.
 
-- **Strict Blocking**: Instantly block distracting apps like Instagram, YouTube Shorts, and TikTok.
-- **Overlay Shield**: A non-intrusive but firm overlay prevents you from accessing blocked apps during focus hours.
-- **Usage Limits**: Set daily time allowances for specific apps. Once the time is up, the app is locked for the day.
-- **Live Scroll Counter**: A real-time overlay that counts and displays how much you are scrolling to increase awareness.
+### 🛡️ Prevent Uninstall
 
-### 💰 **Gamification & Rewards**
+Stop anyone — including a future impulsive self — from deleting Mind Mint without your explicit permission.
 
-Make productivity addictive in a good way.
+- **Device Admin Guard** — Activates Android's Device Administrator to block unauthorized uninstall attempts.
+- **Settings Lock** — Secure your app settings with Biometric Authentication or a PIN so your configuration cannot be tampered with mid-session.
 
-- **Mint Crystals**: Earn in-app currency for every minute of successful focus.
-- **Shop**: (Coming Soon) Use your hard-earned Mint Crystals to unlock new themes, crystal styles, and companions.
-- **Streaks**: Keep your daily streak alive to earn bonus multipliers.
+### 📵 Intelligent App Blocker
 
-### 📊 **Deep Analytics**
+Stop doomscrolling before it starts — outside of focus sessions too.
 
-Understand your habits with data.
+- **Selective Blocking** — Block specific apps (Instagram, YouTube Shorts, TikTok, etc.) on a per-app basis.
+- **Usage Limits** — Set daily time allowances per app. Once the limit is hit, the app locks for the rest of the day.
+- **Live Scroll Counter** — A real-time overlay counts how much you scroll, surfacing the behavior so you can change it.
+- **Pause Blocker** — Temporarily suspend blocking for a defined grace period without fully disabling the service.
 
-- **Habit Heatmaps**: GitHub-style activity heatmaps showing your consistency over the year.
-- **Usage Charts**: Detailed bar and pie charts breaking down your app usage and focus time.
-- **Insights**: Get weekly reports on your most productive days and biggest distractions.
+### ✅ Integrated Task Manager
 
-### ✅ **Integrated Task Manager**
+- **Quick Add** — Capture tasks instantly from the home screen without navigating away.
+- **Priority & Due Dates** — Organize to-dos with due dates and priority levels.
+- **Focus Integration** — Link any task to a focus session so completion feels concrete.
+- **Widget Support** — View and check off tasks directly from your Android home screen.
 
-- **Quick Add**: Rapidly add tasks directly from the home screen.
-- **Date & Priority**: Organize your to-dos with due dates and priority levels.
-- **Widget Support**: View and check off tasks directly from your home screen widget.
+### 📅 Habit Tracker
 
-### 🔒 **Privacy & Security**
+Build lasting routines with deep insight into your behavior.
 
-- **Settings Lock**: Secure your app settings with Biometric Authentication or a PIN to prevent unauthorized changes.
+- **Streak System** — Daily streaks with visual feedback keep your consistency front and center.
+- **Goal Setting** — Define targets for each habit and track progress toward them.
+- **Mood & Emotion Logging** — Attach how you felt to each habit entry for richer reflection.
+- **Per-Habit Stats** — Tap any habit to open its dedicated statistics view.
 
-### 📱 **App Experience**
+### 📊 Deep Analytics
 
-- **Swipe-to-Navigate**: Intuitive swipe gestures for smoother navigation.
-- **Push Notifications**: Stay updated with Firebase Cloud Messaging (FCM) and deep-link routing.
+Understand your patterns with data, not guesswork.
 
-<br />
+- **Habit Heatmaps** — GitHub-style activity heatmaps visualize your consistency across the year at a glance.
+- **Focus Charts** — Bar and pie charts break down focus time by topic, session length, and time of day.
+- **Task Analytics** — Completion rates, overdue trends, and priority breakdowns in one view.
+- **Insights** — Weekly summaries highlighting your most productive days and biggest distractions.
+
+### 💰 Gamification & Rewards
+
+Make productivity motivating.
+
+- **Mint Crystals** — Earn in-app currency for every minute of successful focus time.
+- **Custom Themes** — Unlock and switch between curated visual themes.
+- **Shop** *(Coming Soon)* — Spend Mint Crystals on new crystal styles, themes, and companions.
+
+### 📱 App Experience
+
+- **Swipe Navigation** — Fluid swipe gestures for seamless screen transitions.
+- **Home Screen Widgets** — 5 widgets covering focus, tasks, and habits for at-a-glance access.
+- **Subtle Animations** — Micro-animations throughout the UI make interactions feel polished and alive.
+- **Push Notifications** — Firebase Cloud Messaging with deep-link routing keeps you in the loop.
+- **Keep Service Alive** — Optional setting to ensure the blocking service stays running in the background.
+
+---
 
 ## <a id="-screenshots"></a>📸 Screenshots
 
 <div align="center">
-  <img src="./screenshots/1.png" width="18%" />
-  <img src="./screenshots/2.png" width="18%" />
-  <img src="./screenshots/3.png" width="18%" />
-  <img src="./screenshots/4.png" width="18%" />
-  <img src="./screenshots/5.png" width="18%" />
-  <br/>
-  <br/>
-  <img src="./screenshots/6.png" width="18%" />
-  <img src="./screenshots/7.png" width="18%" />
-  <img src="./screenshots/8.png" width="18%" />
-  <img src="./screenshots/9.png" width="18%" />
-  <img src="./screenshots/10.png" width="18%" />
+  <img src="./screenshots/screenshots.png" width="100%" alt="Mind Mint Screenshots" />
+</div>
+
+<br/>
+
+<div align="center">
+<table>
+  <tr>
+    <td><img src="./screenshots/0.jpg" width="180"/></td>
+    <td><img src="./screenshots/1.jpg" width="180"/></td>
+    <td><img src="./screenshots/2.jpg" width="180"/></td>
+    <td><img src="./screenshots/3.jpg" width="180"/></td>
+    <td><img src="./screenshots/4.jpg" width="180"/></td>
+    <td><img src="./screenshots/5.jpg" width="180"/></td>
+    <td><img src="./screenshots/6.jpg" width="180"/></td>
+  </tr>
+</table>
 </div>
 
 ---
 
 ## <a id="-tech-stack"></a>🛠 Tech Stack
 
-Mind Mint is built with modern Android development practices, ensuring a smooth and responsive experience.
+Mind Mint is built with modern Android development practices for a smooth, responsive experience.
 
 <div align="center">
 
-| Category             | Technologies                                                                                                                                                                                                                                                           |
-| :------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Languages**        | ![Java](https://img.shields.io/badge/Java-ED8B00?style=flat-square&logo=openjdk&logoColor=white) ![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white) ![XML](https://img.shields.io/badge/XML-orange?style=flat-square) |
-| **Architecture**     | **MVVM** (Model-View-ViewModel)                                                                                                                                                                                                                                        |
-| **Database**         | **Room** (SQLite ORM)                                                                                                                                                                                                                                                  |
-| **Networking**       | **OkHttp**, **Glide** (Image Loading)                                                                                                                                                                                                                                  |
-| **UI Components**    | **Jetpack Compose**, **Material Design 3**, **MPAndroidChart**, **Lottie**                                                                                                                                                                                             |
-| **Backend/Services** | **Firebase** (Crashlytics, FCM)                                                                                                                                                                                                                                        |
-| **Tools**            | **Gradle**, **Android Studio**                                                                                                                                                                                                                                         |
+| Category | Technologies |
+| :--- | :--- |
+| **Languages** | ![Java](https://img.shields.io/badge/Java-ED8B00?style=flat-square&logo=openjdk&logoColor=white) ![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white) ![XML](https://img.shields.io/badge/XML-orange?style=flat-square) |
+| **Architecture** | **MVVM** (Model-View-ViewModel) |
+| **Database** | **Room** (SQLite ORM) |
+| **Networking** | **OkHttp**, **Glide** (Image Loading) |
+| **UI Components** | **Material Design 3**, **MPAndroidChart**, **Lottie** |
+| **System APIs** | **AccessibilityService**, **DevicePolicyManager**, **WorkManager** |
+| **Backend / Services** | **Firebase** (Crashlytics, FCM) |
+| **Tools** | **Gradle**, **Android Studio** |
 
 </div>
 
 <details>
-<summary>Click to see full dependency list</summary>
+<summary>Full dependency list</summary>
 
 - `androidx.core:core-ktx`
 - `androidx.appcompat:appcompat`
@@ -157,7 +190,7 @@ Mind Mint is built with modern Android development practices, ensuring a smooth 
 - `com.github.bumptech.glide:glide`
 - `androidx.room:room-runtime`
 - `me.tankery.lib:circularSeekBar`
-- And more... (see `build.gradle`)
+- And more — see `build.gradle`
 
 </details>
 
@@ -167,17 +200,17 @@ Mind Mint is built with modern Android development practices, ensuring a smooth 
 
 <div align="center">
 
-|                                               **Commit Activity**                                               |                                           **Repo Size**                                            |
-| :-------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------: |
+| **Commit Activity** | **Repo Size** |
+| :---: | :---: |
 | ![Commits](https://img.shields.io/github/commit-activity/m/gtxPrime/Mind-Mint?style=for-the-badge&color=25D366) | ![Size](https://img.shields.io/github/repo-size/gtxPrime/Mind-Mint?style=for-the-badge&color=blue) |
 
-|                                                 **Top Language**                                                 |                                                    **Code Size**                                                    |
-| :--------------------------------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------------------------------: |
+| **Top Language** | **Code Size** |
+| :---: | :---: |
 | ![Language](https://img.shields.io/github/languages/top/gtxPrime/Mind-Mint?style=for-the-badge&color=blueviolet) | ![Code Size](https://img.shields.io/github/languages/code-size/gtxPrime/Mind-Mint?style=for-the-badge&color=orange) |
 
 </div>
 
-<br />
+---
 
 ## 🌟 Star History
 
@@ -189,64 +222,62 @@ Mind Mint is built with modern Android development practices, ensuring a smooth 
 
 ## 🗺 Roadmap
 
-We are constantly improving Mind Mint. Here is what's coming next:
-
-- [ ] **Companions**: AI-driven friendly companions to motivate you.
-- [ ] **Battles**: Challenge friends to focus streaks.
-- [ ] **Cloud Sync**: Backup your data across devices.
-- [ ] **Web Dashboard**: View your stats on the big screen.
-- [ ] **Accessibility**: Improved support for screen readers.
+- [ ] **Lock Types** — More ways to protect your settings and enforce your commitments.
+- [ ] **Companions** — Friendly AI-driven companions to motivate and coach you.
+- [ ] **Friendly Battles** — Challenge friends to focus streaks and compete for streaks.
+- [ ] **Cloud Sync** — Back up your data and restore it across devices.
+- [ ] **Web Dashboard** — Review your full stats on a desktop browser.
 
 ---
 
 ## 📚 Documentation
 
-We have comprehensive documentation to help you understand the codebase:
-
-- **[⚡ Quick Start](docs/QUICK_START.md)**: Get the app running in 5 minutes.
-- **[🔧 Build & Run](docs/BUILD_AND_RUN.md)**: Detailed setup instructions.
-- **[🏛️ Architecture](docs/ARCHITECTURE.md)**: High-level overview of the code structure.
-- **[🔑 Key Components](docs/KEY_COMPONENTS.md)**: Deep dive into critical files and services.
-- **[📂 Documentation Index](docs/SUMMARY.md)**: Full list of available docs.
+- **[⚡ Quick Start](docs/QUICK_START.md)** — Get the app running in 5 minutes.
+- **[🔧 Build & Run](docs/BUILD_AND_RUN.md)** — Detailed setup instructions.
+- **[🏛️ Architecture](docs/ARCHITECTURE.md)** — High-level overview of the code structure.
+- **[🔑 Key Components](docs/KEY_COMPONENTS.md)** — Deep dive into critical files and services.
+- **[📂 Documentation Index](docs/SUMMARY.md)** — Full list of available docs.
 
 ---
 
 ## <a id="-installation"></a>📥 Installation
 
-Mind Mint is currently in active development. You can build it from source:
+Mind Mint is currently in active development. Build it from source:
 
-1.  **Clone the repository**
-    ```bash
-    git clone https://github.com/gtxprime/mind-mint.git
-    ```
-2.  **Open in Android Studio**
-3.  **Sync Gradle** and hit **Run**
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/gtxprime/mind-mint.git
+   ```
+2. **Open in Android Studio**
+3. **Copy the example properties file** and fill in your keys
+   ```bash
+   cp gradle.properties.example gradle.properties
+   ```
+4. **Sync Gradle** and hit **Run**
 
-_Note: A release APK will be available in the Releases section soon._
+> A release APK will be available in the [Releases](https://github.com/gtxPrime/Mind-Mint/releases) section soon.
 
 ---
 
 ## <a id="-contributing"></a>🤝 How to Contribute
 
-We love contributions! Whether it's a bug fix, new feature, or documentation improvement.
+Contributions are welcome — bug fixes, new features, or documentation improvements alike.
 
-1.  **Fork the Project**
-2.  **Create your Feature Branch** (`git checkout -b feature/AmazingFeature`)
-3.  **Commit your Changes** (`git commit -m 'Add some AmazingFeature'`)
-4.  **Push to the Branch** (`git push origin feature/AmazingFeature`)
-5.  **Open a Pull Request**
+1. **Fork the Project**
+2. **Create your Feature Branch** (`git checkout -b feature/AmazingFeature`)
+3. **Commit your Changes** (`git commit -m 'Add some AmazingFeature'`)
+4. **Push to the Branch** (`git push origin feature/AmazingFeature`)
+5. **Open a Pull Request**
 
-> **Note:** Our current focus is on improving UI animations. If you're a Lottie wizard, we need you!
+> **Current focus areas:** UI animations (Lottie), widget improvements, and the upcoming Lock Types system.
 
 ---
 
 ## ⚖️ License
 
-Distributed under a **Modified MIT License**.
+Distributed under a **Modified MIT License**. Visible credit to Mind Mint is required.
 
-> Permission is hereby granted, free of charge... provided that visible credit is given to Mind Mint.
-
-See [`LICENSE`](./LICENSE) for more information.
+See [`LICENSE`](./LICENSE) for full details.
 
 ---
 

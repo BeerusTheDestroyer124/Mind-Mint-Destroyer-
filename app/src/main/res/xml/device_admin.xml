@@ -1,12 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <device-admin>
     <uses-policies>
-        <!--
-                            force-lock allows the app to call lockNow() (screen lock).
-                            More importantly it grants Device Admin status, which prevents
-                            the app from being uninstalled or force-stopped without the user
-                            first revoking admin in Settings → Security → Device Admin.
-                        -->
         <force-lock/>
     </uses-policies>
 </device-admin>

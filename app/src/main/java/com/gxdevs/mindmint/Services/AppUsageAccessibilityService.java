@@ -246,9 +246,9 @@ public class AppUsageAccessibilityService extends AccessibilityService {
 
     private long lastActionTime = 0L;
     public static boolean serviceStatus = false;
+
     private final Map<String, Long> lastLockInOverlayTimeMs = new HashMap<>();
-    private static final long LOCK_IN_OVERLAY_DEBOUNCE_MS = 1500L;
-    private String lastBlockedPackageForDebounceReset = null;
+    private static final long LOCK_IN_OVERLAY_DEBOUNCE_MS = 500L;
     private BroadcastReceiver screenReceiver;
     private boolean isScreenReceiverRegistered = false;
     public static final String RESTORE_NOTIFICATION = "restore_notification";
@@ -387,12 +387,6 @@ public class AppUsageAccessibilityService extends AccessibilityService {
             @Override
             public void onReceive(Context context, Intent intent) {
                 if (intent != null && ACTION_PERFORM_GLOBAL_HOME_FROM_OVERLAY.equals(intent.getAction())) {
-                    long slideNow = System.currentTimeMillis();
-                    for (String pkg : lastLockInOverlayTimeMs.keySet()) {
-                        lastLockInOverlayTimeMs.put(pkg, slideNow);
-                        Log.d(TAG, "Debounce slid on HOME for: " + pkg);
-                    }
-                    lastBlockedPackageForDebounceReset = null;
                     performThrottledGlobalAction(GLOBAL_ACTION_HOME);
                 } else if (intent != null && ACTION_PERFORM_GLOBAL_BACK_FROM_OVERLAY.equals(intent.getAction())) {
                     performThrottledGlobalAction(GLOBAL_ACTION_BACK);
@@ -674,79 +668,53 @@ public class AppUsageAccessibilityService extends AccessibilityService {
             if (!isLockedInActive || isPackageAllowedInLockedIn(eventPackageName)) {
                 handleScrollCounting(event);
             }
-            boolean isWindowStateEvent = (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED);
+            boolean isBlockerEvent = (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+                    || eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+                    || eventType == AccessibilityEvent.TYPE_VIEW_CLICKED
+                    || eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED);
 
-            if (isFocusRunning && isWindowStateEvent) {
-                if (isLockedInPref) {
-                    // DEBUG: log every window-state event when Lock-In is active
-                    android.util.Log.d("LockInDebug",
-                            "=== WINDOW_STATE event | pkg=" + eventPackageName
-                                    + " | ownPkg=" + getPackageName()
-                                    + " | isOwnApp=" + getPackageName().equals(eventPackageName));
-                }
-
-                if (eventPackageName != null
-                        && dynamicLauncherPackages.contains(eventPackageName)
-                        && lastBlockedPackageForDebounceReset != null) {
-                    long slideNow = System.currentTimeMillis();
-                    lastLockInOverlayTimeMs.put(lastBlockedPackageForDebounceReset, slideNow);
-                    Log.d(TAG, "Debounce slid to launcher-arrival for " + lastBlockedPackageForDebounceReset);
-                    lastBlockedPackageForDebounceReset = null;
-                }
-
+            if (isFocusRunning && isBlockerEvent) {
                 if (eventPackageName != null && !eventPackageName.equals(getPackageName())) {
+
+                    rootNode = getRootInActiveWindow();
+                    if (rootNode != null) {
+                        CharSequence activePkgSequence = rootNode.getPackageName();
+                        if (activePkgSequence != null) {
+                            String activePkg = activePkgSequence.toString();
+                            if (!activePkg.equals(eventPackageName) && !activePkg.equals(getPackageName())) {
+                                rootNode.recycle();
+                                rootNode = null;
+                                return; // Ignore spurious background event
+                            }
+                        }
+                        // Don't recycle yet because it might be used below by the scroll counter or doom scrolling logic
+                    }
+
                     long now = System.currentTimeMillis();
 
                     if (isLockedInPref) {
                         boolean allowed = isPackageAllowedInLockedIn(eventPackageName);
-
-                        if (allowed) {
-                            Log.i(TAG, "LOCK-IN: allowed (whitelist) → " + eventPackageName);
-                        } else {
+                        if (!allowed) {
                             Long lastTime = lastLockInOverlayTimeMs.get(eventPackageName);
-                            boolean debounceOk = lastTime == null || (now - lastTime) > LOCK_IN_OVERLAY_DEBOUNCE_MS;
-
-                            if (debounceOk) {
-                                Log.i(TAG, "LOCK-IN: overlay fired → " + eventPackageName);
-                                Log.e(TAG, "LOCKED IN BLOCKER POP UP CAUSED BY PACKAGE: " + eventPackageName);
-                                Toast.makeText(getApplicationContext(),
-                                        "Lock-In Blocker triggered by: " + eventPackageName, Toast.LENGTH_LONG).show();
+                            if (lastTime == null || (now - lastTime) > LOCK_IN_OVERLAY_DEBOUNCE_MS) {
                                 lastLockInOverlayTimeMs.put(eventPackageName, now);
-                                lastBlockedPackageForDebounceReset = eventPackageName;
                                 Intent intent = new Intent(this, BlockingOverlayDisplayActivity.class);
                                 intent.putExtra(EXTRA_IS_FOCUS, true);
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                                        | Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                        | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                                 startActivity(intent);
                                 resetUsageAndTimersForPackage(eventPackageName);
-                            } else {
-                                Log.w(TAG, "LOCK-IN: overlay skipped (debounce) → " + eventPackageName
-                                        + " | " + (now - lastTime) + "ms since last block");
                             }
                             return;
                         }
                     } else if (customBlockedApps != null && customBlockedApps.contains(eventPackageName)) {
                         Long lastTime = lastLockInOverlayTimeMs.get(eventPackageName);
-                        boolean debounceOk = lastTime == null || (now - lastTime) > LOCK_IN_OVERLAY_DEBOUNCE_MS;
-
-                        if (debounceOk) {
-                            Log.i(TAG, "FOCUS: overlay fired → " + eventPackageName);
-                            Log.e(TAG, "FOCUS BLOCKER POP UP CAUSED BY PACKAGE: " + eventPackageName);
-                            Toast.makeText(getApplicationContext(), "Focus Blocker triggered by: " + eventPackageName,
-                                    Toast.LENGTH_LONG).show();
+                        if (lastTime == null || (now - lastTime) > LOCK_IN_OVERLAY_DEBOUNCE_MS) {
                             lastLockInOverlayTimeMs.put(eventPackageName, now);
-                            lastBlockedPackageForDebounceReset = eventPackageName;
                             Intent intent = new Intent(this, BlockingOverlayDisplayActivity.class);
                             intent.putExtra(EXTRA_IS_FOCUS, true);
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                                    | Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                    | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                             startActivity(intent);
                             resetUsageAndTimersForPackage(eventPackageName);
-                        } else {
-                            Log.w(TAG, "FOCUS: overlay skipped (debounce) → " + eventPackageName
-                                    + " | " + (now - lastTime) + "ms since last block");
                         }
                         return;
                     }
@@ -1007,7 +975,7 @@ public class AppUsageAccessibilityService extends AccessibilityService {
         if (isScrollCounterPillVisible && scrollCounterEnabled && scrollPillOverlayView != null) {
             String appTag = getAppTagFromAllPackages(packageName);
             if (appTag != null) {
-                new Handler(Looper.getMainLooper()).post(() -> updateScrollCounterPillInternal(appTag, packageName));
+                new Handler(Looper.getMainLooper()).post(() -> updateScrollCounterPillInternal(appTag));
             }
         }
 
@@ -2413,7 +2381,7 @@ public class AppUsageAccessibilityService extends AccessibilityService {
         isScrollCounterPillVisible = true;
         lastSeenPillAppTag = appTag;
         lastSeenPillPackageName = packageName;
-        updateScrollCounterPillInternal(appTag, packageName);
+        updateScrollCounterPillInternal(appTag);
 
         // animate alpha if invisible
         android.view.View pillContainer = scrollPillOverlayView.findViewById(R.id.pillContainer);
@@ -2425,7 +2393,7 @@ public class AppUsageAccessibilityService extends AccessibilityService {
         }
     }
 
-    private void updateScrollCounterPillInternal(String appTag, String packageName) {
+    private void updateScrollCounterPillInternal(String appTag) {
         if (scrollPillOverlayView == null || pillScrollCountText == null)
             return;
 
