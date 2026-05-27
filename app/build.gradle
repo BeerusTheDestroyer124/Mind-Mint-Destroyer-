@@ -8,12 +8,12 @@ plugins {
 
 android {
     namespace 'com.gxdevs.mindmint'
-    compileSdk 36
+    compileSdk 35
 
     defaultConfig {
         applicationId "com.gxdevs.mindmint"
         minSdk 28
-        targetSdk 37
+        targetSdk 35
         versionCode 17
         versionName 'Pumpkin 12'
 
