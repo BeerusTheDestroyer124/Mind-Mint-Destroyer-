@@ -25,16 +25,15 @@ jobs:
       with:
         gradle-version: wrapper
 
-    # Yeh step script chalane ki permission dega aur error thik karega
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
+    # Is step me hum RAM ko limit kar rahe hain taaki daemon crash na ho
     - name: Build Debug APK
-      run: ./gradlew assembleDebug --stacktrace
+      run: ./gradlew assembleDebug --no-daemon -Dorg.gradle.jvmargs="-Xmx2048m -XX:MaxMetaspaceSize=512m" --stacktrace
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: Mind-Mint-ColorOS15-APK
         path: app/build/outputs/apk/debug/app-debug.apk
-        
