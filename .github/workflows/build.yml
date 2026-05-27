@@ -19,19 +19,12 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+        cache: gradle
 
-    # Yeh step system me fresh gradle install karega bina project wrapper ke
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: wrapper
 
-    # Seedhe command line se run karenge, wrapper validation ki jhanjhat hi khatam
     - name: Build Debug APK
-      run: gradle assembleDebug
-
-    - name: Upload APK Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: Mind-Mint-ColorOS15-APK
-        path: app/build/outputs/apk/debug/app-debug.apk
+      run: gradle assembleDebug --stacktrace
